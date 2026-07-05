@@ -16,6 +16,7 @@ import java.util.List;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class GuiMachineControllerResizableTest {
@@ -110,6 +111,47 @@ public class GuiMachineControllerResizableTest {
         } finally {
             MMCEGuiExtConfig.machineController = original;
         }
+    }
+
+    @Test
+    public void legacyConfigSmartInterfaceFallbackDoesNotEnableDefaultEditor() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        MMCEGuiExtConfig.MachineController cfg = new MMCEGuiExtConfig.MachineController();
+        cfg.enableSmartInterfaceEditor = true;
+        cfg.smartInterfaceEditorVirtualKey = "mmcege_virtual_port";
+
+        set(gui, "styleOverride", MachineGuiStyleManager.ControllerStyle.EMPTY);
+
+        assertFalse(((Boolean) invoke(
+            gui,
+            "getSmartInterfaceEditorEnabled",
+            new Class<?>[] {MMCEGuiExtConfig.MachineController.class},
+            cfg
+        )).booleanValue());
+    }
+
+    @Test
+    public void styleSmartInterfaceFallbackStillHonorsExplicitJsonKey() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        MMCEGuiExtConfig.MachineController cfg = new MMCEGuiExtConfig.MachineController();
+        cfg.enableSmartInterfaceEditor = false;
+        cfg.smartInterfaceEditorVirtualKey = "mmcege_virtual_port";
+        MachineGuiStyleManager.ControllerStyle style = new MachineGuiStyleManager.ControllerStyle();
+        style.smartInterfaceEditorVirtualKey = "demo_default_port_a,demo_default_port_b";
+
+        set(gui, "styleOverride", style);
+
+        @SuppressWarnings("unchecked")
+        List<String> keys = (List<String>) invoke(
+            gui,
+            "getSmartInterfaceEditorVirtualKeys",
+            new Class<?>[] {MMCEGuiExtConfig.MachineController.class},
+            cfg
+        );
+
+        assertEquals(2, keys.size());
+        assertEquals("demo_default_port_a", keys.get(0));
+        assertEquals("demo_default_port_b", keys.get(1));
     }
 
     private static GuiMachineControllerResizable allocateGui() throws Exception {

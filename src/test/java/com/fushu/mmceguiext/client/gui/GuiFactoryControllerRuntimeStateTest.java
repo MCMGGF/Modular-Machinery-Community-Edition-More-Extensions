@@ -1,5 +1,6 @@
 package com.fushu.mmceguiext.client.gui;
 
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.client.config.MachineGuiStyleManager;
 import net.minecraft.client.gui.GuiButton;
 import org.junit.Test;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 
 public class GuiFactoryControllerRuntimeStateTest {
@@ -149,6 +151,21 @@ public class GuiFactoryControllerRuntimeStateTest {
         assertEquals(29, defaultPrev.y);
         assertEquals(45, customButton.x);
         assertEquals(47, customButton.y);
+    }
+
+    @Test
+    public void legacyConfigSmartInterfaceFallbackDoesNotEnableDefaultEditor() throws Exception {
+        GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
+        MMCEGuiExtConfig.FactoryController cfg = new MMCEGuiExtConfig.FactoryController();
+        cfg.enableSmartInterfaceEditor = true;
+        cfg.smartInterfaceEditorVirtualKey = "demo_default_port_a,demo_default_port_b";
+
+        assertFalse(((Boolean) invoke(
+            gui,
+            "getSmartInterfaceEditorEnabled",
+            new Class<?>[] {MMCEGuiExtConfig.FactoryController.class},
+            cfg
+        )).booleanValue());
     }
 
     private static GuiFactoryControllerResizable allocateGui() throws Exception {

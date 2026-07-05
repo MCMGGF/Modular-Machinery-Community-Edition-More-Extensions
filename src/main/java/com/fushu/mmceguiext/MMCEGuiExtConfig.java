@@ -4,6 +4,10 @@ import net.minecraftforge.common.config.Config;
 
 @Config(modid = MMCEGuiExt.MODID, name = MMCEGuiExt.MODID + "/client")
 public class MMCEGuiExtConfig {
+    private static final String LEGACY_DEFAULT_SMART_INTERFACE_KEY = "mmcege_virtual_port";
+    private static final String LEGACY_SAMPLE_SMART_INTERFACE_KEY_A = "demo_default_port_a";
+    private static final String LEGACY_SAMPLE_SMART_INTERFACE_KEY_B = "demo_default_port_b";
+
     @Config.Comment("总开关：是否启用所有控制器 GUI 替换 / Master switch for all controller GUI replacements.")
     public static boolean enabled = true;
 
@@ -136,6 +140,46 @@ public class MMCEGuiExtConfig {
 
         @Config.Comment("Virtual Smart Interface key when no DataPort is bound. Empty = disabled.")
         public String smartInterfaceEditorVirtualKey = "";
+    }
+
+    public static boolean isLegacySmartInterfaceEditorFallback(String raw) {
+        if (raw == null) {
+            return false;
+        }
+        String[] split = raw.split("[,;\\r\\n，；]");
+        int keyCount = 0;
+        boolean hasDefaultKey = false;
+        boolean hasSampleA = false;
+        boolean hasSampleB = false;
+        for (String value : split) {
+            String key = normalizeSmartInterfaceKey(value);
+            if (key.isEmpty()) {
+                continue;
+            }
+            keyCount++;
+            if (LEGACY_DEFAULT_SMART_INTERFACE_KEY.equals(key)) {
+                hasDefaultKey = true;
+            } else if (LEGACY_SAMPLE_SMART_INTERFACE_KEY_A.equals(key)) {
+                hasSampleA = true;
+            } else if (LEGACY_SAMPLE_SMART_INTERFACE_KEY_B.equals(key)) {
+                hasSampleB = true;
+            } else {
+                return false;
+            }
+        }
+        return (keyCount == 1 && hasDefaultKey)
+            || (keyCount == 2 && hasSampleA && hasSampleB);
+    }
+
+    public static String sanitizeSmartInterfaceEditorVirtualKey(String raw) {
+        if (raw == null || isLegacySmartInterfaceEditorFallback(raw)) {
+            return "";
+        }
+        return raw;
+    }
+
+    private static String normalizeSmartInterfaceKey(String raw) {
+        return raw == null ? "" : raw.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     public static class FactoryController {

@@ -3931,7 +3931,8 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         if (styleOverride.enableSmartInterfaceEditor != null) {
             return styleOverride.enableSmartInterfaceEditor.booleanValue();
         }
-        return cfg.enableSmartInterfaceEditor;
+        return cfg.enableSmartInterfaceEditor
+            && !MMCEGuiExtConfig.isLegacySmartInterfaceEditorFallback(cfg.smartInterfaceEditorVirtualKey);
     }
 
     private String resolveConfiguredDefaultPanelId(MMCEGuiExtConfig.MachineController cfg) {
@@ -4039,7 +4040,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
     private List<String> getSmartInterfaceEditorVirtualKeys(MMCEGuiExtConfig.MachineController cfg) {
         String raw = styleOverride.smartInterfaceEditorVirtualKey != null
             ? styleOverride.smartInterfaceEditorVirtualKey
-            : cfg.smartInterfaceEditorVirtualKey;
+            : MMCEGuiExtConfig.sanitizeSmartInterfaceEditorVirtualKey(cfg.smartInterfaceEditorVirtualKey);
         return parseVirtualKeys(raw);
     }
 

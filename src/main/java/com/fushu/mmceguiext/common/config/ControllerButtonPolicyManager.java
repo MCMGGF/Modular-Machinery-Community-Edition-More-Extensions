@@ -489,6 +489,7 @@ public final class ControllerButtonPolicyManager {
         String raw = controller instanceof TileFactoryController
             ? MMCEGuiExtConfig.factoryController.smartInterfaceEditorVirtualKey
             : MMCEGuiExtConfig.machineController.smartInterfaceEditorVirtualKey;
+        raw = MMCEGuiExtConfig.sanitizeSmartInterfaceEditorVirtualKey(raw);
         List<String> out = new ArrayList<String>();
         addVirtualKeys(out, raw);
         return out.isEmpty() ? java.util.Collections.emptyList() : out;
