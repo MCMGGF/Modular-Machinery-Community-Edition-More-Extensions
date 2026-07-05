@@ -420,8 +420,10 @@ public class MMCEGuiExtConfig {
             "EXPERIMENTAL: enable long fluid/gas recipe requirement support.",
             "Default is false because the current implementation may make some fluid/gas recipes fail to take effect.",
             "Only enable this when testing recipes whose fluid/gas amount is greater than Integer.MAX_VALUE and the bound hatch/bus supports long IO.",
+            "Changing this option requires a full game restart because related Mixins are loaded during early startup.",
             "实验性：启用流体/气体配方需求的 long 数量支持。默认 false，因为当前实现可能导致部分流体/气体配方无法生效。",
-            "仅在测试 amount 超过 Integer.MAX_VALUE 且绑定仓口/总线支持 long IO 的配方时开启。"
+            "仅在测试 amount 超过 Integer.MAX_VALUE 且绑定仓口/总线支持 long IO 的配方时开启。",
+            "修改该选项后必须完整重启游戏，因为相关 Mixin 在早期启动阶段决定是否加载。"
         })
         public boolean enableLongFluidGasRequirements = false;
     }

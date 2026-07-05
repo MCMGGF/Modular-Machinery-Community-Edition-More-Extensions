@@ -28,7 +28,7 @@ experimental {
 }
 ```
 
-Then write a large `amount` in your normal MMCE recipe JSON:
+Then fully restart the game and write a large `amount` in your normal MMCE recipe JSON:
 
 ```json
 {
@@ -48,7 +48,7 @@ Then write a large `amount` in your normal MMCE recipe JSON:
 }
 ```
 
-Both parse and run as `long` only while `experimental.enableLongFluidGasRequirements` is enabled. Keep the option off unless you are explicitly testing long-capacity fluid/gas requirements. Note: this fix covers normal `fluid` / `gas` requirements; per-tick fluid/gas requirements are not claimed as supported yet and will be handled separately.
+Both parse and run as `long` only while `experimental.enableLongFluidGasRequirements` is enabled at game startup. While disabled, MMCEGE does not load the `RequirementFluid` / `RequirementGas` long-support Mixins. Keep the option off unless you are explicitly testing long-capacity fluid/gas requirements. Note: this fix covers normal `fluid` / `gas` requirements; per-tick fluid/gas requirements are not claimed as supported yet and will be handled separately.
 
 ## Why it matters here
 

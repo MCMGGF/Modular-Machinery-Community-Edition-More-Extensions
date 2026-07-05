@@ -404,8 +404,8 @@ Common JSON fields / 通用 JSON 字段：`id`, `displayName`, the GUI layout (`
 MMCE's `RequirementFluid` / `RequirementGas` store the recipe `amount` as `int`, which overflows above ~2.1 billion mB. MMCEGE can patch the requirement system (via Mixins) so fluid/gas amounts are parsed and processed as `long`, but this path is currently experimental.
 MMCE 的 `RequirementFluid` / `RequirementGas` 以 `int` 存储配方 `amount`，超过约 21 亿 mB 会溢出。MMCEGE 可以通过 Mixin 改造需求系统，使流体/气体量以 `long` 解析与处理，但此路径当前仍是实验性功能。
 
-**Configuration required / experimental** — enable `experimental.enableLongFluidGasRequirements=true` in `config/mmceguiext/client.cfg` before writing large `amount` values in MMCE recipe JSON. It is disabled by default because the current implementation may make some fluid/gas recipes fail to take effect; keep it off unless you are explicitly testing long-capacity fluid/gas requirements.
-**需要配置 / 实验性** — 先在 `config/mmceguiext/client.cfg` 中设置 `experimental.enableLongFluidGasRequirements=true`，再在 MMCE 配方 JSON 中写大数值 `amount`。该选项默认关闭，因为当前实现可能导致部分流体/气体配方无法生效；除非明确测试 long 容量流体/气体需求，否则建议保持关闭。
+**Configuration required / experimental** — enable `experimental.enableLongFluidGasRequirements=true` in `config/mmceguiext/client.cfg`, then fully restart the game before writing large `amount` values in MMCE recipe JSON. It is disabled by default because the current implementation may make some fluid/gas recipes fail to take effect; while disabled, MMCEGE does not load the `RequirementFluid` / `RequirementGas` long-support Mixins.
+**需要配置 / 实验性** — 先在 `config/mmceguiext/client.cfg` 中设置 `experimental.enableLongFluidGasRequirements=true`，然后完整重启游戏，再在 MMCE 配方 JSON 中写大数值 `amount`。该选项默认关闭，因为当前实现可能导致部分流体/气体配方无法生效；关闭时 MMCEGE 不会加载 `RequirementFluid` / `RequirementGas` 的 long 支持 Mixin。
 
 This is what makes the long-capacity custom hatches / AE buses above actually usable in recipes.
 正是这一改造，让前面 long 容量的自定义仓口 / AE 总线能在配方中真正可用。

@@ -6,7 +6,7 @@
   "compatibilityLevel": "JAVA_8",
   "priority": 1001,
   "mixins": [
-    "MixinRecipeCraftingContext",
-    "MixinTileMultiblockMachineController"
+    "MixinRequirementFluid",
+    "MixinRequirementTypeFluid"
   ]
 }

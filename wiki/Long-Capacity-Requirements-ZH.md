@@ -28,7 +28,7 @@ experimental {
 }
 ```
 
-然后在普通的 MMCE 配方 JSON 里写大数值：
+然后完整重启游戏，再在普通的 MMCE 配方 JSON 里写大数值：
 
 ```json
 {
@@ -48,7 +48,7 @@ experimental {
 }
 ```
 
-只有 `experimental.enableLongFluidGasRequirements` 开启时，两者才会以 `long` 解析并运行。除非你正在明确测试 long 容量流体/气体需求，否则建议保持默认关闭。注意：当前修复范围是普通 `fluid` / `gas` 需求，per-tick 流体/气体需求暂不宣称支持，后续会单独处理。
+只有 `experimental.enableLongFluidGasRequirements` 在游戏启动时开启，两者才会以 `long` 解析并运行。关闭时 MMCEGE 不会加载 `RequirementFluid` / `RequirementGas` 的 long 支持 Mixin。除非你正在明确测试 long 容量流体/气体需求，否则建议保持默认关闭。注意：当前修复范围是普通 `fluid` / `gas` 需求，per-tick 流体/气体需求暂不宣称支持，后续会单独处理。
 
 ## 它为何重要
 
