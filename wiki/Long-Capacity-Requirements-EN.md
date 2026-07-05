@@ -8,7 +8,7 @@ MMCE stores the recipe `amount` of `RequirementFluid` / `RequirementGas` as a Ja
 
 ## What MMCEGE does
 
-MMCEGE patches the requirement system (via Mixins) so fluid/gas recipe amounts are parsed and processed as **`long`** (up to 9.2 quintillion). This runs across the whole recipe lifecycle:
+MMCEGE can patch the requirement system (via Mixins) so fluid/gas recipe amounts are parsed and processed as **`long`** (up to 9.2 quintillion). This path is currently **experimental and disabled by default** because it may make some fluid/gas recipes fail to take effect in some packs. When enabled, it runs across the whole recipe lifecycle:
 
 - parse (`createRequirement`)
 - "can start crafting" check
@@ -20,7 +20,15 @@ Vanilla, small-amount recipes are unaffected — they keep using the original `i
 
 ## How to use it
 
-**No configuration. No extra mod node.** Just write a large `amount` in your normal MMCE recipe JSON:
+Enable the experimental option first:
+
+```properties
+experimental {
+    B:enableLongFluidGasRequirements=true
+}
+```
+
+Then write a large `amount` in your normal MMCE recipe JSON:
 
 ```json
 {
@@ -40,7 +48,7 @@ Vanilla, small-amount recipes are unaffected — they keep using the original `i
 }
 ```
 
-Both parse and run as `long`. Note: this fix covers normal `fluid` / `gas` requirements; per-tick fluid/gas requirements are not claimed as supported yet and will be handled separately.
+Both parse and run as `long` only while `experimental.enableLongFluidGasRequirements` is enabled. Keep the option off unless you are explicitly testing long-capacity fluid/gas requirements. Note: this fix covers normal `fluid` / `gas` requirements; per-tick fluid/gas requirements are not claimed as supported yet and will be handled separately.
 
 ## Why it matters here
 

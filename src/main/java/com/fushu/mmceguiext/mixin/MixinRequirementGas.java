@@ -1,5 +1,6 @@
 package com.fushu.mmceguiext.mixin;
 
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.common.requirement.LongAmountRequirement;
 import com.fushu.mmceguiext.common.requirement.LongGasRequirementIO;
 import com.fushu.mmceguiext.common.requirement.LongRequirementAmounts;
@@ -24,7 +25,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import javax.annotation.Nonnull;
-import java.util.Collections;
 import java.util.List;
 
 @Mixin(value = RequirementGas.class, remap = false)
@@ -57,8 +57,9 @@ public abstract class MixinRequirementGas extends ComponentRequirement.MultiComp
 
     @Inject(method = "deepCopyModified", at = @At("HEAD"), cancellable = true)
     private void mmceguiext$copyLongAmount(List<RecipeModifier> modifiers, CallbackInfoReturnable<RequirementGas> cir) {
-        if (this.required == null) {
-            cir.setReturnValue((RequirementGas) (Object) this);
+        if (!MMCEGuiExtConfig.isLongFluidGasRequirementsEnabled()
+            || this.required == null
+            || mmceguiext$getRequiredAmountLong() <= Integer.MAX_VALUE) {
             return;
         }
         long modified = LongRequirementAmounts.applyModifiers(modifiers, (RequirementGas) (Object) this, mmceguiext$getRequiredAmountLong());
@@ -72,8 +73,10 @@ public abstract class MixinRequirementGas extends ComponentRequirement.MultiComp
 
     @Inject(method = "copyComponents", at = @At("HEAD"), cancellable = true)
     private void mmceguiext$copyLongHandlers(List<ProcessingComponent<?>> components, CallbackInfoReturnable<List<ProcessingComponent<?>>> cir) {
+        if (!MMCEGuiExtConfig.isLongFluidGasRequirementsEnabled()) {
+            return;
+        }
         if (this.required == null) {
-            cir.setReturnValue(Collections.<ProcessingComponent<?>>emptyList());
             return;
         }
         if (mmceguiext$shouldUseLongGasPath(components)) {
@@ -84,6 +87,9 @@ public abstract class MixinRequirementGas extends ComponentRequirement.MultiComp
     @Inject(method = "canStartCrafting(Ljava/util/List;Lhellfirepvp/modularmachinery/common/crafting/helper/RecipeCraftingContext;)Lhellfirepvp/modularmachinery/common/crafting/helper/CraftCheck;",
         at = @At("HEAD"), cancellable = true)
     private void mmceguiext$canStartLong(List<ProcessingComponent<?>> components, RecipeCraftingContext context, CallbackInfoReturnable<CraftCheck> cir) {
+        if (!MMCEGuiExtConfig.isLongFluidGasRequirementsEnabled()) {
+            return;
+        }
         if (this.required == null) {
             cir.setReturnValue(mmceguiext$missingGasRequirement());
             return;
@@ -96,6 +102,9 @@ public abstract class MixinRequirementGas extends ComponentRequirement.MultiComp
     @Inject(method = "startCrafting(Ljava/util/List;Lhellfirepvp/modularmachinery/common/crafting/helper/RecipeCraftingContext;Lhellfirepvp/modularmachinery/common/util/ResultChance;)V",
         at = @At("HEAD"), cancellable = true)
     private void mmceguiext$startLong(List<ProcessingComponent<?>> components, RecipeCraftingContext context, ResultChance chance, CallbackInfo ci) {
+        if (!MMCEGuiExtConfig.isLongFluidGasRequirementsEnabled()) {
+            return;
+        }
         if (this.required == null) {
             ci.cancel();
             return;
@@ -111,6 +120,9 @@ public abstract class MixinRequirementGas extends ComponentRequirement.MultiComp
     @Inject(method = "finishCrafting(Ljava/util/List;Lhellfirepvp/modularmachinery/common/crafting/helper/RecipeCraftingContext;Lhellfirepvp/modularmachinery/common/util/ResultChance;)V",
         at = @At("HEAD"), cancellable = true)
     private void mmceguiext$finishLong(List<ProcessingComponent<?>> components, RecipeCraftingContext context, ResultChance chance, CallbackInfo ci) {
+        if (!MMCEGuiExtConfig.isLongFluidGasRequirementsEnabled()) {
+            return;
+        }
         if (this.required == null) {
             ci.cancel();
             return;
@@ -125,6 +137,9 @@ public abstract class MixinRequirementGas extends ComponentRequirement.MultiComp
 
     @Inject(method = "getMaxParallelism", at = @At("HEAD"), cancellable = true)
     private void mmceguiext$getMaxParallelismLong(List<ProcessingComponent<?>> components, RecipeCraftingContext context, int maxParallelism, CallbackInfoReturnable<Integer> cir) {
+        if (!MMCEGuiExtConfig.isLongFluidGasRequirementsEnabled()) {
+            return;
+        }
         if (this.required == null) {
             cir.setReturnValue(0);
             return;
@@ -178,7 +193,8 @@ public abstract class MixinRequirementGas extends ComponentRequirement.MultiComp
 
     @Unique
     private boolean mmceguiext$shouldUseLongGasPath(List<ProcessingComponent<?>> components) {
-        return this.required != null
+        return MMCEGuiExtConfig.isLongFluidGasRequirementsEnabled()
+            && this.required != null
             && mmceguiext$getRequiredAmountLong() > Integer.MAX_VALUE
             && LongGasRequirementIO.hasLongGasHandler(components);
     }

@@ -39,6 +39,9 @@ public class MMCEGuiExtConfig {
     @Config.Comment("自定义内容注册设置 / Settings for JSON-defined custom content registration.")
     public static CustomContent customContent = new CustomContent();
 
+    @Config.Comment("实验性功能设置 / Experimental feature settings.")
+    public static Experimental experimental = new Experimental();
+
     @Config.Comment("自定义仓室 TOP 显示设置 / The One Probe display settings for custom hatches.")
     public static CustomHatchTop customHatchTop = new CustomHatchTop();
 
@@ -410,6 +413,21 @@ public class MMCEGuiExtConfig {
     public static boolean shouldRegisterGenericCustomHatch() {
         return areCustomHatchesEnabled()
             && (customContent == null || customContent.registerGenericCustomHatch);
+    }
+
+    public static class Experimental {
+        @Config.Comment({
+            "EXPERIMENTAL: enable long fluid/gas recipe requirement support.",
+            "Default is false because the current implementation may make some fluid/gas recipes fail to take effect.",
+            "Only enable this when testing recipes whose fluid/gas amount is greater than Integer.MAX_VALUE and the bound hatch/bus supports long IO.",
+            "实验性：启用流体/气体配方需求的 long 数量支持。默认 false，因为当前实现可能导致部分流体/气体配方无法生效。",
+            "仅在测试 amount 超过 Integer.MAX_VALUE 且绑定仓口/总线支持 long IO 的配方时开启。"
+        })
+        public boolean enableLongFluidGasRequirements = false;
+    }
+
+    public static boolean isLongFluidGasRequirementsEnabled() {
+        return experimental != null && experimental.enableLongFluidGasRequirements;
     }
 
     public static class ItemBus {

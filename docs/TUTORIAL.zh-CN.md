@@ -7,7 +7,7 @@ MMCEGE 目前包含四大功能，本教程按部分组织：
 - **第一部分 · 控制器 GUI**（第 1–8 章）：替换 / 自定义普通与集成控制器的 GUI。
 - **第二部分 · 自定义仓口（Hatch）**（第 9 章）：用 JSON 定义新的流体 / 气体 / 物品 / 能量仓口方块。
 - **第三部分 · 自定义 AE2 总线（实验性）**（第 10 章）：ME 物品输入、混合（物品+流体+气体）输入 / 输出总线。
-- **第四部分 · Long 容量配方需求**（第 11 章）：让流体 / 气体配方量突破原版 `int` 上限，自动生效。
+- **第四部分 · Long 容量配方需求（实验性，需要手动开启）**（第 11 章）：让流体 / 气体配方量突破原版 `int` 上限。
 
 > 快速字段速查见 `examples/MMCE_GUI_EXT_FIELD_REFERENCE.md`。
 
@@ -545,9 +545,17 @@ MMCEGE 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常�
 
 ## 11. 突破 int 上限的流体 / 气体配方
 
-MMCE 的 `RequirementFluid` / `RequirementGas` 用 `int` 存配方 `amount`，超过约 **21 亿 mB** 会溢出。MMCEGE 通过 Mixin 改造需求系统，使流体 / 气体量以 **long** 解析与处理。
+MMCE 的 `RequirementFluid` / `RequirementGas` 用 `int` 存配方 `amount`，超过约 **21 亿 mB** 会溢出。MMCEGE 可以通过 Mixin 改造需求系统，使流体 / 气体量以 **long** 解析与处理，但该路径当前仍是实验性功能。
 
-**无需任何配置** —— 直接在 MMCE 配方 JSON 里写大数值即可：
+**需要手动开启 / 实验性** —— 先在 `config/mmceguiext/client.cfg` 中设置：
+
+```properties
+experimental {
+    B:enableLongFluidGasRequirements=true
+}
+```
+
+再在 MMCE 配方 JSON 里写大数值：
 
 ```json
 {
@@ -558,7 +566,7 @@ MMCE 的 `RequirementFluid` / `RequirementGas` 用 `int` 存配方 `amount`，�
 }
 ```
 
-解析、判定能否开始合成、消耗输入、产出、计算最大并行度，全程走 long 路径；原版小数值配方不受影响（仍走原 int 逻辑）。
+开启后，解析、判定能否开始合成、消耗输入、产出、计算最大并行度会走 long 路径。该选项默认关闭，因为当前实现可能导致部分流体 / 气体配方无法生效；除非明确测试 long 容量流体 / 气体需求，否则建议保持关闭。
 
 正是这一改造，让第二 / 三部分中 long 容量的自定义仓口 / AE 总线能在配方中真正可用。
 

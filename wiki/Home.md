@@ -11,7 +11,7 @@ MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova 
 | Controller GUI | Resizable, texture-driven, multi-panel controller GUIs (replace MMCE machine/factory controller screens) | [Controller GUI](Controller-GUI-EN) |
 | Custom Hatches | Define new fluid/gas/item/energy hatch **blocks** from JSON, no code | [Custom Hatches](Custom-Hatches-EN) |
 | Custom AE2 Buses | ME item input + mixed (item+fluid+gas) input/output buses, from JSON | [Custom AE2 Buses](Custom-AE-Buses-EN) |
-| Long-Capacity Requirements | Fluid/gas recipe amounts beyond the vanilla `int` limit (~2.1 billion mB) | [Long-Capacity Requirements](Long-Capacity-Requirements-EN) |
+| Long-Capacity Requirements | Experimental opt-in support for fluid/gas recipe amounts beyond the vanilla `int` limit (~2.1 billion mB) | [Long-Capacity Requirements](Long-Capacity-Requirements-EN) |
 
 ### Dependencies
 
@@ -52,7 +52,7 @@ MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附
 | 控制器 GUI | 可调整大小、贴图驱动、多信息区的控制器 GUI（替换 MMCE 普通/集成控制器界面） | [控制器 GUI](Controller-GUI-ZH) |
 | 自定义仓口 | 用 JSON 定义新的流体/气体/物品/能量仓口**方块**，无需写代码 | [自定义仓口](Custom-Hatches-ZH) |
 | 自定义 AE2 总线 | ME 物品输入 + 混合（物品+流体+气体）输入/输出总线，由 JSON 定义 | [自定义 AE2 总线](Custom-AE-Buses-ZH) |
-| Long 容量配方需求 | 流体/气体配方量突破原版 `int` 上限（约 21 亿 mB） | [Long 容量配方需求](Long-Capacity-Requirements-ZH) |
+| Long 容量配方需求 | 实验性手动开启：流体/气体配方量突破原版 `int` 上限（约 21 亿 mB） | [Long 容量配方需求](Long-Capacity-Requirements-ZH) |
 
 ### 依赖
 

@@ -8,7 +8,7 @@ MMCE 的 `RequirementFluid` / `RequirementGas` 用 Java `int` 存储配方 `amou
 
 ## MMCEGE 的做法
 
-MMCEGE 通过 Mixin 改造需求系统，使流体/气体配方量以 **`long`** 解析与处理（上限约 920 京）。覆盖整个配方生命周期：
+MMCEGE 可以通过 Mixin 改造需求系统，使流体/气体配方量以 **`long`** 解析与处理（上限约 920 京）。该路径当前是**实验性功能，默认关闭**，因为在部分整合包中可能导致流体/气体配方无法生效。开启后覆盖整个配方生命周期：
 
 - 解析（`createRequirement`）
 - “能否开始合成”判定
@@ -20,7 +20,15 @@ MMCEGE 通过 Mixin 改造需求系统，使流体/气体配方量以 **`long`**
 
 ## 如何使用
 
-**无需任何配置，也不需要额外的模组节点。** 直接在普通的 MMCE 配方 JSON 里写大数值即可：
+先开启实验性配置：
+
+```properties
+experimental {
+    B:enableLongFluidGasRequirements=true
+}
+```
+
+然后在普通的 MMCE 配方 JSON 里写大数值：
 
 ```json
 {
@@ -40,7 +48,7 @@ MMCEGE 通过 Mixin 改造需求系统，使流体/气体配方量以 **`long`**
 }
 ```
 
-两者都会以 `long` 解析并运行。注意：当前修复范围是普通 `fluid` / `gas` 需求，per-tick 流体/气体需求暂不宣称支持，后续会单独处理。
+只有 `experimental.enableLongFluidGasRequirements` 开启时，两者才会以 `long` 解析并运行。除非你正在明确测试 long 容量流体/气体需求，否则建议保持默认关闭。注意：当前修复范围是普通 `fluid` / `gas` 需求，per-tick 流体/气体需求暂不宣称支持，后续会单独处理。
 
 ## 它为何重要
 

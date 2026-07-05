@@ -12,8 +12,8 @@ It started as a controller-GUI editor, but now bundles four subsystems:
    **JSON 定义的自定义仓口（hatch）** — 用配置文件定义新的流体/气体/物品/能量仓口方块，无需写代码。
 3. **JSON-defined custom AE2 buses** — ME item input, and mixed (item+fluid+gas) input/output buses.
    **JSON 定义的自定义 AE2 总线** — ME 物品输入总线，以及混合（物品+流体+气体）输入/输出总线。
-4. **Long-capacity recipe requirements** — fluid/gas recipe amounts beyond the vanilla `int` limit.
-   **Long 容量配方需求** — 流体/气体配方量可突破原版 `int`（约 21 亿 mB）上限。
+4. **Long-capacity recipe requirements (experimental opt-in)** — fluid/gas recipe amounts beyond the vanilla `int` limit.
+   **Long 容量配方需求（实验性，需要手动开启）** — 流体/气体配方量可突破原版 `int`（约 21 亿 mB）上限。
 
 Current version / 当前版本: **`1.2.0`** · MC `1.12.2` · author / 作者: WuXiaoYa
 
@@ -401,11 +401,11 @@ Common JSON fields / 通用 JSON 字段：`id`, `displayName`, the GUI layout (`
 
 # Part 4 — Long-Capacity Recipe Requirements | 第四部分 · Long 容量配方需求
 
-MMCE's `RequirementFluid` / `RequirementGas` store the recipe `amount` as `int`, which overflows above ~2.1 billion mB. MMCEGE patches the requirement system (via Mixins) so fluid/gas amounts are parsed and processed as `long`.
-MMCE 的 `RequirementFluid` / `RequirementGas` 以 `int` 存储配方 `amount`，超过约 21 亿 mB 会溢出。MMCEGE 通过 Mixin 改造需求系统，使流体/气体量以 `long` 解析与处理。
+MMCE's `RequirementFluid` / `RequirementGas` store the recipe `amount` as `int`, which overflows above ~2.1 billion mB. MMCEGE can patch the requirement system (via Mixins) so fluid/gas amounts are parsed and processed as `long`, but this path is currently experimental.
+MMCE 的 `RequirementFluid` / `RequirementGas` 以 `int` 存储配方 `amount`，超过约 21 亿 mB 会溢出。MMCEGE 可以通过 Mixin 改造需求系统，使流体/气体量以 `long` 解析与处理，但此路径当前仍是实验性功能。
 
-**No configuration needed** — just write large `amount` values in your MMCE recipe JSON and they will be respected at parse, craft-start, finish, and parallelism checks (vanilla recipes are unaffected; int paths still work).
-**无需任何配置** — 直接在 MMCE 配方 JSON 中写大数值即可，解析、开始合成、完成、并行度计算均会正确处理（原版配方不受影响，int 路径照常工作）。
+**Configuration required / experimental** — enable `experimental.enableLongFluidGasRequirements=true` in `config/mmceguiext/client.cfg` before writing large `amount` values in MMCE recipe JSON. It is disabled by default because the current implementation may make some fluid/gas recipes fail to take effect; keep it off unless you are explicitly testing long-capacity fluid/gas requirements.
+**需要配置 / 实验性** — 先在 `config/mmceguiext/client.cfg` 中设置 `experimental.enableLongFluidGasRequirements=true`，再在 MMCE 配方 JSON 中写大数值 `amount`。该选项默认关闭，因为当前实现可能导致部分流体/气体配方无法生效；除非明确测试 long 容量流体/气体需求，否则建议保持关闭。
 
 This is what makes the long-capacity custom hatches / AE buses above actually usable in recipes.
 正是这一改造，让前面 long 容量的自定义仓口 / AE 总线能在配方中真正可用。

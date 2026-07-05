@@ -1,5 +1,6 @@
 package com.fushu.mmceguiext.mixin;
 
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.common.requirement.LongAmountRequirement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
@@ -33,14 +34,21 @@ public abstract class MixinRequirementTypeFluid {
             throw new JsonParseException("The ComponentType 'fluid' expects an 'amount'-entry that defines the type of fluid!");
         }
         String fluidName = requirement.getAsJsonPrimitive("fluid").getAsString();
-        long mbAmount = Math.max(0L, requirement.getAsJsonPrimitive("amount").getAsLong());
         Fluid fluid = FluidRegistry.getFluid(fluidName);
         if (fluid == null) {
             throw new JsonParseException("The fluid specified in the 'fluid'-entry (" + fluidName + ") doesn't exist!");
         }
-        FluidStack fluidStack = new FluidStack(fluid, downcastAmount(mbAmount));
-        req = new RequirementFluid(type, fluidStack);
-        ((LongAmountRequirement) req).mmceguiext$setRequiredAmountLong(mbAmount);
+        if (MMCEGuiExtConfig.isLongFluidGasRequirementsEnabled()) {
+            long mbAmount = Math.max(0L, requirement.getAsJsonPrimitive("amount").getAsLong());
+            FluidStack fluidStack = new FluidStack(fluid, downcastAmount(mbAmount));
+            req = new RequirementFluid(type, fluidStack);
+            ((LongAmountRequirement) req).mmceguiext$setRequiredAmountLong(mbAmount);
+        } else {
+            int mbAmount = requirement.getAsJsonPrimitive("amount").getAsInt();
+            mbAmount = Math.max(0, mbAmount);
+            FluidStack fluidStack = new FluidStack(fluid, mbAmount);
+            req = new RequirementFluid(type, fluidStack);
+        }
 
         if (requirement.has("chance")) {
             if (!requirement.get("chance").isJsonPrimitive() || !requirement.getAsJsonPrimitive("chance").isNumber()) {

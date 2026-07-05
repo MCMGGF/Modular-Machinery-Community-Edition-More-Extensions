@@ -36,4 +36,11 @@ public class MMCEGuiExtConfigTest {
         assertFalse(customContent.enableCustomAEBuses);
         assertTrue(customContent.registerGenericCustomHatch);
     }
+
+    @Test
+    public void experimentalLongFluidGasRequirementsAreDisabledByDefault() {
+        MMCEGuiExtConfig.Experimental experimental = new MMCEGuiExtConfig.Experimental();
+
+        assertFalse(experimental.enableLongFluidGasRequirements);
+    }
 }

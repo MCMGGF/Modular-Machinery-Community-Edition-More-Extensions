@@ -1,5 +1,6 @@
 package com.fushu.mmceguiext.mixin;
 
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.common.requirement.LongAmountRequirement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
@@ -31,14 +32,22 @@ public abstract class MixinRequirementTypeGas {
             throw new JsonParseException("The ComponentType 'gas' expects an 'amount'-entry that defines the type of gas!");
         }
         String gasName = requirement.getAsJsonPrimitive("gas").getAsString();
-        long mbAmount = Math.max(0L, requirement.getAsJsonPrimitive("amount").getAsLong());
         Gas gas = GasRegistry.getGas(gasName);
         if (gas == null) {
             throw new JsonParseException("The gas specified in the 'gas'-entry (" + gasName + ") doesn't exist!");
         }
-        GasStack gasStack = new GasStack(gas, downcastAmount(mbAmount));
-        RequirementGas req = new RequirementGas(machineIoType, gasStack);
-        ((LongAmountRequirement) req).mmceguiext$setRequiredAmountLong(mbAmount);
+        RequirementGas req;
+        if (MMCEGuiExtConfig.isLongFluidGasRequirementsEnabled()) {
+            long mbAmount = Math.max(0L, requirement.getAsJsonPrimitive("amount").getAsLong());
+            GasStack gasStack = new GasStack(gas, downcastAmount(mbAmount));
+            req = new RequirementGas(machineIoType, gasStack);
+            ((LongAmountRequirement) req).mmceguiext$setRequiredAmountLong(mbAmount);
+        } else {
+            int mbAmount = requirement.getAsJsonPrimitive("amount").getAsInt();
+            mbAmount = Math.max(0, mbAmount);
+            GasStack gasStack = new GasStack(gas, mbAmount);
+            req = new RequirementGas(machineIoType, gasStack);
+        }
 
         if (requirement.has("chance")) {
             if (!requirement.get("chance").isJsonPrimitive() || !requirement.getAsJsonPrimitive("chance").isNumber()) {
