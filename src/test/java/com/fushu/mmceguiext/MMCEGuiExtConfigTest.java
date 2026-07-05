@@ -27,4 +27,13 @@ public class MMCEGuiExtConfigTest {
         assertEquals("", MMCEGuiExtConfig.sanitizeSmartInterfaceEditorVirtualKey("demo_default_port_a,demo_default_port_b"));
         assertEquals("mmcege_virtual_port,food", MMCEGuiExtConfig.sanitizeSmartInterfaceEditorVirtualKey("mmcege_virtual_port,food"));
     }
+
+    @Test
+    public void jsonCustomContentIsOptInByDefault() {
+        MMCEGuiExtConfig.CustomContent customContent = new MMCEGuiExtConfig.CustomContent();
+
+        assertFalse(customContent.enableCustomHatches);
+        assertFalse(customContent.enableCustomAEBuses);
+        assertTrue(customContent.registerGenericCustomHatch);
+    }
 }

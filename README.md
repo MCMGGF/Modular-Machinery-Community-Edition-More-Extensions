@@ -75,10 +75,10 @@ Config directories MMCEGE reads at startup / MMCEGE 启动时读取的配置目�
 |---|---|
 | `config/mmceguiext/client.cfg` | Global client config / 全局客户端配置 |
 | `config/modularmachinery/machinery/*.json` | Per-machine controller GUI override (`mmce_gui_ext` node) / 机器级控制器 GUI 覆盖 |
-| `config/mmceguiext/custom_hatches/*.json` | Custom hatch definitions / 自定义仓口定义 |
-| `config/mmceguiext/custom_ae_item_input_buses/*.json` | Custom ME item input bus definitions / 自定义 ME 物品输入总线 |
-| `config/mmceguiext/custom_ae_mixed_input_buses/*.json` | Custom mixed input bus definitions / 自定义混合输入总线 |
-| `config/mmceguiext/custom_ae_mixed_output_buses/*.json` | Custom mixed output bus definitions / 自定义混合输出总线 |
+| `config/mmceguiext/custom_hatches/*.json` | Custom hatch definitions; requires `customContent.enableCustomHatches=true` / 自定义仓口定义；需开启 `customContent.enableCustomHatches=true` |
+| `config/mmceguiext/custom_ae_item_input_buses/*.json` | Custom ME item input bus definitions; requires `customContent.enableCustomAEBuses=true` / 自定义 ME 物品输入总线；需开启 `customContent.enableCustomAEBuses=true` |
+| `config/mmceguiext/custom_ae_mixed_input_buses/*.json` | Custom mixed input bus definitions; requires `customContent.enableCustomAEBuses=true` / 自定义混合输入总线；需开启 `customContent.enableCustomAEBuses=true` |
+| `config/mmceguiext/custom_ae_mixed_output_buses/*.json` | Custom mixed output bus definitions; requires `customContent.enableCustomAEBuses=true` / 自定义混合输出总线；需开启 `customContent.enableCustomAEBuses=true` |
 
 ---
 
@@ -327,8 +327,8 @@ See `examples/quick-start/sliders.json`.
 
 # Part 2 — Custom Hatches | 第二部分 · 自定义仓口
 
-Drop a `.json` into `config/mmceguiext/custom_hatches/` and MMCEGE registers a new block + item + tile at startup. Each hatch acts as an MMCE multiblock component (input/output for fluid / gas / item / energy, or a combined component) and uses **long** capacities (beyond the `int` limit).
-在 `config/mmceguiext/custom_hatches/` 放入一个 `.json`，MMCEGE 会在启动时注册新的方块 + 物品 + tile。每个仓口作为 MMCE 多方块组件（流体/气体/物品/能量的输入或输出，或组合组件），容量使用 **long**（突破 `int` 上限）。
+Custom hatches are opt-in. Set `customContent.enableCustomHatches=true` in `config/mmceguiext/client.cfg`, then drop a `.json` into `config/mmceguiext/custom_hatches/` and MMCEGE registers a new block + item + tile at startup. Each hatch acts as an MMCE multiblock component (input/output for fluid / gas / item / energy, or a combined component) and uses **long** capacities (beyond the `int` limit).
+自定义仓口默认不注册，避免整合包玩家在 JEI 里看到示例/开发用仓室。需要时先在 `config/mmceguiext/client.cfg` 设置 `customContent.enableCustomHatches=true`，再把 `.json` 放入 `config/mmceguiext/custom_hatches/`，MMCEGE 会在启动时注册新的方块 + 物品 + tile。每个仓口作为 MMCE 多方块组件（流体/气体/物品/能量的输入或输出，或组合组件），容量使用 **long**（突破 `int` 上限）。
 
 Key top-level fields / 关键顶层字段：
 
@@ -382,8 +382,8 @@ Probe info / 探针信息: when The One Probe is installed, hatch fill levels an
 
 # Part 3 — Custom AE2 Buses (experimental) | 第三部分 · 自定义 AE2 总线（实验性）
 
-> These are advanced/experimental. JSON shape mirrors the hatch system; current bus registration depends on classic AE2 (`appliedenergistics2`) + Mekanism Energistics being present. AE2S (`ae2`) is accepted as an AE implementation for startup, but native AE2S custom buses are not implemented yet. Treat the `Def` parsing in the registry classes as the source of truth.
-> 这些功能较新/实验性。JSON 结构与仓口系统同构；当前总线注册依赖传统 AE2（`appliedenergistics2`）+ Mekanism Energistics。AE2S（`ae2`）可作为启动阶段的 AE 实现被接受，但原生 AE2S 自定义总线尚未实现。字段以注册表类中的 `Def` 解析为准。
+> These are advanced/experimental and opt-in. Set `customContent.enableCustomAEBuses=true` in `config/mmceguiext/client.cfg` before using these JSON directories. Current bus registration depends on classic AE2 (`appliedenergistics2`) + Mekanism Energistics being present. AE2S (`ae2`) is accepted as an AE implementation for startup, but native AE2S custom buses are not implemented yet. Treat the `Def` parsing in the registry classes as the source of truth.
+> 这些功能较新/实验性，且默认不注册。使用这些 JSON 目录前，需在 `config/mmceguiext/client.cfg` 设置 `customContent.enableCustomAEBuses=true`。当前总线注册依赖传统 AE2（`appliedenergistics2`）+ Mekanism Energistics。AE2S（`ae2`）可作为启动阶段的 AE 实现被接受，但原生 AE2S 自定义总线尚未实现。字段以注册表类中的 `Def` 解析为准。
 
 Each bus type is JSON-defined (one `.json` per definition) and registered as a block + tile at startup, connecting to the AE2 ME network via an `AENetworkProxy` (requires a channel, consumes network power).
 每种总线均由 JSON 定义（每个定义一个 `.json`），启动时注册为方块 + tile，通过 `AENetworkProxy` 接入 AE2 ME 网络（需要频道，消耗网络能量）。

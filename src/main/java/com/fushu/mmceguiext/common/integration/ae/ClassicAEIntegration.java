@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.common.integration.ae;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedInputBus;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedOutputBus;
 import com.fushu.mmceguiext.common.block.BlockCustomMEItemInputBus;
@@ -30,6 +31,9 @@ public final class ClassicAEIntegration {
     }
 
     public static int registerNetworkMessages(SimpleNetworkWrapper channel, int nextPacketId) {
+        if (!MMCEGuiExtConfig.areCustomAEBusesEnabled()) {
+            return nextPacketId;
+        }
         channel.registerMessage(
             PktCustomAEMixedSlotUpdate.class,
             PktCustomAEMixedSlotUpdate.class,
@@ -46,6 +50,12 @@ public final class ClassicAEIntegration {
     }
 
     public static void loadDefinitions() {
+        if (!MMCEGuiExtConfig.areCustomAEBusesEnabled()) {
+            CustomAEItemInputBusRegistry.clear();
+            CustomAEMixedInputBusRegistry.clear();
+            CustomAEMixedOutputBusRegistry.clear();
+            return;
+        }
         CustomAEItemInputBusRegistry.loadAll();
         CustomAEMixedInputBusRegistry.loadAll();
         CustomAEMixedOutputBusRegistry.loadAll();

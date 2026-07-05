@@ -2,9 +2,9 @@
 
 [首页](Home) · [English](Custom-AE-Buses-EN)
 
-> ⚠️ **实验性功能。** JSON 结构与仓口系统同构，但功能较新，未来字段可能调整。当前自定义 AE 总线注册依赖传统 **AE2（`appliedenergistics2`）+ Mekanism Energistics** 同时在场。AE2S（`ae2`）可用于模组启动，但原生 AE2S 自定义总线尚未实现。升级模组版本后请验证存档与配方。
+> ⚠️ **实验性功能，默认不注册。** 使用前需在 `config/mmceguiext/client.cfg` 开启 `customContent.enableCustomAEBuses=true`。JSON 结构与仓口系统同构，但功能较新，未来字段可能调整。当前自定义 AE 总线注册依赖传统 **AE2（`appliedenergistics2`）+ Mekanism Energistics** 同时在场。AE2S（`ae2`）可用于模组启动，但原生 AE2S 自定义总线尚未实现。升级模组版本后请验证存档与配方。
 
-三种总线，各自一个目录，每个 `.json` 定义一个总线，**游戏启动时**注册为方块 + tile，通过 `AENetworkProxy` 接入 AE2 ME 网络（需要频道、消耗网络能量）。单文件上限均为 1 MB。
+三种总线，各自一个目录，每个 `.json` 定义一个总线，开启后在**游戏启动时**注册为方块 + tile，通过 `AENetworkProxy` 接入 AE2 ME 网络（需要频道、消耗网络能量）。单文件上限均为 1 MB。
 
 | 总线 | 目录 | 方向 | 物品 | 流体 | 气体 | config 槽 |
 |---|---|---|:--:|:--:|:--:|:--:|

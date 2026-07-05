@@ -24,12 +24,12 @@ MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova 
 |---|---|
 | `config/mmceguiext/client.cfg` | Global client config |
 | `config/modularmachinery/machinery/*.json` (`mmce_gui_ext` node) | Per-machine controller GUI override |
-| `config/mmceguiext/custom_hatches/*.json` | Custom hatch definitions |
-| `config/mmceguiext/custom_ae_item_input_buses/*.json` | ME item input bus definitions |
-| `config/mmceguiext/custom_ae_mixed_input_buses/*.json` | Mixed input bus definitions |
-| `config/mmceguiext/custom_ae_mixed_output_buses/*.json` | Mixed output bus definitions |
+| `config/mmceguiext/custom_hatches/*.json` | Custom hatch definitions; requires `customContent.enableCustomHatches=true` |
+| `config/mmceguiext/custom_ae_item_input_buses/*.json` | ME item input bus definitions; requires `customContent.enableCustomAEBuses=true` |
+| `config/mmceguiext/custom_ae_mixed_input_buses/*.json` | Mixed input bus definitions; requires `customContent.enableCustomAEBuses=true` |
+| `config/mmceguiext/custom_ae_mixed_output_buses/*.json` | Mixed output bus definitions; requires `customContent.enableCustomAEBuses=true` |
 
-> Hatch / bus JSON is scanned **at game start** — edits require a restart, not `/ct reload`. Controller GUI machine JSON reloads more eagerly; ZS lines can be `/ct reload`ed.
+> Hatch / bus JSON registration is opt-in and scanned **at game start** — edits require a restart, not `/ct reload`. Controller GUI machine JSON reloads more eagerly; ZS lines can be `/ct reload`ed.
 
 ### Build
 
@@ -65,12 +65,12 @@ MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附
 |---|---|
 | `config/mmceguiext/client.cfg` | 全局客户端配置 |
 | `config/modularmachinery/machinery/*.json`（`mmce_gui_ext` 节点） | 机器级控制器 GUI 覆盖 |
-| `config/mmceguiext/custom_hatches/*.json` | 自定义仓口定义 |
-| `config/mmceguiext/custom_ae_item_input_buses/*.json` | ME 物品输入总线定义 |
-| `config/mmceguiext/custom_ae_mixed_input_buses/*.json` | 混合输入总线定义 |
-| `config/mmceguiext/custom_ae_mixed_output_buses/*.json` | 混合输出总线定义 |
+| `config/mmceguiext/custom_hatches/*.json` | 自定义仓口定义；需开启 `customContent.enableCustomHatches=true` |
+| `config/mmceguiext/custom_ae_item_input_buses/*.json` | ME 物品输入总线定义；需开启 `customContent.enableCustomAEBuses=true` |
+| `config/mmceguiext/custom_ae_mixed_input_buses/*.json` | 混合输入总线定义；需开启 `customContent.enableCustomAEBuses=true` |
+| `config/mmceguiext/custom_ae_mixed_output_buses/*.json` | 混合输出总线定义；需开启 `customContent.enableCustomAEBuses=true` |
 
-> 仓口/总线 JSON 在**游戏启动时**扫描——修改后需重启，`/ct reload` 无效。控制器 GUI 的机器 JSON 重载更积极；ZS 行可 `/ct reload`。
+> 仓口/总线 JSON 注册默认关闭，开启后在**游戏启动时**扫描——修改后需重启，`/ct reload` 无效。控制器 GUI 的机器 JSON 重载更积极；ZS 行可 `/ct reload`。
 
 ### 构建
 

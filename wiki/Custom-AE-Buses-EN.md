@@ -2,9 +2,9 @@
 
 [Home](Home) · [中文版](Custom-AE-Buses-ZH)
 
-> ⚠️ **Experimental.** The JSON shape mirrors the hatch system, but this is newer and fields may change. Current custom AE bus registration depends on classic **AE2 (`appliedenergistics2`) + Mekanism Energistics** both being present. AE2S (`ae2`) is accepted for mod startup, but native AE2S custom buses are not implemented yet. Re-verify saves and recipes after updating the mod.
+> ⚠️ **Experimental and disabled by default.** Set `customContent.enableCustomAEBuses=true` in `config/mmceguiext/client.cfg` before using these definitions. The JSON shape mirrors the hatch system, but this is newer and fields may change. Current custom AE bus registration depends on classic **AE2 (`appliedenergistics2`) + Mekanism Energistics** both being present. AE2S (`ae2`) is accepted for mod startup, but native AE2S custom buses are not implemented yet. Re-verify saves and recipes after updating the mod.
 
-Three bus types, one directory each, one `.json` per bus, registered as a block + tile **at game start**, connecting to the AE2 ME network via an `AENetworkProxy` (requires a channel, consumes network power). Max file size 1 MB each.
+Three bus types, one directory each, one `.json` per bus, registered as a block + tile **at game start after enabling**, connecting to the AE2 ME network via an `AENetworkProxy` (requires a channel, consumes network power). Max file size 1 MB each.
 
 | Bus | Directory | Direction | Item | Fluid | Gas | config slots |
 |---|---|---|:--:|:--:|:--:|:--:|

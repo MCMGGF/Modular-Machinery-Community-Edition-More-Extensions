@@ -4,8 +4,9 @@
 
 用一个 JSON 文件定义一个全新的仓口方块（含**方块 + 物品 + tile**），作为 MMCE 多方块的输入/输出组件参与配方。容量使用 **long**，可远超原版 `int`（约 21 亿）上限——配合 [Long 容量配方需求](Long-Capacity-Requirements-ZH) 使用。
 
+- 默认状态：不注册；需在 `config/mmceguiext/client.cfg` 开启 `customContent.enableCustomHatches=true`
 - 放置目录：`config/mmceguiext/custom_hatches/*.json`
-- 扫描时机：**游戏启动时**（修改后需重启，`/ct reload` 无效）
+- 扫描时机：开启后在**游戏启动时**扫描（修改后需重启，`/ct reload` 无效）
 - 单文件上限：1 MB
 - 注册结果：方块注册为 `mmceguiext:<id>`
 

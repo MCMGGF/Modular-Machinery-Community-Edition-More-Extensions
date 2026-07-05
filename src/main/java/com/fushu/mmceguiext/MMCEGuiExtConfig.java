@@ -36,6 +36,9 @@ public class MMCEGuiExtConfig {
     @Config.Comment("AE2 仓室 GUI 设置 / Settings for AE2 bus GUIs.")
     public static AEBus aeBus = new AEBus();
 
+    @Config.Comment("自定义内容注册设置 / Settings for JSON-defined custom content registration.")
+    public static CustomContent customContent = new CustomContent();
+
     @Config.Comment("自定义仓室 TOP 显示设置 / The One Probe display settings for custom hatches.")
     public static CustomHatchTop customHatchTop = new CustomHatchTop();
 
@@ -370,6 +373,43 @@ public class MMCEGuiExtConfig {
             @Config.RangeInt(min = 1, max = 512)
             public int thumbMinHeight = 15;
         }
+    }
+
+    public static class CustomContent {
+        @Config.Comment({
+            "Enable JSON-defined custom hatch block registration.",
+            "Default is false so pack players do not see example/development hatches in JEI unless a pack explicitly opts in.",
+            "启用 JSON 自定义仓方块注册。默认 false，避免玩家在 JEI 里看到示例/开发用仓室并误认为是 bug。"
+        })
+        public boolean enableCustomHatches = false;
+
+        @Config.Comment({
+            "Enable JSON-defined custom AE bus block registration.",
+            "This covers custom_ae_item_input_buses, custom_ae_mixed_input_buses and custom_ae_mixed_output_buses.",
+            "Default is false so pack players do not see development/config sample AE buses in JEI unless a pack explicitly opts in.",
+            "启用 JSON 自定义 AE 总线注册。默认 false，避免玩家在 JEI 里看到示例/开发用 AE 仓室并误认为是 bug。"
+        })
+        public boolean enableCustomAEBuses = false;
+
+        @Config.Comment({
+            "When custom hatches are enabled, also register the generic fallback custom_hatch block.",
+            "Keep true for old worlds/configs that may reference mmceguiext:custom_hatch.",
+            "启用自定义仓时，同时注册通用 fallback 方块 custom_hatch。旧存档/旧配置可能需要保持 true。"
+        })
+        public boolean registerGenericCustomHatch = true;
+    }
+
+    public static boolean areCustomHatchesEnabled() {
+        return customContent != null && customContent.enableCustomHatches;
+    }
+
+    public static boolean areCustomAEBusesEnabled() {
+        return customContent != null && customContent.enableCustomAEBuses;
+    }
+
+    public static boolean shouldRegisterGenericCustomHatch() {
+        return areCustomHatchesEnabled()
+            && (customContent == null || customContent.registerGenericCustomHatch);
     }
 
     public static class ItemBus {

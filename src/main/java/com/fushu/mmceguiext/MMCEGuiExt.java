@@ -76,7 +76,11 @@ public class MMCEGuiExt {
             nextPacketId++,
             Side.CLIENT
         );
-        CustomHatchRegistry.loadAll();
+        if (MMCEGuiExtConfig.areCustomHatchesEnabled()) {
+            CustomHatchRegistry.loadAll();
+        } else {
+            CustomHatchRegistry.clear();
+        }
         initClassicAEIntegration();
         if (event.getSide().isClient()) {
             preloadClientStyleCache();
@@ -105,6 +109,10 @@ public class MMCEGuiExt {
     }
 
     private static void initClassicAEIntegration() {
+        if (!MMCEGuiExtConfig.areCustomAEBusesEnabled()) {
+            LOGGER.info("JSON-defined custom AE buses are disabled by config; classic AE custom bus integration will not register blocks.");
+            return;
+        }
         if (!AEIntegrationState.isClassicAEBusEnabled()) {
             if (AEIntegrationState.isAE2SPresent()) {
                 LOGGER.info("AE2S detected. Classic appeng-based custom AE buses are disabled until native AE2S bus support is implemented.");
@@ -218,7 +226,7 @@ public class MMCEGuiExt {
 
         @Nullable
         private Object createClassicAEGuiElement(String methodName, int id, EntityPlayer player, World world, BlockPos pos) {
-            if (!AEIntegrationState.isClassicAEBusEnabled()) {
+            if (!MMCEGuiExtConfig.areCustomAEBusesEnabled() || !AEIntegrationState.isClassicAEBusEnabled()) {
                 return null;
             }
             try {

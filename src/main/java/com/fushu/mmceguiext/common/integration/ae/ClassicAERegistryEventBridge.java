@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.common.integration.ae;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraftforge.event.RegistryEvent;
@@ -20,7 +21,7 @@ public final class ClassicAERegistryEventBridge {
 
     @SubscribeEvent
     public static void onRegisterBlocks(RegistryEvent.Register<Block> event) {
-        if (!AEIntegrationState.isClassicAEBusEnabled()) {
+        if (!isCustomAEBusRegistrationEnabled()) {
             return;
         }
         invoke(ITEM_INPUT_REGISTRY, "onRegisterBlocks", event);
@@ -30,7 +31,7 @@ public final class ClassicAERegistryEventBridge {
 
     @SubscribeEvent
     public static void onRegisterItems(RegistryEvent.Register<Item> event) {
-        if (!AEIntegrationState.isClassicAEBusEnabled()) {
+        if (!isCustomAEBusRegistrationEnabled()) {
             return;
         }
         invoke(ITEM_INPUT_REGISTRY, "onRegisterItems", event);
@@ -46,5 +47,9 @@ public final class ClassicAERegistryEventBridge {
         } catch (Exception | LinkageError e) {
             MMCEGuiExt.logger().warn("Failed to dispatch classic AE registry event {} to {}: {}", methodName, className, e.toString());
         }
+    }
+
+    private static boolean isCustomAEBusRegistrationEnabled() {
+        return MMCEGuiExtConfig.areCustomAEBusesEnabled() && AEIntegrationState.isClassicAEBusEnabled();
     }
 }

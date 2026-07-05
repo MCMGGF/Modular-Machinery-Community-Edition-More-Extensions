@@ -63,6 +63,11 @@ public final class CustomHatchRegistry {
         return new ArrayList<CustomHatchDef>(CACHE);
     }
 
+    public static void clear() {
+        CACHE.clear();
+        REGISTERED.clear();
+    }
+
     public static List<CustomHatchDef> registerAll() {
         return getCached();
     }

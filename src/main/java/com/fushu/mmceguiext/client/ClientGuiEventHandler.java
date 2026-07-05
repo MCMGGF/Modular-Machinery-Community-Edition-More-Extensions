@@ -99,6 +99,7 @@ public class ClientGuiEventHandler {
         }
 
         if (MMCEGuiExtConfig.aeBus.enabled
+            && MMCEGuiExtConfig.areCustomAEBusesEnabled()
             && AEIntegrationState.isClassicAEBusEnabled()
             && hasClassName(gui, MMCE_ME_ITEM_GUI_CLASS)) {
             GuiScreen custom = createCustomAEItemInputBusGui(gui);

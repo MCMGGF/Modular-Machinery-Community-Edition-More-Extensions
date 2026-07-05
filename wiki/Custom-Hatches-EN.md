@@ -4,8 +4,9 @@
 
 Define a brand-new hatch from one JSON file (a **block + item + tile**), acting as an MMCE multiblock input/output component in recipes. Capacities use **long**, far beyond the vanilla `int` limit (~2.1 billion) — pair it with [Long-Capacity Requirements](Long-Capacity-Requirements-EN).
 
+- Default state: not registered; set `customContent.enableCustomHatches=true` in `config/mmceguiext/client.cfg`
 - Directory: `config/mmceguiext/custom_hatches/*.json`
-- Scanned: **at game start** (edits need a restart, not `/ct reload`)
+- Scanned: **at game start** after enabling (edits need a restart, not `/ct reload`)
 - Max file size: 1 MB
 - Registers the block as `mmceguiext:<id>`
 

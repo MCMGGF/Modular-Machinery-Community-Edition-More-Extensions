@@ -52,6 +52,11 @@ public final class CustomAEItemInputBusRegistry {
         return new ArrayList<Def>(CACHE);
     }
 
+    public static void clear() {
+        CACHE.clear();
+        REGISTERED.clear();
+    }
+
     public static List<Def> getCached() {
         return new ArrayList<Def>(CACHE);
     }

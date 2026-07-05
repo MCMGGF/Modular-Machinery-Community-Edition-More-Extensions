@@ -412,6 +412,8 @@ MMCEGE 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常�
 
 用一个 JSON 文件就能定义一个全新的仓口方块（含方块 + 物品 + tile），并作为 MMCE 多方块的输入 / 输出组件参与配方。容量使用 **long**，可远超原版 `int`（约 21 亿）上限。
 
+> 自定义仓口默认不注册，避免玩家在 JEI 里看到示例/开发用仓室并误认为是 bug。整合包需要该功能时，先在 `.minecraft/config/mmceguiext/client.cfg` 中设置 `customContent.enableCustomHatches=true`。
+
 ## 9. 自定义仓口
 
 ### 9.1 放置位置
@@ -420,7 +422,7 @@ MMCEGE 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常�
 
 `.minecraft/config/mmceguiext/custom_hatches/`
 
-模组在**启动时**扫描该目录并注册每个仓口（修改后需重启游戏，不能 `/ct reload`）。
+开启 `customContent.enableCustomHatches=true` 后，模组在**启动时**扫描该目录并注册每个仓口（修改后需重启游戏，不能 `/ct reload`）。
 
 可直接参考的真实示例：
 
@@ -516,7 +518,7 @@ MMCEGE 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常�
 
 # 第三部分 · 自定义 AE2 总线（实验性）
 
-> 这是较新 / 实验性功能，JSON 结构与仓口系统同构。当前自定义 AE 总线注册依赖传统 **AE2（`appliedenergistics2`）+ Mekanism Energistics** 同时在场；AE2S（`ae2`）可用于模组启动，但原生 AE2S 自定义总线尚未实现。字段以注册表类中的 `Def` 解析为准，未来可能调整。
+> 这是较新 / 实验性功能，JSON 结构与仓口系统同构，且默认不注册。使用前需在 `.minecraft/config/mmceguiext/client.cfg` 中设置 `customContent.enableCustomAEBuses=true`。当前自定义 AE 总线注册依赖传统 **AE2（`appliedenergistics2`）+ Mekanism Energistics** 同时在场；AE2S（`ae2`）可用于模组启动，但原生 AE2S 自定义总线尚未实现。字段以注册表类中的 `Def` 解析为准，未来可能调整。
 
 每种总线一个 `.json`，启动时注册为方块 + tile，通过 `AENetworkProxy` 接入 AE2 ME 网络（需要频道、消耗网络能量）。
 

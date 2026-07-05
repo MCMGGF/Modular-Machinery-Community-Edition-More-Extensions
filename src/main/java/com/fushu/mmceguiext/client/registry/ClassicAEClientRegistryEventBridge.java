@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.client.registry;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.common.integration.ae.AEIntegrationState;
 import net.minecraftforge.client.event.ModelBakeEvent;
 import net.minecraftforge.client.event.ModelRegistryEvent;
@@ -19,7 +20,7 @@ public final class ClassicAEClientRegistryEventBridge {
 
     @SubscribeEvent
     public static void onModelRegister(ModelRegistryEvent event) {
-        if (!AEIntegrationState.isClassicAEBusEnabled()) {
+        if (!isCustomAEBusRegistrationEnabled()) {
             return;
         }
         invoke("onModelRegister", ModelRegistryEvent.class, event);
@@ -27,7 +28,7 @@ public final class ClassicAEClientRegistryEventBridge {
 
     @SubscribeEvent
     public static void onModelBake(ModelBakeEvent event) {
-        if (!AEIntegrationState.isClassicAEBusEnabled()) {
+        if (!isCustomAEBusRegistrationEnabled()) {
             return;
         }
         invoke("onModelBake", ModelBakeEvent.class, event);
@@ -41,5 +42,9 @@ public final class ClassicAEClientRegistryEventBridge {
         } catch (Exception | LinkageError e) {
             MMCEGuiExt.logger().warn("Failed to dispatch classic AE client registry event {}: {}", methodName, e.toString());
         }
+    }
+
+    private static boolean isCustomAEBusRegistrationEnabled() {
+        return MMCEGuiExtConfig.areCustomAEBusesEnabled() && AEIntegrationState.isClassicAEBusEnabled();
     }
 }

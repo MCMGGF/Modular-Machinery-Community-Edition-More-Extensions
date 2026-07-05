@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.common.registry;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedOutputBus;
 import com.fushu.mmceguiext.common.integration.ae.AEIntegrationState;
 import com.fushu.mmceguiext.common.item.ItemBlockCustomAEMixedOutputBus;
@@ -29,7 +30,7 @@ public final class CustomAEMixedOutputBusGameRegistry {
     @SubscribeEvent
     public static void onRegisterBlocks(RegistryEvent.Register<Block> event) {
         BLOCKS.clear();
-        if (!AEIntegrationState.isClassicAEBusEnabled()) {
+        if (!MMCEGuiExtConfig.areCustomAEBusesEnabled() || !AEIntegrationState.isClassicAEBusEnabled()) {
             return;
         }
         List<CustomAEMixedOutputBusRegistry.Def> defs = CustomAEMixedOutputBusRegistry.getCached();
@@ -61,7 +62,7 @@ public final class CustomAEMixedOutputBusGameRegistry {
 
     @SubscribeEvent
     public static void onRegisterItems(RegistryEvent.Register<Item> event) {
-        if (!AEIntegrationState.isClassicAEBusEnabled()) {
+        if (!MMCEGuiExtConfig.areCustomAEBusesEnabled() || !AEIntegrationState.isClassicAEBusEnabled()) {
             return;
         }
         for (BlockCustomAEMixedOutputBus block : BLOCKS.values()) {

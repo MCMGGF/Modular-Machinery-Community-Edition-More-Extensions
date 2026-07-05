@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.client.registry;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.client.model.CustomAEBusBakedModel;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedInputBus;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedOutputBus;
@@ -40,7 +41,7 @@ public final class CustomAEBusClientRegistry {
     @SubscribeEvent
     public static void onModelRegister(ModelRegistryEvent event) {
         WRAP_TARGETS.clear();
-        if (!AEIntegrationState.isClassicAEBusEnabled()) {
+        if (!isCustomAEBusRegistrationEnabled()) {
             return;
         }
         registerItemInputBuses();
@@ -50,7 +51,7 @@ public final class CustomAEBusClientRegistry {
 
     @SubscribeEvent
     public static void onModelBake(ModelBakeEvent event) {
-        if (!AEIntegrationState.isClassicAEBusEnabled()) {
+        if (!isCustomAEBusRegistrationEnabled()) {
             WRAP_TARGETS.clear();
             return;
         }
@@ -115,5 +116,9 @@ public final class CustomAEBusClientRegistry {
     private static ResourceLocation resolveBakedModelLocation(ModelResourceLocation location) {
         String path = location.getPath();
         return new ResourceLocation(location.getNamespace(), path.startsWith("block/") ? path : "block/" + path);
+    }
+
+    private static boolean isCustomAEBusRegistrationEnabled() {
+        return MMCEGuiExtConfig.areCustomAEBusesEnabled() && AEIntegrationState.isClassicAEBusEnabled();
     }
 }
