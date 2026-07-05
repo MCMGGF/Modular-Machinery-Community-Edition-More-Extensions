@@ -76,4 +76,44 @@ public class CustomHatchRegistryTest {
         assertEquals(22, first.scrollbarPressedU);
         assertEquals(1, first.scrollbarPressedV);
     }
+
+    @Test
+    public void loadParsesCharacterSpacingForCustomHatchTextComponents() throws Exception {
+        File rootTextFile = this.temporaryFolder.newFile("root_spacing.json");
+        Files.write(
+            rootTextFile.toPath(),
+            ("{\n" +
+                "  \"id\": \"spacing_hatch_root\",\n" +
+                "  \"defaultCharSpacing\": 1.25,\n" +
+                "  \"texts\": [\n" +
+                "    {\"x\": 1, \"y\": 2, \"value\": \"Top\", \"charSpacing\": -1.0}\n" +
+                "  ]\n" +
+                "}").getBytes(StandardCharsets.UTF_8)
+        );
+        CustomHatchRegistry.CustomHatchDef rootDef = CustomHatchRegistry.load(rootTextFile.toPath());
+
+        assertNotNull(rootDef);
+        assertEquals(Float.valueOf(1.25F), rootDef.defaultCharSpacing);
+        assertEquals(Float.valueOf(-1.0F), rootDef.texts.get(0).charSpacing);
+
+        File guiComponentFile = this.temporaryFolder.newFile("gui_spacing.json");
+        Files.write(
+            guiComponentFile.toPath(),
+            ("{\n" +
+                "  \"id\": \"spacing_hatch_gui\",\n" +
+                "  \"gui\": {\n" +
+                "    \"defaultLetterSpacing\": 2.5,\n" +
+                "    \"components\": [\n" +
+                "      {\"type\": \"text\", \"x\": 3, \"y\": 4, \"value\": \"Component\", \"letter_spacing\": 4.5}\n" +
+                "    ]\n" +
+                "  }\n" +
+                "}").getBytes(StandardCharsets.UTF_8)
+        );
+        CustomHatchRegistry.CustomHatchDef guiDef = CustomHatchRegistry.load(guiComponentFile.toPath());
+
+        assertNotNull(guiDef);
+        assertEquals(Float.valueOf(2.5F), guiDef.gui.defaultCharSpacing);
+        assertEquals(Float.valueOf(4.5F), guiDef.gui.components.get(0).charSpacing);
+        assertEquals(Float.valueOf(4.5F), guiDef.texts.get(0).charSpacing);
+    }
 }

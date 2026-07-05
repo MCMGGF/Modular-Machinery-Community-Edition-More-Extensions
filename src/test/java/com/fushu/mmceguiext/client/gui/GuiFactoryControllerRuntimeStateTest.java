@@ -10,6 +10,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,6 +131,30 @@ public class GuiFactoryControllerRuntimeStateTest {
     }
 
     @Test
+    public void modalSubGuiHotkeyHandlesCustomButtonsWithoutFocusedEditor() throws Exception {
+        GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
+        Object activeSubGui = newActiveSubGui("modal");
+        Object runtimeState = get(activeSubGui, "runtimeState");
+        Object hotkeyButton = newHotkeyPageButton("C", "settings");
+        set(runtimeState, "customButtons", new ArrayList<Object>(Collections.singletonList(hotkeyButton)));
+        set(runtimeState, "activePageId", "main");
+        set(gui, "activeSubGui", activeSubGui);
+        set(gui, "activePageId", "parent");
+
+        assertEquals(Boolean.TRUE, invoke(
+            gui,
+            "handleModalSubGuiKeyTyped",
+            new Class<?>[] {char.class, int.class},
+            Character.valueOf('c'),
+            Integer.valueOf(0)
+        ));
+
+        Object updatedRuntimeState = get(get(gui, "activeSubGui"), "runtimeState");
+        assertEquals("settings", get(updatedRuntimeState, "activePageId"));
+        assertEquals("parent", get(gui, "activePageId"));
+    }
+
+    @Test
     public void movingCurrentGuiAlsoMovesInteractiveControls() throws Exception {
         GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
         GuiButton defaultPrev = new GuiButton(1, 12, 22, 10, 10, "<");
@@ -227,6 +252,19 @@ public class GuiFactoryControllerRuntimeStateTest {
         constructor.setAccessible(true);
         Object customButton = constructor.newInstance();
         set(customButton, "button", guiButton);
+        return customButton;
+    }
+
+    private static Object newHotkeyPageButton(String hotkey, String targetPage) throws Exception {
+        Class<?> customButtonClass = Class.forName("com.fushu.mmceguiext.client.gui.GuiFactoryControllerResizable$CustomButton");
+        Constructor<?> constructor = customButtonClass.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        Object customButton = constructor.newInstance();
+        set(customButton, "action", "page");
+        set(customButton, "targetPage", targetPage);
+        set(customButton, "page", null);
+        set(customButton, "hotkeys", new ArrayList<String>(Collections.singletonList(hotkey)));
+        set(customButton, "consumeHotkey", Boolean.TRUE);
         return customButton;
     }
 

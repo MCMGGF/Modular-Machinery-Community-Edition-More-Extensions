@@ -91,6 +91,40 @@ public class GuiMachineControllerResizableTest {
     }
 
     @Test
+    public void hiddenHotkeyButtonTriggersPageAction() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        Object hotkeyButton = newHotkeyPageButton("C", "settings", true);
+        set(gui, "customButtons", new ArrayList<Object>(Collections.singletonList(hotkeyButton)));
+        set(gui, "activePageId", "main");
+
+        assertEquals(Boolean.TRUE, invoke(
+            gui,
+            "handleCustomButtonKeyTyped",
+            new Class<?>[] {char.class, int.class},
+            Character.valueOf('c'),
+            Integer.valueOf(0)
+        ));
+        assertEquals("settings", get(gui, "activePageId"));
+    }
+
+    @Test
+    public void hotkeyButtonCanActivateWithoutConsumingKey() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        Object hotkeyButton = newHotkeyPageButton("C", "settings", false);
+        set(gui, "customButtons", new ArrayList<Object>(Collections.singletonList(hotkeyButton)));
+        set(gui, "activePageId", "main");
+
+        assertEquals(Boolean.FALSE, invoke(
+            gui,
+            "handleCustomButtonKeyTyped",
+            new Class<?>[] {char.class, int.class},
+            Character.valueOf('c'),
+            Integer.valueOf(0)
+        ));
+        assertEquals("settings", get(gui, "activePageId"));
+    }
+
+    @Test
     public void setWidthHeightKeepsOversizedGuiWhenOffscreenIsAllowed() throws Exception {
         GuiMachineControllerResizable gui = allocateGui();
         MMCEGuiExtConfig.MachineController original = MMCEGuiExtConfig.machineController;
@@ -194,6 +228,19 @@ public class GuiMachineControllerResizableTest {
         set(slider, "visible", Boolean.TRUE);
         set(slider, "page", "main");
         return slider;
+    }
+
+    private static Object newHotkeyPageButton(String hotkey, String targetPage, boolean consumeHotkey) throws Exception {
+        Class<?> buttonClass = Class.forName("com.fushu.mmceguiext.client.gui.GuiMachineControllerResizable$CustomButton");
+        Constructor<?> ctor = buttonClass.getDeclaredConstructor();
+        ctor.setAccessible(true);
+        Object button = ctor.newInstance();
+        set(button, "action", "page");
+        set(button, "targetPage", targetPage);
+        set(button, "page", null);
+        set(button, "hotkeys", new ArrayList<String>(Collections.singletonList(hotkey)));
+        set(button, "consumeHotkey", Boolean.valueOf(consumeHotkey));
+        return button;
     }
 
     private static Object newRuntimeState() throws Exception {

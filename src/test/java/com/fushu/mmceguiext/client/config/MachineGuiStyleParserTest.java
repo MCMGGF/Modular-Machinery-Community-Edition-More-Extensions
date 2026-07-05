@@ -442,6 +442,67 @@ public class MachineGuiStyleParserTest {
     }
 
     @Test
+    public void parseMachineJsonParsesCharacterSpacingDefaultsAndOverrides() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "char-spacing.json",
+            "{\n" +
+                "  \"registryname\": \"demo:char_spacing\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"defaultCharSpacing\": 1.5,\n" +
+                "      \"texts\": [\n" +
+                "        {\"x\": 1, \"y\": 2, \"value\": \"A\", \"charSpacing\": -2.0},\n" +
+                "        {\"x\": 3, \"y\": 4, \"value\": \"B\", \"letter_spacing\": 100000.0}\n" +
+                "      ],\n" +
+                "      \"buttons\": [\n" +
+                "        {\"x\": 5, \"y\": 6, \"label\": \"M\", \"action\": \"event\", \"buttonId\": \"evt\", \"characterSpacing\": 3.0},\n" +
+                "        {\"x\": 7, \"y\": 8, \"label\": \"C\", \"action\": \"cycle\", \"key\": \"mode\", \"states\": [\n" +
+                "          {\"label\": \"One\", \"letterSpacing\": 4.0}\n" +
+                "        ]}\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertEquals(Float.valueOf(1.5F), result.machineStyle.defaultCharSpacing);
+        assertNotNull(result.machineStyle.texts);
+        assertEquals(Float.valueOf(-2.0F), result.machineStyle.texts.get(0).charSpacing);
+        assertEquals(Float.valueOf(100000.0F), result.machineStyle.texts.get(1).charSpacing);
+        assertNotNull(result.machineStyle.buttons);
+        assertEquals(Float.valueOf(3.0F), result.machineStyle.buttons.get(0).charSpacing);
+        assertNotNull(result.machineStyle.buttons.get(1).cycleStates);
+        assertEquals(Float.valueOf(4.0F), result.machineStyle.buttons.get(1).cycleStates.get(0).charSpacing);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonRejectsNonFiniteCharacterSpacing() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "invalid-char-spacing.json",
+            "{\n" +
+                "  \"registryname\": \"demo:bad_spacing\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"defaultCharSpacing\": \"NaN\",\n" +
+                "      \"texts\": [\n" +
+                "        {\"x\": 1, \"y\": 2, \"value\": \"A\", \"charSpacing\": \"Infinity\"}\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNull(result.machineStyle.defaultCharSpacing);
+        assertNotNull(result.machineStyle.texts);
+        assertNull(result.machineStyle.texts.get(0).charSpacing);
+        assertTrue(containsWarning(result, "defaultCharSpacing must be a finite number"));
+        assertTrue(containsWarning(result, "charSpacing must be a finite number"));
+    }
+
+    @Test
     public void parseMachineJsonParsesAnimatedTextureFileFrames() {
         MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
             "animated-frames.json",
@@ -840,6 +901,62 @@ public class MachineGuiStyleParserTest {
         assertEquals(2, result.machineStyle.buttons.get(2).hotkeys.size());
         assertEquals(Boolean.FALSE, result.machineStyle.buttons.get(2).consumeHotkey);
         assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonInfersSubGuiActionForButtonsAndGuiOnlyHotkeys() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "button-subgui-hotkeys.json",
+            "{\n" +
+                "  \"registryname\": \"demo:subgui_hotkey_machine\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"buttons\": [\n" +
+                "        {\"x\": 140, \"y\": 8, \"label\": \"Open\", \"targetSubGui\": \"crafting_popup\", \"openMode\": \"modal\"}\n" +
+                "      ],\n" +
+                "      \"hotkeys\": [\n" +
+                "        {\"key\": \"C\", \"targetSubGui\": \"crafting_popup\", \"openMode\": \"replace\"}\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.buttons);
+        assertEquals(2, result.machineStyle.buttons.size());
+        MachineGuiStyleManager.ButtonStyle visibleButton = result.machineStyle.buttons.get(0);
+        assertEquals("subgui", visibleButton.action);
+        assertEquals("crafting_popup", visibleButton.targetSubGui);
+        assertEquals("modal", visibleButton.openMode);
+        MachineGuiStyleManager.ButtonStyle hotkeyButton = result.machineStyle.buttons.get(1);
+        assertEquals("subgui", hotkeyButton.action);
+        assertEquals("crafting_popup", hotkeyButton.targetSubGui);
+        assertEquals("replace", hotkeyButton.openMode);
+        assertEquals("C", hotkeyButton.hotkeys.get(0));
+        assertEquals(Boolean.FALSE, hotkeyButton.visible);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonWarnsWhenSubGuiHotkeyHasNoTargetSubGui() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "invalid-subgui-hotkey.json",
+            "{\n" +
+                "  \"registryname\": \"demo:bad_subgui_hotkey\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"hotkeys\": [\n" +
+                "        {\"key\": \"C\", \"action\": \"subgui\"}\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNull(result.machineStyle.buttons);
+        assertTrue(containsWarning(result, "subgui action requires targetSubGui."));
     }
 
     @Test

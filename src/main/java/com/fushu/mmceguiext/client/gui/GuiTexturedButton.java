@@ -33,6 +33,7 @@ public class GuiTexturedButton extends GuiButton {
     private final int textColor;
     private final int hoverTextColor;
     private final int disabledTextColor;
+    private final float charSpacing;
     private final boolean drawLabel;
 
     private GuiTexturedButton(Builder builder) {
@@ -56,6 +57,7 @@ public class GuiTexturedButton extends GuiButton {
         this.textColor = builder.textColor;
         this.hoverTextColor = builder.hoverTextColor;
         this.disabledTextColor = builder.disabledTextColor;
+        this.charSpacing = builder.charSpacing;
         this.drawLabel = builder.drawLabel;
     }
 
@@ -76,10 +78,6 @@ public class GuiTexturedButton extends GuiButton {
         ResourceLocation hoverTexture = GuiRenderUtils.parseOptionalTexture(style.hoverTexture);
         ResourceLocation pressedTexture = GuiRenderUtils.parseOptionalTexture(style.pressedTexture);
         ResourceLocation disabledTexture = GuiRenderUtils.parseOptionalTexture(style.disabledTexture);
-        if (texture == null && hoverTexture == null && pressedTexture == null && disabledTexture == null) {
-            return new GuiButton(id, x, y, width, height, label);
-        }
-
         int textureWidth = style.textureWidth == null ? width : Math.max(1, style.textureWidth.intValue());
         int textureHeight = style.textureHeight == null ? height : Math.max(1, style.textureHeight.intValue());
         int normalU = style.u == null ? 0 : Math.max(0, style.u.intValue());
@@ -93,9 +91,14 @@ public class GuiTexturedButton extends GuiButton {
         int normalTextColor = style.textColor == null ? 0xE0E0E0 : style.textColor.intValue();
         int hoverTextColor = style.hoverTextColor == null ? 0xFFFFA0 : style.hoverTextColor.intValue();
         int disabledTextColor = style.disabledTextColor == null ? 0xA0A0A0 : style.disabledTextColor.intValue();
+        float charSpacing = GuiRenderUtils.resolveCharSpacing(style.charSpacing, 0.0F);
         boolean useNineSlice = style.useNineSlice != null && style.useNineSlice.booleanValue();
         int corner = style.corner == null ? 4 : Math.max(1, style.corner.intValue());
         boolean drawLabel = style.drawLabel == null || style.drawLabel.booleanValue();
+
+        if (texture == null && hoverTexture == null && pressedTexture == null && disabledTexture == null && charSpacing == 0.0F) {
+            return new GuiButton(id, x, y, width, height, label);
+        }
 
         return builder(id, x, y, width, height, label)
             .texture(texture)
@@ -109,6 +112,7 @@ public class GuiTexturedButton extends GuiButton {
             .textureSize(textureWidth, textureHeight)
             .nineSlice(useNineSlice, corner)
             .textColors(normalTextColor, hoverTextColor, disabledTextColor)
+            .charSpacing(charSpacing)
             .drawLabel(drawLabel)
             .build();
     }
@@ -146,6 +150,7 @@ public class GuiTexturedButton extends GuiButton {
         merged.textColor = stateStyle.textColor != null ? stateStyle.textColor : style.textColor;
         merged.hoverTextColor = stateStyle.hoverTextColor != null ? stateStyle.hoverTextColor : style.hoverTextColor;
         merged.disabledTextColor = stateStyle.disabledTextColor != null ? stateStyle.disabledTextColor : style.disabledTextColor;
+        merged.charSpacing = stateStyle.charSpacing != null ? stateStyle.charSpacing : style.charSpacing;
         merged.drawLabel = stateStyle.drawLabel != null ? stateStyle.drawLabel : style.drawLabel;
         String effectiveLabel = stateStyle.label != null ? stateStyle.label : label;
         return forStyle(id, x, y, width, height, effectiveLabel, merged);
@@ -156,7 +161,7 @@ public class GuiTexturedButton extends GuiButton {
         if (!this.visible) {
             return;
         }
-        if (this.texture == null && this.hoverTexture == null && this.pressedTexture == null && this.disabledTexture == null) {
+        if (this.texture == null && this.hoverTexture == null && this.pressedTexture == null && this.disabledTexture == null && this.charSpacing == 0.0F) {
             super.drawButton(mc, mouseX, mouseY, partialTicks);
             return;
         }
@@ -179,13 +184,40 @@ public class GuiTexturedButton extends GuiButton {
                 );
             }
             GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        } else {
+            drawVanillaButtonBackground(mc, mouseX, mouseY);
         }
 
         if (this.drawLabel && this.displayString != null && !this.displayString.isEmpty()) {
             int color = this.enabled ? (this.hovered ? this.hoverTextColor : this.textColor) : this.disabledTextColor;
-            this.drawCenteredString(mc.fontRenderer, this.displayString, this.x + this.width / 2,
+            drawCenteredStringWithCharSpacing(mc, this.displayString, this.x + this.width / 2,
                 this.y + (this.height - 8) / 2, color);
         }
+    }
+
+    private void drawVanillaButtonBackground(Minecraft mc, int mouseX, int mouseY) {
+        mc.getTextureManager().bindTexture(BUTTON_TEXTURES);
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        int hoverState = this.getHoverState(this.hovered);
+        GlStateManager.enableBlend();
+        GlStateManager.tryBlendFuncSeparate(
+            org.lwjgl.opengl.GL11.GL_SRC_ALPHA,
+            org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA,
+            org.lwjgl.opengl.GL11.GL_ONE,
+            org.lwjgl.opengl.GL11.GL_ZERO
+        );
+        GlStateManager.blendFunc(
+            org.lwjgl.opengl.GL11.GL_SRC_ALPHA,
+            org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
+        );
+        this.drawTexturedModalRect(this.x, this.y, 0, 46 + hoverState * 20, this.width / 2, this.height);
+        this.drawTexturedModalRect(this.x + this.width / 2, this.y, 200 - this.width / 2, 46 + hoverState * 20, this.width / 2, this.height);
+        this.mouseDragged(mc, mouseX, mouseY);
+    }
+
+    private void drawCenteredStringWithCharSpacing(Minecraft mc, String text, int centerX, int y, int color) {
+        float width = GuiRenderUtils.getStringWidth(mc.fontRenderer, text, this.charSpacing);
+        GuiRenderUtils.drawString(mc.fontRenderer, text, centerX - width / 2.0F, y, color, true, this.charSpacing);
     }
 
     @Nullable
@@ -269,6 +301,7 @@ public class GuiTexturedButton extends GuiButton {
         private int textColor = 0xE0E0E0;
         private int hoverTextColor = 0xFFFFA0;
         private int disabledTextColor = 0xA0A0A0;
+        private float charSpacing = 0.0F;
         private boolean drawLabel = true;
 
         private Builder(int id, int x, int y, int width, int height, @Nullable String label) {
@@ -345,6 +378,11 @@ public class GuiTexturedButton extends GuiButton {
             this.textColor = normal;
             this.hoverTextColor = hover;
             this.disabledTextColor = disabled;
+            return this;
+        }
+
+        public Builder charSpacing(float value) {
+            this.charSpacing = Float.isFinite(value) ? value : 0.0F;
             return this;
         }
 

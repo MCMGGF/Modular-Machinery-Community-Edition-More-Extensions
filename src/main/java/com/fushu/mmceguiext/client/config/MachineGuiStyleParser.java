@@ -383,6 +383,18 @@ final class MachineGuiStyleParser {
             "baseContentPriority",
             "base_content_priority"
         );
+        style.defaultCharSpacing = getCharSpacing(
+            node,
+            result,
+            scope,
+            "defaultCharSpacing",
+            "defaultCharacterSpacing",
+            "defaultLetterSpacing",
+            "default_char_spacing",
+            "default_letter_spacing",
+            "textCharSpacing",
+            "text_char_spacing"
+        );
         style.hideDefaultSmartInterfaceEditor = getBoolean(
             node,
             result,
@@ -601,6 +613,7 @@ final class MachineGuiStyleParser {
             text.visible = getBoolean(obj, result, itemScope, "visible", "show", "enabled");
             text.page = getTrimmedString(obj, result, itemScope, "page", "pageId", "page_id", "tab", "state", "stateId", "state_id", "guiState", "gui_state");
             text.align = normalizeTextAlign(getTrimmedString(obj, result, itemScope, "align", "alignment", "textAlign", "text_align"));
+            text.charSpacing = getCharSpacing(obj, result, itemScope, "charSpacing", "characterSpacing", "letterSpacing", "char_spacing", "letter_spacing");
             texts.add(text);
         }
 
@@ -827,6 +840,9 @@ final class MachineGuiStyleParser {
         if ((action == null || action.isEmpty()) && targetPage != null && !targetPage.isEmpty()) {
             action = "page";
         }
+        if ((action == null || action.isEmpty()) && targetSubGui != null && !targetSubGui.isEmpty()) {
+            action = "subgui";
+        }
         if (action == null || action.isEmpty()) {
             result.warnForMachine(itemScope, itemScope + " is missing required field action.");
             return null;
@@ -913,6 +929,7 @@ final class MachineGuiStyleParser {
         button.textColor = getColor(obj, result, itemScope, "textColor", "text_color", "labelColor", "label_color");
         button.hoverTextColor = getColor(obj, result, itemScope, "hoverTextColor", "hover_text_color", "labelHoverColor", "label_hover_color");
         button.disabledTextColor = getColor(obj, result, itemScope, "disabledTextColor", "disabled_text_color", "labelDisabledColor", "label_disabled_color");
+        button.charSpacing = getCharSpacing(obj, result, itemScope, "charSpacing", "characterSpacing", "letterSpacing", "char_spacing", "letter_spacing");
         button.drawLabel = getBoolean(obj, result, itemScope, "drawLabel", "draw_label", "showLabel", "show_label");
         button.cycleWrap = getBoolean(obj, result, itemScope, "cycleWrap", "cycle_wrap", "wrap");
         button.cycleStates = cycleStates;
@@ -2128,6 +2145,7 @@ final class MachineGuiStyleParser {
             state.textColor = getColor(stateObj, result, itemScope, "textColor", "text_color", "labelColor", "label_color");
             state.hoverTextColor = getColor(stateObj, result, itemScope, "hoverTextColor", "hover_text_color", "labelHoverColor", "label_hover_color");
             state.disabledTextColor = getColor(stateObj, result, itemScope, "disabledTextColor", "disabled_text_color", "labelDisabledColor", "label_disabled_color");
+            state.charSpacing = getCharSpacing(stateObj, result, itemScope, "charSpacing", "characterSpacing", "letterSpacing", "char_spacing", "letter_spacing");
             state.drawLabel = getBoolean(stateObj, result, itemScope, "drawLabel", "draw_label", "showLabel", "show_label");
             out.add(state);
         }
@@ -2268,6 +2286,11 @@ final class MachineGuiStyleParser {
             result.warn(field(scope, match.key) + " must be a valid number.");
             return null;
         }
+    }
+
+    @Nullable
+    private static Float getCharSpacing(JsonObject obj, MachineFileParseResult result, String scope, String... keys) {
+        return getFloat(obj, result, scope, keys);
     }
 
     @Nullable

@@ -765,6 +765,58 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         super.mouseReleased(mouseX, mouseY, state);
     }
 
+    private float resolveDefaultCharSpacing() {
+        return GuiRenderUtils.sanitizeCharSpacing(this.styleOverride.defaultCharSpacing);
+    }
+
+    private float resolveCharSpacing(@Nullable Float charSpacing) {
+        return GuiRenderUtils.resolveCharSpacing(charSpacing, resolveDefaultCharSpacing());
+    }
+
+    private MachineGuiStyleManager.ButtonStyle applyDefaultButtonCharSpacing(MachineGuiStyleManager.ButtonStyle style) {
+        if (style != null && style.charSpacing == null) {
+            float spacing = resolveDefaultCharSpacing();
+            if (spacing != 0.0F) {
+                style.charSpacing = Float.valueOf(spacing);
+            }
+        }
+        return style;
+    }
+
+    private GuiButton createGuiButton(int id, int x, int y, int width, int height, String label) {
+        float spacing = resolveDefaultCharSpacing();
+        if (spacing == 0.0F) {
+            return new GuiButton(id, x, y, width, height, label);
+        }
+        return GuiTexturedButton.builder(id, x, y, width, height, label)
+            .charSpacing(spacing)
+            .build();
+    }
+
+    private List<String> wrapFormattedStringToWidth(String text, int width) {
+        return GuiRenderUtils.listFormattedStringToWidth(this.fontRenderer, text, width, resolveDefaultCharSpacing());
+    }
+
+    private int getTextWidth(String text) {
+        return Math.round(GuiRenderUtils.getStringWidth(this.fontRenderer, text, resolveDefaultCharSpacing()));
+    }
+
+    private int getTextWidth(String text, float charSpacing) {
+        return Math.round(GuiRenderUtils.getStringWidth(this.fontRenderer, text, charSpacing));
+    }
+
+    private int drawStringWithShadow(String text, float x, float y, int color) {
+        return GuiRenderUtils.drawString(this.fontRenderer, text, x, y, color, true, resolveDefaultCharSpacing());
+    }
+
+    private int drawString(String text, float x, float y, int color) {
+        return GuiRenderUtils.drawString(this.fontRenderer, text, x, y, color, false, resolveDefaultCharSpacing());
+    }
+
+    private int drawStringWithSpacing(String text, float x, float y, int color, boolean shadow, float charSpacing) {
+        return GuiRenderUtils.drawString(this.fontRenderer, text, x, y, color, shadow, charSpacing);
+    }
+
     private void drawRecipeQueue() {
         int offsetX = getThreadQueueX();
         int offsetY = getThreadQueueY();
@@ -844,29 +896,29 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         }
 
         if (parallelism > 1) {
-            this.fontRenderer.drawString(
+            drawString(
                 threadName + " (" + I18n.format("gui.controller.parallelism", parallelism) + ")",
                 offsetX,
                 offsetY,
                 0x222222
             );
         } else {
-            this.fontRenderer.drawString(threadName, offsetX, offsetY, 0x222222);
+            drawString(threadName, offsetX, offsetY, 0x222222);
         }
         offsetY += 12;
 
-        List<String> out = this.fontRenderer.listFormattedStringToWidth(
+        List<String> out = wrapFormattedStringToWidth(
             I18n.format(status.getUnlocMessage()),
             Math.max(24, (int) ((rowWidth - 6) / FONT_SCALE))
         );
         for (String draw : out) {
-            this.fontRenderer.drawString(draw, offsetX, offsetY, 0x222222);
+            drawString(draw, offsetX, offsetY, 0x222222);
             offsetY += 10;
         }
 
         if (activeRecipe != null && activeRecipe.getTotalTick() > 0) {
             int progress = (activeRecipe.getTick() * 100) / activeRecipe.getTotalTick();
-            this.fontRenderer.drawString(
+            drawString(
                 I18n.format("gui.controller.status.crafting.progress", progress + "%"),
                 offsetX,
                 offsetY,
@@ -889,12 +941,12 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
         int redstone = factory.getWorld().getStrongPower(factory.getPos());
         if (redstone > 0) {
-            List<String> out = this.fontRenderer.listFormattedStringToWidth(
+            List<String> out = wrapFormattedStringToWidth(
                 I18n.format("gui.controller.status.redstone_stopped"),
                 MathHelper.floor(135 * (1.0D / FONT_SCALE))
             );
             for (String draw : out) {
-                this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
                 offsetY += 10;
             }
             GlStateManager.popMatrix();
@@ -940,7 +992,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             int usedTimeCache = TileMultiblockMachineController.usedTimeCache;
             float searchUsedTimeCache = TileMultiblockMachineController.searchUsedTimeCache;
             String workMode = TileMultiblockMachineController.workModeCache.getDisplayName();
-            this.fontRenderer.drawStringWithShadow(
+            drawStringWithShadow(
                 String.format(
                     "Avg: %dus/t (Search: %sms), WorkMode: %s",
                     usedTimeCache,
@@ -959,18 +1011,18 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     private int drawDefaultBlueprintInfo(int offsetX, int y, @Nullable DynamicMachine machine, boolean formed) {
         int offsetY = y;
         if (machine != null) {
-            this.fontRenderer.drawStringWithShadow(I18n.format("gui.controller.blueprint", ""), offsetX, offsetY, 0xFFFFFF);
-            List<String> out = this.fontRenderer.listFormattedStringToWidth(
+            drawStringWithShadow(I18n.format("gui.controller.blueprint", ""), offsetX, offsetY, 0xFFFFFF);
+            List<String> out = wrapFormattedStringToWidth(
                 machine.getLocalizedName(),
                 MathHelper.floor(135 * (1.0D / FONT_SCALE))
             );
             for (String draw : out) {
                 offsetY += 10;
-                this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
             }
             offsetY += 15;
         } else if (!formed) {
-            this.fontRenderer.drawStringWithShadow(
+            drawStringWithShadow(
                 I18n.format("gui.controller.blueprint", I18n.format("gui.controller.blueprint.none")),
                 offsetX,
                 offsetY,
@@ -984,18 +1036,18 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     private int drawDefaultStructureInfo(int offsetX, int y, @Nullable DynamicMachine found) {
         int offsetY = y;
         if (found != null) {
-            this.fontRenderer.drawStringWithShadow(I18n.format("gui.controller.structure", ""), offsetX, offsetY, 0xFFFFFF);
-            List<String> out = this.fontRenderer.listFormattedStringToWidth(
+            drawStringWithShadow(I18n.format("gui.controller.structure", ""), offsetX, offsetY, 0xFFFFFF);
+            List<String> out = wrapFormattedStringToWidth(
                 found.getLocalizedName(),
                 MathHelper.floor(135 * (1.0D / FONT_SCALE))
             );
             for (String draw : out) {
                 offsetY += 10;
-                this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
             }
             offsetY = drawDefaultExtraInfo(offsetX, offsetY);
         } else {
-            this.fontRenderer.drawStringWithShadow(
+            drawStringWithShadow(
                 I18n.format("gui.controller.structure", I18n.format("gui.controller.structure.none")),
                 offsetX,
                 offsetY,
@@ -1020,7 +1072,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 }
                 RoutedText routed = parseRoutedText(s, "main");
                 waitForDraw.addAll(
-                    this.fontRenderer.listFormattedStringToWidth(
+                    wrapFormattedStringToWidth(
                         routed.text,
                         MathHelper.floor(135 * (1.0D / FONT_SCALE))
                     )
@@ -1029,7 +1081,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             offsetY += 5;
             for (String s : waitForDraw) {
                 offsetY += 10;
-                this.fontRenderer.drawStringWithShadow(s, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(s, offsetX, offsetY, 0xFFFFFF);
             }
         }
         return offsetY;
@@ -1041,14 +1093,14 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         }
         int offsetY = y;
 
-        this.fontRenderer.drawStringWithShadow(I18n.format("gui.controller.status"), offsetX, offsetY, 0xFFFFFF);
-        List<String> out = this.fontRenderer.listFormattedStringToWidth(
+        drawStringWithShadow(I18n.format("gui.controller.status"), offsetX, offsetY, 0xFFFFFF);
+        List<String> out = wrapFormattedStringToWidth(
             I18n.format(factory.getControllerStatus().getUnlocMessage()),
             MathHelper.floor(135 * (1.0D / FONT_SCALE))
         );
         for (String draw : out) {
             offsetY += 10;
-            this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+            drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
         }
         return offsetY + 15;
     }
@@ -1057,7 +1109,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         if (factory.getMaxThreads() <= 0) {
             return offsetY;
         }
-        this.fontRenderer.drawStringWithShadow(
+        drawStringWithShadow(
             I18n.format("gui.factory.threads", factory.getFactoryRecipeThreadList().size(), factory.getMaxThreads()),
             offsetX,
             offsetY,
@@ -1092,9 +1144,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             return offsetY;
         }
 
-        this.fontRenderer.drawStringWithShadow(I18n.format("gui.controller.parallelism", parallelism), offsetX, offsetY, 0xFFFFFF);
+        drawStringWithShadow(I18n.format("gui.controller.parallelism", parallelism), offsetX, offsetY, 0xFFFFFF);
         offsetY += 10;
-        this.fontRenderer.drawStringWithShadow(
+        drawStringWithShadow(
             I18n.format("gui.controller.max_parallelism", maxParallelism),
             offsetX,
             offsetY,
@@ -1138,7 +1190,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             GlStateManager.pushMatrix();
             GlStateManager.scale((float) FONT_SCALE, (float) FONT_SCALE, 1.0F);
             for (String line : lines) {
-                this.fontRenderer.drawStringWithShadow(line, textX, textY, 0xFFFFFF);
+                drawStringWithShadow(line, textX, textY, 0xFFFFFF);
                 textY += this.fontRenderer.FONT_HEIGHT + 2;
             }
             GlStateManager.popMatrix();
@@ -1607,7 +1659,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             return;
         }
         int wrapWidth = Math.max(24, MathHelper.floor((float) ((panel.rect.width - 8) / FONT_SCALE)));
-        target.addAll(this.fontRenderer.listFormattedStringToWidth(text, wrapWidth));
+        target.addAll(wrapFormattedStringToWidth(text, wrapWidth));
     }
 
     private void addBlank(Map<String, List<String>> linesByPanel, String panelId) {
@@ -2385,12 +2437,13 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         GuiRuntimeState restore = captureCurrentRuntimeState();
         applyRuntimeState(this.activeSubGui.runtimeState);
         try {
-            if (!hasFocusedSubGuiEditor()) {
-                return false;
+            if (handleCustomButtonKeyTyped(typedChar, keyCode)
+                || handleCustomSmartInterfaceKeyTyped(typedChar, keyCode)
+                || handleSmartInterfaceKeyTyped(typedChar, keyCode)) {
+                saveActiveSubGuiRuntimeState();
+                return true;
             }
-            keyTypedWithinCurrentState(typedChar, keyCode);
-            saveActiveSubGuiRuntimeState();
-            return true;
+            return false;
         } finally {
             applyRuntimeState(restore);
         }
@@ -2892,16 +2945,13 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             int color = text.color == null ? 0xFFFFFF : text.color.intValue();
             float scale = text.scale == null ? 1.0F : Math.max(0.05F, text.scale.floatValue());
             boolean shadow = text.shadow == null || text.shadow.booleanValue();
-            int alignedX = GuiRenderUtils.resolveAlignedTextX(text.x, Math.round(this.fontRenderer.getStringWidth(value) * scale), text.align);
+            float charSpacing = resolveCharSpacing(text.charSpacing);
+            int alignedX = GuiRenderUtils.resolveAlignedTextX(text.x, Math.round(getTextWidth(value, charSpacing) * scale), text.align);
             GlStateManager.pushMatrix();
             GlStateManager.scale(scale, scale, 1.0F);
             int drawX = MathHelper.floor((float) (alignedX / scale));
             int drawY = MathHelper.floor((float) (text.y / scale));
-            if (shadow) {
-                this.fontRenderer.drawStringWithShadow(value, drawX, drawY, color);
-            } else {
-                this.fontRenderer.drawString(value, drawX, drawY, color);
-            }
+            drawStringWithSpacing(value, drawX, drawY, color, shadow, charSpacing);
             GlStateManager.popMatrix();
         }
     }
@@ -3098,9 +3148,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         if (Boolean.TRUE.equals(bar.showText)) {
             String text = Math.round(progress * 100.0F) + "%";
             int color = bar.textColor == null ? 0xFFFFFFFF : bar.textColor.intValue();
-            int textX = bar.x + Math.max(0, (bar.width - this.fontRenderer.getStringWidth(text)) / 2);
+            int textX = bar.x + Math.max(0, (bar.width - getTextWidth(text)) / 2);
             int textY = bar.y + Math.max(0, (bar.height - this.fontRenderer.FONT_HEIGHT) / 2);
-            this.fontRenderer.drawStringWithShadow(text, textX, textY, color);
+            drawStringWithShadow(text, textX, textY, color);
         }
     }
 
@@ -3508,9 +3558,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             editor.input.setMaxStringLength(1024);
 
             if (editor.showControls) {
-                editor.prev = new GuiButton(buttonId++, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
-                editor.next = new GuiButton(buttonId++, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
-                editor.apply = new GuiButton(
+                editor.prev = createGuiButton(buttonId++, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
+                editor.next = createGuiButton(buttonId++, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
+                editor.apply = createGuiButton(
                     buttonId++,
                     absX + leftControls + inputWidth + 2,
                     absY,
@@ -3567,9 +3617,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         this.smartInterfaceEditorInput = new GuiTextField(0, this.fontRenderer, absX + SMART_EDITOR_BUTTON_W * 2 + 3, absY, inputWidth, SMART_EDITOR_INPUT_H);
         this.smartInterfaceEditorInput.setMaxStringLength(1024);
 
-        this.smartInterfacePrevButton = new GuiButton(201, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
-        this.smartInterfaceNextButton = new GuiButton(202, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
-        this.smartInterfaceApplyButton = new GuiButton(
+        this.smartInterfacePrevButton = createGuiButton(201, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
+        this.smartInterfaceNextButton = createGuiButton(202, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
+        this.smartInterfaceApplyButton = createGuiButton(
             203,
             absX + SMART_EDITOR_BUTTON_W * 2 + 5 + inputWidth,
             absY,
@@ -3670,7 +3720,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
         String title = resolveSmartInterfaceEditorTitle(hasData, selectableCount, currentIndexDisplay, virtualKey);
         if (!this.smartInterfaceHideTitleText) {
-            this.fontRenderer.drawStringWithShadow(title, this.smartInterfaceEditorX, this.smartInterfaceEditorY - 10, 0xE0E0E0);
+            drawStringWithShadow(title, this.smartInterfaceEditorX, this.smartInterfaceEditorY - 10, 0xE0E0E0);
         }
 
         if (!this.smartInterfaceHideInfoText) {
@@ -3686,7 +3736,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 infoText = "No DataPort bound";
                 infoColor = 0xB0B0B0;
             }
-            this.fontRenderer.drawStringWithShadow(
+            drawStringWithShadow(
                 infoText,
                 this.smartInterfaceEditorX,
                 this.smartInterfaceEditorY + SMART_EDITOR_INPUT_H + 2,
@@ -3924,10 +3974,10 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                         .replace("{index}", Integer.toString(index))
                         .replace("{count}", Integer.toString(count))
                         .replace("{key}", activeKey);
-                this.fontRenderer.drawStringWithShadow(title, editor.x, editor.y - 10, 0xE0E0E0);
+                drawStringWithShadow(title, editor.x, editor.y - 10, 0xE0E0E0);
             }
             if (editor.showInfo) {
-                this.fontRenderer.drawStringWithShadow("Key: " + activeKey, editor.x, editor.y + SMART_EDITOR_INPUT_H + 2, 0xBFD3FF);
+                drawStringWithShadow("Key: " + activeKey, editor.x, editor.y + SMART_EDITOR_INPUT_H + 2, 0xBFD3FF);
             }
         }
     }
@@ -4144,9 +4194,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         drawRect(thumb.x, thumb.y, thumb.x + thumb.width, thumb.y + thumb.height, slider.thumbColor);
         if (slider.showText) {
             String text = formatSliderValue(slider.value);
-            int textX = x + Math.max(0, (slider.width - this.fontRenderer.getStringWidth(text)) / 2);
+            int textX = x + Math.max(0, (slider.width - getTextWidth(text)) / 2);
             int textY = y + Math.max(0, (slider.height - this.fontRenderer.FONT_HEIGHT) / 2);
-            this.fontRenderer.drawStringWithShadow(text, textX, textY, slider.textColor);
+            drawStringWithShadow(text, textX, textY, slider.textColor);
         }
     }
 
@@ -4389,7 +4439,31 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private boolean matchesHotkey(@Nullable String raw, char typedChar, int keyCode) {
-        return matchesHotkey(raw, typedChar, keyCode, isShiftKeyDown(), isCtrlKeyDown(), isAltKeyDown());
+        return matchesHotkey(raw, typedChar, keyCode, isShiftHotkeyModifierDown(), isCtrlHotkeyModifierDown(), isAltHotkeyModifierDown());
+    }
+
+    private static boolean isShiftHotkeyModifierDown() {
+        try {
+            return isShiftKeyDown();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isCtrlHotkeyModifierDown() {
+        try {
+            return isCtrlKeyDown();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isAltHotkeyModifierDown() {
+        try {
+            return isAltKeyDown();
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private static boolean matchesHotkey(@Nullable String raw, char typedChar, int keyCode, boolean shiftDown, boolean ctrlDown, boolean altDown) {
@@ -4609,7 +4683,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             button.buttonWidth,
             button.buttonHeight,
             label,
-            button.baseStyle,
+            applyDefaultButtonCharSpacing(button.baseStyle),
             state
         );
     }

@@ -59,6 +59,16 @@ public final class GlobalGuiStyleManager {
             String text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
             JsonObject root = new JsonParser().parse(text).getAsJsonObject();
             StyleFile style = new StyleFile();
+            style.defaultCharSpacing = getFirstFiniteFloat(
+                root,
+                "defaultCharSpacing",
+                "defaultCharacterSpacing",
+                "defaultLetterSpacing",
+                "default_char_spacing",
+                "default_letter_spacing",
+                "textCharSpacing",
+                "text_char_spacing"
+            );
             style.background = parseBackground(getObject(root, "background"));
             style.tank = parseRect(getObject(root, "tank"));
             style.texts = parseTexts(getArray(root, "texts"));
@@ -131,6 +141,7 @@ public final class GlobalGuiStyleManager {
             def.color = getString(obj, "color");
             def.scale = normalizeScale(getFloat(obj, "scale"));
             def.align = normalizeTextAlign(getString(obj, "align"), getString(obj, "alignment"), getString(obj, "textAlign"), getString(obj, "text_align"));
+            def.charSpacing = getFirstFiniteFloat(obj, "charSpacing", "characterSpacing", "letterSpacing", "char_spacing", "letter_spacing");
             def.priority = getInt(obj, "priority");
             if (def.priority == null) def.priority = getInt(obj, "zIndex");
             if (def.priority == null) def.priority = getInt(obj, "z_index");
@@ -247,6 +258,20 @@ public final class GlobalGuiStyleManager {
     }
 
     @Nullable
+    private static Float getFirstFiniteFloat(JsonObject obj, String... keys) {
+        if (obj == null || keys == null) {
+            return null;
+        }
+        for (String key : keys) {
+            Float value = getFloat(obj, key);
+            if (value != null) {
+                return Float.isFinite(value.floatValue()) ? value : null;
+            }
+        }
+        return null;
+    }
+
+    @Nullable
     private static JsonObject getObject(JsonObject obj, String key) {
         JsonElement e = obj.get(key);
         return e != null && e.isJsonObject() ? e.getAsJsonObject() : null;
@@ -350,6 +375,8 @@ public final class GlobalGuiStyleManager {
         public Background background;
         @Nullable
         public Rect tank;
+        @Nullable
+        public Float defaultCharSpacing;
         public List<TextDef> texts = Collections.emptyList();
         public List<GlobalTextureLayerConfig.LayerDef> layers = Collections.emptyList();
     }
@@ -396,6 +423,8 @@ public final class GlobalGuiStyleManager {
         public Float scale;
         @Nullable
         public String align;
+        @Nullable
+        public Float charSpacing;
         @Nullable
         public Integer priority;
     }

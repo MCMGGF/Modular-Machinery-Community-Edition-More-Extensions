@@ -139,9 +139,15 @@ This file is a quick reference for pack authors.
 - `defaultPageId`
   - CN: GUI 打开时默认显示的页。未填写时通常使用 `main`。
   - EN: Page shown when the GUI opens. Usually `main` when omitted.
+- `defaultCharSpacing`
+  - CN: 本 controller/style 下 MMCEGE 自绘文本的默认字符间距。别名：`defaultCharacterSpacing`、`defaultLetterSpacing`、`default_char_spacing`、`default_letter_spacing`、`textCharSpacing`、`text_char_spacing`。未写或为 `0` 时保持原版字体绘制路径。
+  - EN: Default character spacing for MMCEGE-rendered text in this controller/style. Aliases: `defaultCharacterSpacing`, `defaultLetterSpacing`, `default_char_spacing`, `default_letter_spacing`, `textCharSpacing`, `text_char_spacing`. Omitted or `0` keeps the vanilla font path.
 - `page`
   - CN: 可写在 `customPanels` 第 6 段、`texts`、`smartInterfaceEditors`、图层和按钮上，用来限制它们只在某一页显示。`state` / `guiState` 可作为别名。
   - EN: Can be used on the 6th segment of `customPanels`, `texts`, `smartInterfaceEditors`, layers, and buttons to show them only on one page. `state` / `guiState` are accepted aliases.
+- `texts[].charSpacing`
+  - CN: 单条文本覆盖字符间距。别名：`characterSpacing`、`letterSpacing`、`char_spacing`、`letter_spacing`。支持负数/大数；非有限值会被忽略。
+  - EN: Per-text character spacing override. Aliases: `characterSpacing`, `letterSpacing`, `char_spacing`, `letter_spacing`. Negative/large values are allowed; non-finite values are ignored.
 - `buttons`
   - CN: 自定义控制器按钮数组，每个对象一个按钮。
   - EN: Custom controller button array. One object per button.
@@ -235,6 +241,9 @@ This file is a quick reference for pack authors.
 - `visible`
   - CN: 是否显示按钮。
   - EN: Whether the button is visible.
+- `charSpacing`
+  - CN: 按钮文字字符间距覆盖；别名同 `texts[].charSpacing`。未写时继承 `defaultCharSpacing`。
+  - EN: Button-label character spacing override; aliases are the same as `texts[].charSpacing`. Omitted values inherit `defaultCharSpacing`.
 - `priority`
   - CN: 按钮排序优先级，越大越后处理。
   - EN: Button ordering priority. Higher values are handled later.

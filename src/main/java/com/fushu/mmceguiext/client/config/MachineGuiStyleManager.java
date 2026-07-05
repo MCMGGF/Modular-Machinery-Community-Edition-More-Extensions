@@ -327,6 +327,8 @@ public final class MachineGuiStyleManager {
         @Nullable
         public Integer foregroundContentPriority;
         @Nullable
+        public Float defaultCharSpacing;
+        @Nullable
         public Boolean hideDefaultSmartInterfaceEditor;
         @Nullable
         public Boolean hidePlayerInventory;
@@ -397,6 +399,7 @@ public final class MachineGuiStyleManager {
                    && (smartInterfaceEditorVirtualKey == null || smartInterfaceEditorVirtualKey.trim().isEmpty())
                    && smartInterfaceEditorPriority == null
                    && foregroundContentPriority == null
+                   && defaultCharSpacing == null
                    && hideDefaultSmartInterfaceEditor == null
                    && hidePlayerInventory == null
                    && showBlueprintInfo == null
@@ -454,6 +457,7 @@ public final class MachineGuiStyleManager {
             copy.smartInterfaceEditorVirtualKey = source.smartInterfaceEditorVirtualKey;
             copy.smartInterfaceEditorPriority = source.smartInterfaceEditorPriority;
             copy.foregroundContentPriority = source.foregroundContentPriority;
+            copy.defaultCharSpacing = source.defaultCharSpacing;
             copy.hideDefaultSmartInterfaceEditor = source.hideDefaultSmartInterfaceEditor;
             copy.hidePlayerInventory = source.hidePlayerInventory;
             copy.showBlueprintInfo = source.showBlueprintInfo;
@@ -511,6 +515,7 @@ public final class MachineGuiStyleManager {
             if (overlay.smartInterfaceEditorVirtualKey != null) this.smartInterfaceEditorVirtualKey = overlay.smartInterfaceEditorVirtualKey;
             if (overlay.smartInterfaceEditorPriority != null) this.smartInterfaceEditorPriority = overlay.smartInterfaceEditorPriority;
             if (overlay.foregroundContentPriority != null) this.foregroundContentPriority = overlay.foregroundContentPriority;
+            if (overlay.defaultCharSpacing != null) this.defaultCharSpacing = overlay.defaultCharSpacing;
             if (overlay.hideDefaultSmartInterfaceEditor != null) this.hideDefaultSmartInterfaceEditor = overlay.hideDefaultSmartInterfaceEditor;
             if (overlay.hidePlayerInventory != null) this.hidePlayerInventory = overlay.hidePlayerInventory;
             if (overlay.showBlueprintInfo != null) this.showBlueprintInfo = overlay.showBlueprintInfo;
@@ -687,6 +692,8 @@ public final class MachineGuiStyleManager {
         public String page;
         @Nullable
         public String align;
+        @Nullable
+        public Float charSpacing;
     }
 
     public static class SmartInterfaceEditorStyle {
@@ -799,6 +806,8 @@ public final class MachineGuiStyleManager {
         @Nullable
         public Integer disabledTextColor;
         @Nullable
+        public Float charSpacing;
+        @Nullable
         public Boolean drawLabel;
         @Nullable
         public Boolean cycleWrap;
@@ -845,6 +854,8 @@ public final class MachineGuiStyleManager {
         public Integer hoverTextColor;
         @Nullable
         public Integer disabledTextColor;
+        @Nullable
+        public Float charSpacing;
         @Nullable
         public Boolean drawLabel;
     }

@@ -39,6 +39,7 @@ Working examples:
 | `inputSlot` / `outputSlot` | — | `{x,y}` | `{0,0}` | Legacy slot coords (used without `gui.components`) |
 | `tank` | — | object | see §3.3 | Legacy tank render params (used without a gui tank component) |
 | `texts` | — | array | `[]` | Legacy static text list (overridden by gui text components) |
+| `defaultCharSpacing` | `defaultCharacterSpacing`,`defaultLetterSpacing`,`default_char_spacing`,`default_letter_spacing`,`textCharSpacing`,`text_char_spacing` | float | null | Default character spacing for this hatch's MMCEGE-rendered text; `0` keeps vanilla text rendering |
 
 ### 1.1 `componentType` values
 
@@ -133,6 +134,7 @@ Each item can be an object, or a plain texture string (then `minFillRatio` is sp
 | `coordinateWidth` | int | `-1` (off) | Logical coordinate width (enables coordinate scaling) |
 | `coordinateHeight` | int | `-1` (off) | Logical coordinate height |
 | `components` | array | `[]` | GUI components, see §4.1, max 4096 (after expansion) |
+| `defaultCharSpacing` | float | inherit top-level | Default character spacing for `gui.components` text entries; aliases are the same as top-level |
 
 ### 4.1 `gui.components[]`
 
@@ -194,6 +196,7 @@ Vertical scrolling remains unchanged: for example, a 6-row grid with `visibleRow
 - `color`: ARGB hex (default white `0xFFFFFF`)
 - `scale`: scale (default 1.0)
 - `align` (`alignment`/`textAlign`/`text_align`): `left`/`center`/`right` (aliases `start`/`middle`/`end`)
+- `charSpacing` (`characterSpacing`/`letterSpacing`/`char_spacing`/`letter_spacing`): per-text character spacing override. Negative/large values are allowed; invalid non-finite values are ignored.
 - `content`: chooses the placeholder data source
 
 **`player_inventory`** — player inventory

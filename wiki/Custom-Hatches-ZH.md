@@ -39,6 +39,7 @@
 | `inputSlot` / `outputSlot` | — | `{x,y}` | `{0,0}` | 旧式槽位坐标（无 `gui.components` 时用） |
 | `tank` | — | object | 见 §3.3 | 旧式储罐渲染参数（无 gui tank 组件时用） |
 | `texts` | — | array | `[]` | 旧式静态文本列表（被 gui text 组件覆盖） |
+| `defaultCharSpacing` | `defaultCharacterSpacing`,`defaultLetterSpacing`,`default_char_spacing`,`default_letter_spacing`,`textCharSpacing`,`text_char_spacing` | float | null | 本仓口 MMCEGE 自绘文本默认字符间距；`0` 保持原版文本绘制路径 |
 
 ### 1.1 `componentType` 取值
 
@@ -133,6 +134,7 @@
 | `coordinateWidth` | int | `-1`（不启用） | 逻辑坐标系宽度（启用坐标缩放映射） |
 | `coordinateHeight` | int | `-1`（不启用） | 逻辑坐标系高度 |
 | `components` | array | `[]` | GUI 组件，见 §4.1，最多 4096（展开后） |
+| `defaultCharSpacing` | float | 继承顶层 | `gui.components` 文本条目的默认字符间距；别名同顶层 |
 
 ### 4.1 `gui.components[]`
 
@@ -194,6 +196,7 @@
 - `color`：ARGB 十六进制（默认白 `0xFFFFFF`）
 - `scale`：缩放（默认 1.0）
 - `align`（`alignment`/`textAlign`/`text_align`）：`left`/`center`/`right`（含别名 `start`/`middle`/`end`）
+- `charSpacing`（`characterSpacing`/`letterSpacing`/`char_spacing`/`letter_spacing`）：单条文本字符间距覆盖。允许负数/大值；非有限值会被忽略。
 - `content`：决定占位符数据源
 
 **`player_inventory`** — 玩家背包
