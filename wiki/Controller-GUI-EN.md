@@ -121,10 +121,14 @@ Virtual DataPort: write values even without a physical port. Recommended read (c
 
 `buttons[]` are defined per-machine and validated server-side by a policy manager to prevent forged actions. Action types:
 - `page` — client-side page switch.
+- `subgui` — open a configured sub GUI.
+- `close_subgui` — close the current sub GUI.
 - `event` — fire MMCE `ControllerButtonClickEvent` server-side.
 - `smart_set` / `smart_add` — set / add a Smart Interface value (optional min/max clamp).
 
-Examples: `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `controller-button-test.json`.
+Use `hotkey` / `hotkeys` on a button for GUI-local shortcuts. Top-level `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` create invisible hotkey-only actions; for example, `C` can open a modal sub GUI and `ESCAPE` can run `close_subgui`. Hotkeys are only active while the controller GUI is open, and focused text fields keep normal typing priority.
+
+Examples: `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `controller-button-test.json`, `subgui-page-reference.json`.
 
 ---
 

@@ -121,10 +121,14 @@ MMCEGE 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineContro
 
 `buttons[]` 在机器级定义，服务端策略管理器校验以防伪造。动作类型：
 - `page` — 纯客户端页面切换。
+- `subgui` — 打开已配置的子 GUI。
+- `close_subgui` — 关闭当前子 GUI。
 - `event` — 服务端触发 MMCE `ControllerButtonClickEvent`。
 - `smart_set` / `smart_add` — 设置/累加 Smart Interface 值（可选 min/max 限幅）。
 
-示例：`examples/quick-start/buttons-and-pages.json`、`event-button-test.json`、`controller-button-test.json`。
+按钮上可写 `hotkey` / `hotkeys` 做 GUI 内快捷键。控制器级 `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` 会创建不可见的纯热键动作，例如用 `C` 打开 modal 子 GUI，用 `ESCAPE` 执行 `close_subgui`。热键只在控制器 GUI 打开时生效，文本框聚焦时仍优先输入文本。
+
+示例：`examples/quick-start/buttons-and-pages.json`、`event-button-test.json`、`controller-button-test.json`、`subgui-page-reference.json`。
 
 ---
 

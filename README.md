@@ -245,6 +245,9 @@ Buttons are defined per-machine (`buttons[]`) and validated server-side by a pol
 - `event` — fire MMCE `ControllerButtonClickEvent` server-side / 在服务端触发 MMCE 按钮点击事件
 - `smart_set` / `smart_add` — set / add a Smart Interface value (with optional min/max clamp) / 设置 / 累加 Smart Interface 值（可选 min/max 限幅）
 
+Buttons may also define `hotkey` / `hotkeys` (for example `C`, `ctrl+C`, `shift+G`). Controller-level `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` create invisible GUI-only buttons, useful for opening `subgui` modal windows or triggering the same actions without a visible button. Hotkeys are active only while the controller GUI is open, and text fields keep priority while focused.
+按钮也可以写 `hotkey` / `hotkeys`（例如 `C`、`ctrl+C`、`shift+G`）。控制器级 `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` 会创建不可见的 GUI 内热键按钮，适合用键盘打开 `subgui` 浮窗或触发同一套按钮动作。热键只在当前控制器 GUI 打开时生效，文本框聚焦时优先输入文本。
+
 See `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `controller-button-test.json`, `subgui-page-reference.json`.
 示例见 `examples/quick-start/` 下相应文件。
 

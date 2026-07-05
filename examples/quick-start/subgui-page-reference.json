@@ -20,6 +20,9 @@
         { "x": 186, "y": 96, "width": 48, "height": 20, "label": "Modal", "action": "subgui", "targetSubGui": "modal_help", "openMode": "modal", "page": "main" },
         { "x": 238, "y": 96, "width": 48, "height": 20, "label": "Replace", "action": "subgui", "targetSubGui": "replace_settings", "openMode": "replace", "page": "main" }
       ],
+      "hotkeys": [
+        { "key": "C", "targetSubGui": "modal_help", "openMode": "modal", "consumeHotkey": true }
+      ],
       "subGuis": [
         {
           "id": "modal_help",
@@ -40,7 +43,7 @@
             { "x": 8, "y": 22, "value": "Use close_subgui to dismiss it.", "scale": 0.7 }
           ],
           "buttons": [
-            { "x": 8, "y": 68, "width": 44, "height": 20, "label": "Close", "action": "close_subgui" },
+            { "x": 8, "y": 68, "width": 44, "height": 20, "label": "Close", "action": "close_subgui", "hotkey": "ESCAPE" },
             { "x": 56, "y": 68, "width": 56, "height": 20, "label": "Page", "action": "page", "targetPage": "settings" }
           ]
         },

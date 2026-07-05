@@ -30,6 +30,7 @@ Page / sub GUI naming rule used by the sample:
 - `subGuis` entries live in the main machine JSON and use `id` plus `mode` / `openMode`
 - a sub GUI open button uses `action: "subgui"` plus `targetSubGui`
 - `close_subgui` closes the currently open sub GUI and keeps the main controller visible
+- `hotkey` / `hotkeys` can be placed on a button; top-level `hotkeys[]` creates invisible GUI-only hotkey actions such as `C` opening a modal sub GUI
 - the sample keeps the same `registryname` in both files so the sub GUI overlays can merge into the same machine definition
 - `sliders[]` entries write numeric values through their `key`; use the same key from CraftTweaker via `ctrl.getSmartInterfaceData(key)` or `ctrl.customData`
 - `dynamic-visuals.json` uses those slider-written keys (`heat`, `warning`, `load`) to demonstrate both weighted mixed-scale aggregation and same-scale weighted blending across fill, ring visibility, color, renderer switching, rotation, alpha, and scale

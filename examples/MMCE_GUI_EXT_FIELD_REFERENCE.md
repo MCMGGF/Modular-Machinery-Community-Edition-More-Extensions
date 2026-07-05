@@ -151,6 +151,9 @@ This file is a quick reference for pack authors.
 - `buttons`
   - CN: 自定义控制器按钮数组，每个对象一个按钮。
   - EN: Custom controller button array. One object per button.
+- `hotkeys` / `guiHotkeys` / `shortcuts`
+  - CN: GUI 内纯热键数组。每个对象使用与 `buttons[]` 相同的动作字段，但不会显示按钮；`key` / `hotkey` / `hotkeys` 用来声明按键。
+  - EN: GUI-only hotkey array. Each object uses the same action fields as `buttons[]`, but no visible button is drawn; use `key` / `hotkey` / `hotkeys` to declare the shortcut.
 
 ### `subGuis` fields / 子 GUI 条目字段
 
@@ -203,14 +206,14 @@ This file is a quick reference for pack authors.
 ### `buttons` fields / 按钮字段
 
 - `x`, `y`
-  - CN: 按钮左上角坐标，必填。
-  - EN: Button top-left position. Required.
+  - CN: 按钮左上角坐标。可见按钮必填；顶层 `hotkeys[]` 纯热键可省略。
+  - EN: Button top-left position. Required for visible buttons; omitted for top-level `hotkeys[]` entries.
 - `width`, `height`
   - CN: 按钮尺寸。可省略，使用默认尺寸。
   - EN: Button size. Optional; defaults are used when omitted.
 - `label`
-  - CN: 按钮显示文字，必填。
-  - EN: Text shown on the button. Required.
+  - CN: 按钮显示文字。可用贴图按钮或纯热键按钮时可省略。
+  - EN: Text shown on the button. Optional for textured buttons and hotkey-only buttons.
 - `action`
   - CN: 按钮行为。支持 `page`、`subgui`、`close_subgui`、`smart_add`、`smart_set`、`event`。`switch_state` / `set_state` 会兼容为 `page`；`data_port_add` / `data_port_set` 会兼容为数值按钮；`open_subgui` / `close_sub_gui` 等别名也会被兼容。
   - EN: Button action. Supports `page`, `subgui`, `close_subgui`, `smart_add`, `smart_set`, and `event`. `switch_state` / `set_state` alias to `page`; `data_port_add` / `data_port_set` alias to numeric data-port buttons; aliases such as `open_subgui` / `close_sub_gui` are also accepted.
@@ -241,6 +244,12 @@ This file is a quick reference for pack authors.
 - `visible`
   - CN: 是否显示按钮。
   - EN: Whether the button is visible.
+- `hotkey` / `hotkeys` / `shortcut` / `shortcuts`
+  - CN: GUI 内热键。支持单个字符串或数组，如 `C`、`ctrl+C`、`shift+G`、`ESCAPE`。文本框聚焦时不会触发按钮热键。
+  - EN: GUI-local hotkey. Accepts a string or array, such as `C`, `ctrl+C`, `shift+G`, or `ESCAPE`. Button hotkeys do not fire while a text field is focused.
+- `consumeHotkey`
+  - CN: 热键触发后是否吃掉该按键，默认 `true`。设为 `false` 时动作仍触发，但按键继续交给后续 GUI 逻辑。
+  - EN: Whether the hotkey consumes the key after firing. Defaults to `true`; `false` still fires the action but lets later GUI handling continue.
 - `charSpacing`
   - CN: 按钮文字字符间距覆盖；别名同 `texts[].charSpacing`。未写时继承 `defaultCharSpacing`。
   - EN: Button-label character spacing override; aliases are the same as `texts[].charSpacing`. Omitted values inherit `defaultCharSpacing`.
