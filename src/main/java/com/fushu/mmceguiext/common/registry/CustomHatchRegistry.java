@@ -126,6 +126,16 @@ public final class CustomHatchRegistry {
             def.blockModel = getString(root, "blockModel");
             def.block = parseBlock(root);
             def.guiStyleFile = getString(root, "guiStyleFile");
+            def.defaultCharSpacing = getFirstFiniteFloat(
+                root,
+                "defaultCharSpacing",
+                "defaultCharacterSpacing",
+                "defaultLetterSpacing",
+                "default_char_spacing",
+                "default_letter_spacing",
+                "textCharSpacing",
+                "text_char_spacing"
+            );
             def.componentType = lower(getString(root, "componentType"));
             def.ioType = lower(getString(root, "ioType"));
             def.outputSlotLock = getFirstBoolean(root, true, "outputSlotLock", "output_slot_lock", "lockOutputSlots", "lock_output_slots");
@@ -262,6 +272,7 @@ public final class CustomHatchRegistry {
             text.y = getInt(obj, "y", 0);
             text.value = getString(obj, "value");
             text.align = normalizeTextAlign(getString(obj, "align"), getString(obj, "alignment"), getString(obj, "textAlign"), getString(obj, "text_align"));
+            text.charSpacing = getFirstFiniteFloat(obj, "charSpacing", "characterSpacing", "letterSpacing", "char_spacing", "letter_spacing");
             text.priority = getFirstInt(obj, 0, "priority", "zIndex", "z_index", "z", "layer");
             out.add(text);
         }
@@ -278,6 +289,16 @@ public final class CustomHatchRegistry {
         gui.height = clamp(getInt(obj, "height", 166), 1, 4096);
         gui.coordinateWidth = clampCoordinateSize(getInt(obj, "coordinateWidth", -1));
         gui.coordinateHeight = clampCoordinateSize(getInt(obj, "coordinateHeight", -1));
+        gui.defaultCharSpacing = getFirstFiniteFloat(
+            obj,
+            "defaultCharSpacing",
+            "defaultCharacterSpacing",
+            "defaultLetterSpacing",
+            "default_char_spacing",
+            "default_letter_spacing",
+            "textCharSpacing",
+            "text_char_spacing"
+        );
         gui.components = parseComponents(getArray(obj, "components"));
         return gui;
     }
@@ -314,7 +335,7 @@ public final class CustomHatchRegistry {
             def.spacingX = clamp(getInt(obj, "spacingX", getInt(obj, "spacing_x", 2)), 0, MAX_SLOT_SPACING);
             def.spacingY = clamp(getInt(obj, "spacingY", getInt(obj, "spacing_y", 2)), 0, MAX_SLOT_SPACING);
             def.slotSize = clamp(getInt(obj, "slotSize", getInt(obj, "slot_size", getInt(obj, "size", 16))), 1, 256);
-            def.scrollMode = lower(getString(obj, "scrollMode"));
+            def.scrollMode = lower(getFirstString(obj, "scrollMode", "scroll_mode"));
             def.scrollAxis = normalizeScrollAxis(getFirstString(obj, "scrollAxis", "scroll_axis", "scrollDirection", "scroll_direction", "axis", "orientation"));
             def.scrollbar = getBoolean(obj, "scrollbar");
             def.scrollbarX = getInt(obj, "scrollbarX", getInt(obj, "scrollbar_x", 0));
@@ -324,10 +345,10 @@ public final class CustomHatchRegistry {
             def.scrollbarWidth = clamp(getInt(obj, "scrollbarWidth", getInt(obj, "scrollbar_width", 12)), 1, MAX_COMPONENT_SIZE);
             def.scrollbarThumbHeight = clamp(getInt(obj, "scrollbarThumbHeight", getInt(obj, "scrollbar_thumb_height", 15)), 1, MAX_COMPONENT_SIZE);
             def.scrollbarThumbWidth = clampOptionalSize(getFirstInt(obj, 0, "scrollbarThumbWidth", "scrollbar_thumb_width"));
-            def.scrollbarTexture = getString(obj, "scrollbarTexture");
-            def.scrollbarHoverTexture = getString(obj, "scrollbarHoverTexture");
-            def.scrollbarPressedTexture = getString(obj, "scrollbarPressedTexture");
-            def.scrollbarDisabledTexture = getString(obj, "scrollbarDisabledTexture");
+            def.scrollbarTexture = getFirstString(obj, "scrollbarTexture", "scrollbar_texture");
+            def.scrollbarHoverTexture = getFirstString(obj, "scrollbarHoverTexture", "scrollbar_hover_texture");
+            def.scrollbarPressedTexture = getFirstString(obj, "scrollbarPressedTexture", "scrollbar_pressed_texture");
+            def.scrollbarDisabledTexture = getFirstString(obj, "scrollbarDisabledTexture", "scrollbar_disabled_texture");
             def.scrollbarTextureWidth = clamp(getInt(obj, "scrollbarTextureWidth", getInt(obj, "scrollbar_texture_width", 256)), 1, MAX_COMPONENT_SIZE);
             def.scrollbarTextureHeight = clamp(getInt(obj, "scrollbarTextureHeight", getInt(obj, "scrollbar_texture_height", 256)), 1, MAX_COMPONENT_SIZE);
             def.scrollbarU = getInt(obj, "scrollbarU", getInt(obj, "scrollbar_u", 232));
@@ -352,6 +373,7 @@ public final class CustomHatchRegistry {
             def.color = getString(obj, "color");
             def.scale = getFloat(obj, "scale");
             def.align = normalizeTextAlign(getString(obj, "align"), getString(obj, "alignment"), getString(obj, "textAlign"), getString(obj, "text_align"));
+            def.charSpacing = getFirstFiniteFloat(obj, "charSpacing", "characterSpacing", "letterSpacing", "char_spacing", "letter_spacing");
             def.overlay = getBoolean(obj, "overlay");
             def.tips = parseStringList(obj, "tips", "tooltip", "tooltips");
             def.priority = getInt(obj, "priority", getInt(obj, "zIndex", getInt(obj, "z_index", getInt(obj, "z", getInt(obj, "layer", 0)))));
@@ -391,10 +413,10 @@ public final class CustomHatchRegistry {
         int scrollbarWidth = clamp(getFirstInt(obj, 12, "scrollbarWidth", "scrollbar_width"), 1, MAX_COMPONENT_SIZE);
         int scrollbarThumbHeight = clamp(getFirstInt(obj, 15, "scrollbarThumbHeight", "scrollbar_thumb_height"), 1, MAX_COMPONENT_SIZE);
         int scrollbarThumbWidth = clampOptionalSize(getFirstInt(obj, 0, "scrollbarThumbWidth", "scrollbar_thumb_width"));
-        String scrollbarTexture = getString(obj, "scrollbarTexture");
-        String scrollbarHoverTexture = getString(obj, "scrollbarHoverTexture");
-        String scrollbarPressedTexture = getString(obj, "scrollbarPressedTexture");
-        String scrollbarDisabledTexture = getString(obj, "scrollbarDisabledTexture");
+        String scrollbarTexture = getFirstString(obj, "scrollbarTexture", "scrollbar_texture");
+        String scrollbarHoverTexture = getFirstString(obj, "scrollbarHoverTexture", "scrollbar_hover_texture");
+        String scrollbarPressedTexture = getFirstString(obj, "scrollbarPressedTexture", "scrollbar_pressed_texture");
+        String scrollbarDisabledTexture = getFirstString(obj, "scrollbarDisabledTexture", "scrollbar_disabled_texture");
         int scrollbarTextureWidth = clamp(getFirstInt(obj, 256, "scrollbarTextureWidth", "scrollbar_texture_width"), 1, MAX_COMPONENT_SIZE);
         int scrollbarTextureHeight = clamp(getFirstInt(obj, 256, "scrollbarTextureHeight", "scrollbar_texture_height"), 1, MAX_COMPONENT_SIZE);
         int scrollbarU = getFirstInt(obj, 232, "scrollbarU", "scrollbar_u");
@@ -411,7 +433,7 @@ public final class CustomHatchRegistry {
         int itemOverlayTextureHeight = clamp(getFirstInt(obj, 16, "itemOverlayTextureHeight", "item_overlay_texture_height"), 1, MAX_COMPONENT_SIZE);
         int itemOverlayU = getFirstInt(obj, 0, "itemOverlayU", "item_overlay_u");
         int itemOverlayV = getFirstInt(obj, 0, "itemOverlayV", "item_overlay_v");
-        String scrollMode = lower(getString(obj, "scrollMode"));
+        String scrollMode = lower(getFirstString(obj, "scrollMode", "scroll_mode"));
         String scrollAxis = normalizeScrollAxis(getFirstString(obj, "scrollAxis", "scroll_axis", "scrollDirection", "scroll_direction", "axis", "orientation"));
         Boolean scrollbar = getBoolean(obj, "scrollbar");
         int baseIndex = grid.index >= 0 ? grid.index : nextAutoSlotIndex;
@@ -566,6 +588,7 @@ public final class CustomHatchRegistry {
                 text.y = component.y;
                 text.value = component.value;
                 text.align = component.align;
+                text.charSpacing = component.charSpacing;
                 text.priority = component.priority;
                 texts.add(text);
             }
@@ -756,6 +779,12 @@ public final class CustomHatchRegistry {
     }
 
     @Nullable
+    private static Float getFirstFiniteFloat(JsonObject obj, String... keys) {
+        Float value = getFirstFloat(obj, keys);
+        return value != null && Float.isFinite(value.floatValue()) ? value : null;
+    }
+
+    @Nullable
     private static Double getFirstDouble(JsonObject obj, String... keys) {
         if (obj == null) {
             return null;
@@ -877,6 +906,8 @@ public final class CustomHatchRegistry {
         public String blockModel;
         public BlockDef block = new BlockDef();
         public String guiStyleFile;
+        @Nullable
+        public Float defaultCharSpacing;
         public String componentType = "fluid";
         public String ioType = "input";
         public boolean outputSlotLock = true;
@@ -927,6 +958,8 @@ public final class CustomHatchRegistry {
         public int height = 166;
         public int coordinateWidth = -1;
         public int coordinateHeight = -1;
+        @Nullable
+        public Float defaultCharSpacing;
         public List<ComponentDef> components = Collections.emptyList();
     }
 
@@ -1000,6 +1033,8 @@ public final class CustomHatchRegistry {
         public Float scale;
         @Nullable
         public String align;
+        @Nullable
+        public Float charSpacing;
         public Boolean overlay;
         public List<String> tips = Collections.emptyList();
     }
@@ -1032,6 +1067,8 @@ public final class CustomHatchRegistry {
         public String value;
         @Nullable
         public String align;
+        @Nullable
+        public Float charSpacing;
         public int priority = 0;
     }
 

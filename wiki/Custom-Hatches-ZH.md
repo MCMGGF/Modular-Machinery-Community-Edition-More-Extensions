@@ -148,9 +148,39 @@
 - `rows`（`rowCount`/`yCount`，默认 1，≤256）、`columns`（`cols`/`columnCount`/`xCount`，默认 1，≤256）
 - `spacingX`（`xSpacing`/`gapX`，默认 2）、`spacingY`（`ySpacing`/`gapY`，默认 2）
 - `slotSize`（`size`，默认 16）
-- `visibleRows`/`visibleColumns`（默认 0=全部可见，用于滚动）、`scrollMode`、`scrollbar`
-- 滚动条系列：`scrollbarX/Y/Width/Height`、`scrollbarThumbHeight`、`scrollbarTexture`（含 hover/pressed/disabled）、`scrollbarTextureWidth/Height`、`scrollbarU/V`（含 hover/pressed/disabled 变体）——均支持 snake_case
+- `visibleRows`/`visibleColumns`（默认 0=全部可见，用于滚动）、`scrollAxis`（`horizontal`/`vertical`）、`scrollMode`（`row`/`page`）、`scrollbar`
+- 未写 `scrollAxis` 时：只有列溢出且行不溢出时自动横向；其他情况保持旧的纵向默认。
+- `scrollMode = "page"` 时，横向一次滚动 `visibleColumns` 列，纵向一次滚动 `visibleRows` 行；默认每次滚动 1 行/列。
+- 滚动条系列：`scrollbarX/Y/Width/Height`、`scrollbarLength`、`scrollbarThumbHeight`、`scrollbarThumbWidth`、`scrollbarTexture`（含 hover/pressed/disabled）、`scrollbarTextureWidth/Height`、`scrollbarU/V`（含 hover/pressed/disabled 变体）——均支持 snake_case
 - 物品覆盖层：`itemOverlay`、`itemOverlayTexture`、`itemOverlayTextureWidth/Height`、`itemOverlayU/V`
+
+横向滚动 quick-start：
+
+```json
+{
+  "type": "slot_grid",
+  "role": "input",
+  "x": 16,
+  "y": 28,
+  "rows": 3,
+  "columns": 9,
+  "visibleRows": 3,
+  "visibleColumns": 4,
+  "scrollAxis": "horizontal",
+  "scrollMode": "page",
+  "scrollbar": true,
+  "scrollbarX": 16,
+  "scrollbarY": 86,
+  "scrollbarLength": 70,
+  "scrollbarHeight": 6,
+  "scrollbarThumbWidth": 18,
+  "scrollbarTexture": "yourmod:textures/gui/slot_scroll_thumb.png",
+  "scrollbarTextureWidth": 18,
+  "scrollbarTextureHeight": 6
+}
+```
+
+纵向滚动仍可只写 `visibleRows`；例如 6 行网格只显示 3 行时，`scrollAxis` 省略也会按旧语义使用纵向滚动。
 
 **`tank`** — 储罐区域
 - `content`：`fluid` / `gas` / `fluid_gas` / `energy`（`power`/`fe`）

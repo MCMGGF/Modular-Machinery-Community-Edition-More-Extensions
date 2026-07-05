@@ -148,9 +148,39 @@ Shared fields: `type` (required), `role`, `x`, `y`, `width`, `height`, `priority
 - `rows` (`rowCount`/`yCount`, default 1, ≤256), `columns` (`cols`/`columnCount`/`xCount`, default 1, ≤256)
 - `spacingX` (`xSpacing`/`gapX`, default 2), `spacingY` (`ySpacing`/`gapY`, default 2)
 - `slotSize` (`size`, default 16)
-- `visibleRows`/`visibleColumns` (default 0=all visible, for scrolling), `scrollMode`, `scrollbar`
-- Scrollbar set: `scrollbarX/Y/Width/Height`, `scrollbarThumbHeight`, `scrollbarTexture` (+ hover/pressed/disabled), `scrollbarTextureWidth/Height`, `scrollbarU/V` (+ hover/pressed/disabled variants) — all support snake_case
+- `visibleRows`/`visibleColumns` (default 0=all visible, for scrolling), `scrollAxis` (`horizontal`/`vertical`), `scrollMode` (`row`/`page`), `scrollbar`
+- When `scrollAxis` is omitted: MMCEGE auto-selects horizontal only when columns overflow and rows do not; all other old configs keep the vertical default.
+- With `scrollMode = "page"`, horizontal grids scroll by `visibleColumns` columns and vertical grids scroll by `visibleRows` rows. The default step is 1 row/column.
+- Scrollbar set: `scrollbarX/Y/Width/Height`, `scrollbarLength`, `scrollbarThumbHeight`, `scrollbarThumbWidth`, `scrollbarTexture` (+ hover/pressed/disabled), `scrollbarTextureWidth/Height`, `scrollbarU/V` (+ hover/pressed/disabled variants) — all support snake_case
 - Item overlay: `itemOverlay`, `itemOverlayTexture`, `itemOverlayTextureWidth/Height`, `itemOverlayU/V`
+
+Horizontal scrolling quick-start:
+
+```json
+{
+  "type": "slot_grid",
+  "role": "input",
+  "x": 16,
+  "y": 28,
+  "rows": 3,
+  "columns": 9,
+  "visibleRows": 3,
+  "visibleColumns": 4,
+  "scrollAxis": "horizontal",
+  "scrollMode": "page",
+  "scrollbar": true,
+  "scrollbarX": 16,
+  "scrollbarY": 86,
+  "scrollbarLength": 70,
+  "scrollbarHeight": 6,
+  "scrollbarThumbWidth": 18,
+  "scrollbarTexture": "yourmod:textures/gui/slot_scroll_thumb.png",
+  "scrollbarTextureWidth": 18,
+  "scrollbarTextureHeight": 6
+}
+```
+
+Vertical scrolling remains unchanged: for example, a 6-row grid with `visibleRows: 3` can omit `scrollAxis` and still uses the legacy vertical behavior.
 
 **`tank`** — tank region
 - `content`: `fluid` / `gas` / `fluid_gas` / `energy` (`power`/`fe`)

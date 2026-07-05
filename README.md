@@ -368,7 +368,7 @@ Minimal example / 最小示例（fluid input hatch）:
 }
 ```
 
-Working examples / 可用示例：`config/mmceguiext/custom_hatches/custom_gas_input_hatch.json`, `examples/custom_hatches/fluid_meter_hatch_test.json`.
+Working examples / 可用示例：`config/mmceguiext/custom_hatches/custom_gas_input_hatch.json`, `examples/custom_hatches/fluid_meter_hatch_test.json`, `examples/quick-start/horizontal-slot-grid-hatch.json`.
 
 Hatch GUIs / 仓口 GUI：
 

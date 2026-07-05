@@ -54,7 +54,7 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
     private int backgroundTextureHeight = 166;
     private int coordinateWidth = 176;
     private int coordinateHeight = 166;
-    private final Map<String, SlotGridState> slotGridStates = new HashMap<String, SlotGridState>();
+    private final Map<String, ScrollableSlotGrid> slotGridStates = new HashMap<String, ScrollableSlotGrid>();
 
     public GuiFluidProcessorHatchCustom(TileEntity owner, EntityPlayer opening, CustomHatchRegistry.CustomHatchDef definition) {
         super(new ContainerFluidProcessorHatchCustom(owner, opening, definition));
@@ -262,20 +262,39 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
             }
             int color = GuiRenderUtils.parseColorARGBOrDefault(component.color, 0xFFFFFF);
             float scale = component.scale == null ? 1.0F : component.scale.floatValue();
+            float charSpacing = GuiRenderUtils.resolveCharSpacing(component.charSpacing, resolveDefaultCharSpacing());
             int alignedX = GuiRenderUtils.resolveAlignedTextX(
                 componentGuiX(component),
-                Math.round(this.fontRenderer.getStringWidth(value) * scale),
+                Math.round(GuiRenderUtils.getStringWidth(this.fontRenderer, value, charSpacing) * scale),
                 component.align
             );
             if (scale != 1.0F) {
                 GlStateManager.pushMatrix();
                 GlStateManager.scale(scale, scale, 1.0F);
-                this.fontRenderer.drawStringWithShadow(value, Math.round(alignedX / scale), Math.round(componentGuiY(component) / scale), color);
+                GuiRenderUtils.drawString(
+                    this.fontRenderer,
+                    value,
+                    Math.round(alignedX / scale),
+                    Math.round(componentGuiY(component) / scale),
+                    color,
+                    true,
+                    charSpacing
+                );
                 GlStateManager.popMatrix();
             } else {
-                this.fontRenderer.drawStringWithShadow(value, alignedX, componentGuiY(component), color);
+                GuiRenderUtils.drawString(this.fontRenderer, value, alignedX, componentGuiY(component), color, true, charSpacing);
             }
         }
+    }
+
+    private float resolveDefaultCharSpacing() {
+        if (this.styleFile.defaultCharSpacing != null) {
+            return GuiRenderUtils.sanitizeCharSpacing(this.styleFile.defaultCharSpacing);
+        }
+        if (this.definition.gui != null && this.definition.gui.defaultCharSpacing != null) {
+            return GuiRenderUtils.sanitizeCharSpacing(this.definition.gui.defaultCharSpacing);
+        }
+        return GuiRenderUtils.sanitizeCharSpacing(this.definition.defaultCharSpacing);
     }
 
     private void drawItemSlotOverlays(@Nullable Integer priorityFilter) {
@@ -832,34 +851,20 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
     }
 
     private void positionCustomSlot(net.minecraft.inventory.Slot slot, CustomHatchRegistry.ComponentDef component) {
-        SlotGridState state = getSlotGridState(component);
+        ScrollableSlotGrid state = getSlotGridState(component);
         if (state == null) {
             slot.xPos = componentGuiX(component);
             slot.yPos = componentGuiY(component);
             return;
         }
-        int localIndex = component.index - state.baseIndex;
-        if (localIndex < 0) {
+        if (!state.containsAbsoluteIndex(component.index)) {
             slot.xPos = componentGuiX(component);
             slot.yPos = componentGuiY(component);
             return;
         }
-        int row = localIndex / state.columns;
-        int column = localIndex % state.columns;
-        int firstVisibleRow = state.scrollAxis == ScrollAxis.VERTICAL ? state.scrollOffset : 0;
-        int firstVisibleColumn = state.scrollAxis == ScrollAxis.HORIZONTAL ? state.scrollOffset : 0;
-        if (row < firstVisibleRow || row >= firstVisibleRow + state.visibleRows
-            || column < firstVisibleColumn || column >= firstVisibleColumn + state.visibleColumns) {
-            slot.xPos = -10000;
-            slot.yPos = -10000;
-            return;
-        }
-        int visibleRow = row - firstVisibleRow;
-        int visibleColumn = column - firstVisibleColumn;
-        int stepX = state.slotSize + state.spacingX;
-        int stepY = state.slotSize + state.spacingY;
-        slot.xPos = scaledX(state.baseX + visibleColumn * stepX) - this.backgroundOffsetX;
-        slot.yPos = scaledY(state.baseY + visibleRow * stepY) - this.backgroundOffsetY;
+        ScrollableSlotGrid.SlotPosition position = state.positionForAbsoluteIndex(component.index);
+        slot.xPos = position.x;
+        slot.yPos = position.y;
     }
 
     @Nullable
@@ -890,7 +895,7 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
     }
 
     @Nullable
-    private SlotGridState getSlotGridState(@Nullable CustomHatchRegistry.ComponentDef component) {
+    private ScrollableSlotGrid getSlotGridState(@Nullable CustomHatchRegistry.ComponentDef component) {
         if (component == null || component.index < 0) {
             return null;
         }
@@ -914,87 +919,48 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
             if (this.slotGridStates.containsKey(key)) {
                 continue;
             }
-            SlotGridState state = new SlotGridState();
-            state.key = key;
-            state.baseIndex = component.gridBaseIndex;
-            state.baseX = component.gridBaseX;
-            state.baseY = component.gridBaseY;
-            state.rows = Math.max(1, component.rows);
-            state.columns = Math.max(1, component.columns);
-            state.visibleRows = component.visibleRows > 0 ? Math.min(component.visibleRows, component.rows) : component.rows;
-            state.visibleColumns = component.visibleColumns > 0 ? Math.min(component.visibleColumns, component.columns) : component.columns;
-            state.spacingX = component.spacingX;
-            state.spacingY = component.spacingY;
-            state.slotSize = Math.max(1, component.slotSize);
-            state.scrollMode = "page".equalsIgnoreCase(component.scrollMode) ? ScrollMode.PAGE : ScrollMode.ROW;
-            state.scrollAxis = resolveSlotGridScrollAxis(component, state);
-            state.maxScroll = state.scrollAxis == ScrollAxis.HORIZONTAL
-                ? Math.max(0, state.columns - state.visibleColumns)
-                : Math.max(0, state.rows - state.visibleRows);
-            if (state.maxScroll <= 0) {
+            ScrollableSlotGrid.Config config = new ScrollableSlotGrid.Config();
+            config.key = key;
+            config.baseIndex = component.gridBaseIndex;
+            config.baseX = component.gridBaseX;
+            config.baseY = component.gridBaseY;
+            config.rows = Math.max(1, component.rows);
+            config.columns = Math.max(1, component.columns);
+            config.visibleRows = component.visibleRows;
+            config.visibleColumns = component.visibleColumns;
+            config.spacingX = component.spacingX;
+            config.spacingY = component.spacingY;
+            config.slotSize = Math.max(1, component.slotSize);
+            config.scrollMode = ScrollableSlotGrid.parseScrollMode(component.scrollMode);
+            config.scrollAxis = component.scrollAxis;
+            config.scrollbarEnabled = component.scrollbar == null || component.scrollbar.booleanValue();
+            config.scrollbarX = component.scrollbarX;
+            config.scrollbarY = component.scrollbarY;
+            config.scrollbarLength = component.scrollbarLength;
+            config.scrollbarHeight = component.scrollbarHeight;
+            config.scrollbarWidth = component.scrollbarWidth;
+            config.scrollbarThumbHeight = component.scrollbarThumbHeight;
+            config.scrollbarThumbWidth = component.scrollbarThumbWidth;
+            config.scrollbarTexture = component.scrollbarTexture == null ? null : GuiRenderUtils.parseOptionalTexture(component.scrollbarTexture);
+            config.scrollbarHoverTexture = component.scrollbarHoverTexture == null ? null : GuiRenderUtils.parseOptionalTexture(component.scrollbarHoverTexture);
+            config.scrollbarPressedTexture = component.scrollbarPressedTexture == null ? null : GuiRenderUtils.parseOptionalTexture(component.scrollbarPressedTexture);
+            config.scrollbarDisabledTexture = component.scrollbarDisabledTexture == null ? null : GuiRenderUtils.parseOptionalTexture(component.scrollbarDisabledTexture);
+            config.scrollbarTextureWidth = Math.max(1, component.scrollbarTextureWidth);
+            config.scrollbarTextureHeight = Math.max(1, component.scrollbarTextureHeight);
+            config.scrollbarU = component.scrollbarU;
+            config.scrollbarV = component.scrollbarV;
+            config.scrollbarHoverU = component.scrollbarHoverU;
+            config.scrollbarHoverV = component.scrollbarHoverV;
+            config.scrollbarPressedU = component.scrollbarPressedU;
+            config.scrollbarPressedV = component.scrollbarPressedV;
+            config.scrollbarDisabledU = component.scrollbarDisabledU;
+            config.scrollbarDisabledV = component.scrollbarDisabledV;
+            ScrollableSlotGrid state = ScrollableSlotGrid.create(config, slotGridMetrics());
+            if (!state.canScroll()) {
                 continue;
             }
-            state.scrollbarEnabled = component.scrollbar == null || component.scrollbar.booleanValue();
-            int visibleWidth = state.visibleColumns * state.slotSize + Math.max(0, state.visibleColumns - 1) * state.spacingX;
-            int visibleHeight = state.visibleRows * state.slotSize + Math.max(0, state.visibleRows - 1) * state.spacingY;
-            boolean horizontal = state.scrollAxis == ScrollAxis.HORIZONTAL;
-            int scrollbarX = component.scrollbarX != 0
-                ? component.scrollbarX
-                : horizontal ? state.baseX : state.baseX + state.visibleColumns * (state.slotSize + state.spacingX) + 2;
-            int scrollbarY = component.scrollbarY != 0
-                ? component.scrollbarY
-                : horizontal ? state.baseY + state.visibleRows * (state.slotSize + state.spacingY) + 2 : state.baseY;
-            int scrollbarLength = component.scrollbarLength > 0
-                ? component.scrollbarLength
-                : horizontal ? (component.scrollbarWidth != 12 ? component.scrollbarWidth : visibleWidth) : (component.scrollbarHeight > 0 ? component.scrollbarHeight : visibleHeight);
-            state.scrollbar = new CustomScrollbarState();
-            state.scrollbar.horizontal = horizontal;
-            state.scrollbar.left = this.guiLeft + scaledX(scrollbarX) - this.backgroundOffsetX;
-            state.scrollbar.top = this.guiTop + scaledY(scrollbarY) - this.backgroundOffsetY;
-            state.scrollbar.width = horizontal
-                ? Math.max(15, scaledWidth(scrollbarLength))
-                : Math.max(4, scaledWidth(component.scrollbarWidth));
-            state.scrollbar.height = horizontal
-                ? Math.max(4, scaledHeight(component.scrollbarHeight > 0 ? component.scrollbarHeight : 12))
-                : Math.max(15, scaledHeight(scrollbarLength));
-            state.scrollbar.thumbWidth = horizontal
-                ? Math.max(8, scaledWidth(component.scrollbarThumbWidth > 0 ? component.scrollbarThumbWidth : component.scrollbarThumbHeight))
-                : state.scrollbar.width;
-            state.scrollbar.thumbHeight = horizontal
-                ? state.scrollbar.height
-                : Math.max(8, scaledHeight(component.scrollbarThumbHeight));
-            state.scrollbar.texture = component.scrollbarTexture == null ? null : GuiRenderUtils.parseOptionalTexture(component.scrollbarTexture);
-            state.scrollbar.hoverTexture = component.scrollbarHoverTexture == null ? null : GuiRenderUtils.parseOptionalTexture(component.scrollbarHoverTexture);
-            state.scrollbar.pressedTexture = component.scrollbarPressedTexture == null ? null : GuiRenderUtils.parseOptionalTexture(component.scrollbarPressedTexture);
-            state.scrollbar.disabledTexture = component.scrollbarDisabledTexture == null ? null : GuiRenderUtils.parseOptionalTexture(component.scrollbarDisabledTexture);
-            state.scrollbar.textureWidth = Math.max(1, component.scrollbarTextureWidth);
-            state.scrollbar.textureHeight = Math.max(1, component.scrollbarTextureHeight);
-            state.scrollbar.u = component.scrollbarU;
-            state.scrollbar.v = component.scrollbarV;
-            state.scrollbar.hoverU = component.scrollbarHoverU;
-            state.scrollbar.hoverV = component.scrollbarHoverV;
-            state.scrollbar.pressedU = component.scrollbarPressedU;
-            state.scrollbar.pressedV = component.scrollbarPressedV;
-            state.scrollbar.disabledU = component.scrollbarDisabledU;
-            state.scrollbar.disabledV = component.scrollbarDisabledV;
-            int pageSize = state.scrollMode == ScrollMode.PAGE
-                ? (horizontal ? state.visibleColumns : state.visibleRows)
-                : 1;
-            state.scrollbar.setRange(0, state.maxScroll, pageSize);
             this.slotGridStates.put(key, state);
         }
-    }
-
-    private ScrollAxis resolveSlotGridScrollAxis(CustomHatchRegistry.ComponentDef component, SlotGridState state) {
-        if ("horizontal".equalsIgnoreCase(component.scrollAxis)) {
-            return ScrollAxis.HORIZONTAL;
-        }
-        if ("vertical".equalsIgnoreCase(component.scrollAxis)) {
-            return ScrollAxis.VERTICAL;
-        }
-        boolean canScrollColumns = state.visibleColumns < state.columns;
-        boolean canScrollRows = state.visibleRows < state.rows;
-        return canScrollColumns && !canScrollRows ? ScrollAxis.HORIZONTAL : ScrollAxis.VERTICAL;
     }
 
     private static boolean isRuntimeSlotRole(@Nullable String role) {
@@ -1002,50 +968,39 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
     }
 
     private void handleSlotGridWheel(int mouseX, int mouseY, int wheel) {
-        for (SlotGridState state : this.slotGridStates.values()) {
-            if (!isMouseOverSlotGrid(mouseX, mouseY, state)) {
+        for (ScrollableSlotGrid state : this.slotGridStates.values()) {
+            if (!state.isMouseOverGrid(mouseX, mouseY)) {
                 continue;
             }
-            state.scrollbar.wheel(wheel);
-            state.scrollOffset = state.scrollbar.currentScroll;
-            applyConfiguredSlotPositions();
+            if (state.wheel(wheel)) {
+                applyConfiguredSlotPositions();
+            }
             return;
         }
     }
 
     private void clickSlotGridScrollbars(int mouseX, int mouseY) {
-        for (SlotGridState state : this.slotGridStates.values()) {
-            if (!state.scrollbarEnabled || state.scrollbar == null) {
+        for (ScrollableSlotGrid state : this.slotGridStates.values()) {
+            if (!state.clickScrollbar(mouseX, mouseY)) {
                 continue;
             }
-            if (!state.scrollbar.isMouseOver(mouseX, mouseY)) {
-                continue;
-            }
-            state.scrollbar.click(mouseX, mouseY);
-            state.scrollOffset = state.scrollbar.currentScroll;
             applyConfiguredSlotPositions();
             return;
         }
     }
 
     private void releaseSlotGridScrollbars() {
-        for (SlotGridState state : this.slotGridStates.values()) {
-            if (state.scrollbar != null) {
-                state.scrollbar.release();
-            }
+        for (ScrollableSlotGrid state : this.slotGridStates.values()) {
+            state.releaseScrollbar();
         }
     }
 
     private void dragSlotGridScrollbars(int mouseX, int mouseY) {
-        for (SlotGridState state : this.slotGridStates.values()) {
-            if (!state.scrollbarEnabled || state.scrollbar == null) {
+        for (ScrollableSlotGrid state : this.slotGridStates.values()) {
+            if (!state.isDraggingScrollbar()) {
                 continue;
             }
-            if (!state.scrollbar.isPressed()) {
-                continue;
-            }
-            if (state.scrollbar.dragTo(mouseX, mouseY)) {
-                state.scrollOffset = state.scrollbar.currentScroll;
+            if (state.dragScrollbar(mouseX, mouseY)) {
                 applyConfiguredSlotPositions();
             }
             return;
@@ -1053,20 +1008,53 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
     }
 
     private void drawSlotGridScrollbars(int mouseX, int mouseY) {
-        for (SlotGridState state : this.slotGridStates.values()) {
-            if (!state.scrollbarEnabled || state.scrollbar == null || state.maxScroll <= 0) {
-                continue;
-            }
-            state.scrollbar.draw(this, this.mc, mouseX, mouseY);
+        for (ScrollableSlotGrid state : this.slotGridStates.values()) {
+            state.drawScrollbar(this, this.mc, mouseX, mouseY);
         }
     }
 
-    private boolean isMouseOverSlotGrid(int mouseX, int mouseY, SlotGridState state) {
-        int left = this.guiLeft + scaledX(state.baseX) - this.backgroundOffsetX;
-        int top = this.guiTop + scaledY(state.baseY) - this.backgroundOffsetY;
-        int width = scaledWidth(state.visibleColumns * state.slotSize + Math.max(0, state.visibleColumns - 1) * state.spacingX);
-        int height = scaledHeight(state.visibleRows * state.slotSize + Math.max(0, state.visibleRows - 1) * state.spacingY);
-        return mouseX >= left && mouseX < left + width && mouseY >= top && mouseY < top + height;
+    private ScrollableSlotGrid.Metrics slotGridMetrics() {
+        return new ScrollableSlotGrid.Metrics() {
+            @Override
+            public int guiLeft() {
+                return GuiFluidProcessorHatchCustom.this.guiLeft;
+            }
+
+            @Override
+            public int guiTop() {
+                return GuiFluidProcessorHatchCustom.this.guiTop;
+            }
+
+            @Override
+            public int backgroundOffsetX() {
+                return GuiFluidProcessorHatchCustom.this.backgroundOffsetX;
+            }
+
+            @Override
+            public int backgroundOffsetY() {
+                return GuiFluidProcessorHatchCustom.this.backgroundOffsetY;
+            }
+
+            @Override
+            public int scaledX(int textureX) {
+                return GuiFluidProcessorHatchCustom.this.scaledX(textureX);
+            }
+
+            @Override
+            public int scaledY(int textureY) {
+                return GuiFluidProcessorHatchCustom.this.scaledY(textureY);
+            }
+
+            @Override
+            public int scaledWidth(int textureWidth) {
+                return GuiFluidProcessorHatchCustom.this.scaledWidth(textureWidth);
+            }
+
+            @Override
+            public int scaledHeight(int textureHeight) {
+                return GuiFluidProcessorHatchCustom.this.scaledHeight(textureHeight);
+            }
+        };
     }
 
     private String buildSlotGridKey(CustomHatchRegistry.ComponentDef component) {
@@ -1170,10 +1158,11 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
         int visibleColumns = component.visibleColumns > 0 ? Math.min(component.visibleColumns, component.columns) : component.columns;
         int width = visibleColumns * component.slotSize + Math.max(0, visibleColumns - 1) * component.spacingX;
         int height = visibleRows * component.slotSize + Math.max(0, visibleRows - 1) * component.spacingY;
-        union(bounds, this.guiLeft + scaledX(component.gridBaseX) - this.backgroundOffsetX, this.guiTop + scaledY(component.gridBaseY) - this.backgroundOffsetY, scaledWidth(width), scaledHeight(height));
-        SlotGridState state = this.slotGridStates.get(buildSlotGridKey(component));
-        if (state != null && state.scrollbarEnabled && state.maxScroll > 0 && state.scrollbar != null) {
-            union(bounds, state.scrollbar.left, state.scrollbar.top, state.scrollbar.width, state.scrollbar.height);
+        ScrollableSlotGrid state = this.slotGridStates.get(buildSlotGridKey(component));
+        if (state != null) {
+            state.unionBounds(bounds);
+        } else {
+            union(bounds, this.guiLeft + scaledX(component.gridBaseX) - this.backgroundOffsetX, this.guiTop + scaledY(component.gridBaseY) - this.backgroundOffsetY, scaledWidth(width), scaledHeight(height));
         }
     }
 
@@ -1199,7 +1188,8 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
             return;
         }
         float scale = component.scale == null ? 1.0F : component.scale.floatValue();
-        int width = Math.round(this.fontRenderer.getStringWidth(value) * scale);
+        float charSpacing = GuiRenderUtils.resolveCharSpacing(component.charSpacing, resolveDefaultCharSpacing());
+        int width = Math.round(GuiRenderUtils.getStringWidth(this.fontRenderer, value, charSpacing) * scale);
         int height = Math.round(this.fontRenderer.FONT_HEIGHT * scale);
         int x = GuiRenderUtils.resolveAlignedTextX(this.guiLeft + componentGuiX(component), width, component.align);
         union(bounds, x, this.guiTop + componentGuiY(component), width, height);
@@ -1245,202 +1235,5 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
     @Nullable
     private static ResourceLocation parseCustomHatchTexture(String value) {
         return GuiRenderUtils.parseOptionalTexture(value);
-    }
-
-    private enum ScrollMode {
-        ROW,
-        PAGE
-    }
-
-    private enum ScrollAxis {
-        VERTICAL,
-        HORIZONTAL
-    }
-
-    private static class SlotGridState {
-        private String key;
-        private int baseIndex;
-        private int baseX;
-        private int baseY;
-        private int rows;
-        private int columns;
-        private int visibleRows;
-        private int visibleColumns;
-        private int spacingX;
-        private int spacingY;
-        private int slotSize;
-        private int maxScroll;
-        private int scrollOffset;
-        private boolean scrollbarEnabled;
-        private ScrollMode scrollMode;
-        private ScrollAxis scrollAxis;
-        private CustomScrollbarState scrollbar;
-    }
-
-    private static class CustomScrollbarState {
-        private static final ResourceLocation DEFAULT_SCROLLBAR_TEXTURE =
-            new ResourceLocation("minecraft", "textures/gui/container/creative_inventory/tabs.png");
-
-        private int left;
-        private int top;
-        private int width = 12;
-        private int height = 16;
-        private int thumbWidth = 12;
-        private int thumbHeight = 15;
-        private int pageSize = 1;
-        private int minScroll = 0;
-        private int maxScroll = 0;
-        private int currentScroll = 0;
-        private boolean horizontal;
-        @Nullable
-        private ResourceLocation texture;
-        @Nullable
-        private ResourceLocation hoverTexture;
-        @Nullable
-        private ResourceLocation pressedTexture;
-        @Nullable
-        private ResourceLocation disabledTexture;
-        private int textureWidth = 256;
-        private int textureHeight = 256;
-        private int u = 232;
-        private int v = 0;
-        private int hoverU = 232;
-        private int hoverV = 0;
-        private int pressedU = 232;
-        private int pressedV = 0;
-        private int disabledU = 244;
-        private int disabledV = 0;
-        private boolean pressed;
-        private int dragOffset;
-
-        private void setRange(int min, int max, int pageSize) {
-            this.minScroll = min;
-            this.maxScroll = Math.max(min, max);
-            this.pageSize = Math.max(1, pageSize);
-            this.applyRange();
-        }
-
-        private void applyRange() {
-            this.currentScroll = Math.max(Math.min(this.currentScroll, this.maxScroll), this.minScroll);
-        }
-
-        private int getRange() {
-            return this.maxScroll - this.minScroll;
-        }
-
-        private boolean isMouseOver(int x, int y) {
-            return x >= this.left && x < this.left + this.width && y >= this.top && y < this.top + this.height;
-        }
-
-        private boolean isPressed() {
-            return this.pressed;
-        }
-
-        private int getThumbTravel() {
-            return Math.max(1, (this.horizontal ? this.width - this.thumbWidth : this.height - this.thumbHeight));
-        }
-
-        private int getThumbOffset() {
-            if (this.getRange() <= 0) {
-                return 0;
-            }
-            return (this.currentScroll - this.minScroll) * getThumbTravel() / this.getRange();
-        }
-
-        private boolean isMouseOverThumb(int x, int y) {
-            int thumbOffset = getThumbOffset();
-            int thumbLeft = this.left + (this.horizontal ? thumbOffset : 0);
-            int thumbTop = this.top + (this.horizontal ? 0 : thumbOffset);
-            return x >= thumbLeft && x < thumbLeft + this.thumbWidth && y >= thumbTop && y < thumbTop + this.thumbHeight;
-        }
-
-        private void click(int x, int y) {
-            if (this.getRange() == 0) {
-                return;
-            }
-            if (!isMouseOver(x, y)) {
-                return;
-            }
-            if (isMouseOverThumb(x, y)) {
-                this.pressed = true;
-                this.dragOffset = this.horizontal ? x - (this.left + getThumbOffset()) : y - (this.top + getThumbOffset());
-            } else {
-                this.pressed = false;
-                this.dragOffset = (this.horizontal ? this.thumbWidth : this.thumbHeight) / 2;
-                int available = getThumbTravel();
-                int mousePosition = this.horizontal ? x - this.left : y - this.top;
-                int thumbPosition = Math.max(0, Math.min(available, mousePosition - this.dragOffset));
-                this.currentScroll = this.minScroll + Math.round((thumbPosition * this.getRange()) / (float) available);
-                this.applyRange();
-                this.dragOffset = 0;
-            }
-        }
-
-        private void release() {
-            this.pressed = false;
-            this.dragOffset = 0;
-        }
-
-        private boolean dragTo(int mouseX, int mouseY) {
-            if (!this.pressed || this.getRange() <= 0) {
-                return false;
-            }
-            int available = getThumbTravel();
-            int mousePosition = this.horizontal ? mouseX - this.left : mouseY - this.top;
-            int thumbPosition = Math.max(0, Math.min(available, mousePosition - this.dragOffset));
-            int previous = this.currentScroll;
-            this.currentScroll = this.minScroll + Math.round((thumbPosition * this.getRange()) / (float) available);
-            this.applyRange();
-            return this.currentScroll != previous;
-        }
-
-        private void wheel(int delta) {
-            delta = Math.max(Math.min(-delta, 1), -1);
-            this.currentScroll += delta * this.pageSize;
-            this.applyRange();
-        }
-
-        private void draw(Gui gui, Minecraft mc, int mouseX, int mouseY) {
-            if (this.getRange() == 0) {
-                ResourceLocation tex = this.disabledTexture != null
-                    ? this.disabledTexture
-                    : this.texture == null ? DEFAULT_SCROLLBAR_TEXTURE : this.texture;
-                mc.getTextureManager().bindTexture(tex);
-                GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
-                Gui.drawModalRectWithCustomSizedTexture(this.left, this.top, this.disabledU, this.disabledV, this.thumbWidth, this.thumbHeight, this.textureWidth, this.textureHeight);
-                return;
-            }
-
-            int available = getThumbTravel();
-            int offset = (this.currentScroll - this.minScroll) * available / this.getRange();
-            ResourceLocation tex = this.texture == null ? DEFAULT_SCROLLBAR_TEXTURE : this.texture;
-            int drawU = this.u;
-            int drawV = this.v;
-            if (this.pressed) {
-                if (this.pressedTexture != null) {
-                    tex = this.pressedTexture;
-                }
-                drawU = this.pressedU;
-                drawV = this.pressedV;
-            } else if (isMouseOverThumb(mouseX, mouseY)) {
-                if (this.hoverTexture != null) {
-                    tex = this.hoverTexture;
-                }
-                drawU = this.hoverU;
-                drawV = this.hoverV;
-            }
-            mc.getTextureManager().bindTexture(tex);
-            GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
-            Gui.drawModalRectWithCustomSizedTexture(
-                this.left + (this.horizontal ? offset : 0),
-                this.top + (this.horizontal ? 0 : offset),
-                drawU,
-                drawV,
-                this.thumbWidth,
-                this.thumbHeight,
-                this.textureWidth,
-                this.textureHeight
-            );
-        }
     }
 }

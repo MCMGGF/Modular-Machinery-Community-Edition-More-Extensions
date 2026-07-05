@@ -1,0 +1,63 @@
+{
+  "id": "horizontal_slot_grid_hatch",
+  "displayName": "Horizontal Slot Grid Hatch",
+  "componentType": "item",
+  "ioType": "input",
+  "components": [
+    {
+      "type": "item",
+      "io": "input"
+    }
+  ],
+  "gui": {
+    "width": 176,
+    "height": 166,
+    "coordinateWidth": 176,
+    "coordinateHeight": 166,
+    "components": [
+      {
+        "type": "slot_grid",
+        "role": "input",
+        "index": 0,
+        "x": 16,
+        "y": 8,
+        "rows": 3,
+        "columns": 9,
+        "visibleRows": 3,
+        "visibleColumns": 4,
+        "spacingX": 2,
+        "spacingY": 2,
+        "slotSize": 16,
+        "scrollAxis": "horizontal",
+        "scrollMode": "page",
+        "scrollbar": true,
+        "scrollbarX": 16,
+        "scrollbarY": 66,
+        "scrollbarLength": 70,
+        "scrollbarHeight": 6,
+        "scrollbarThumbWidth": 18,
+        "scrollbarThumbHeight": 18,
+        "scrollbarTexture": "yourmod:textures/gui/slot_scroll_thumb.png",
+        "scrollbarHoverTexture": "yourmod:textures/gui/slot_scroll_thumb_hover.png",
+        "scrollbarPressedTexture": "yourmod:textures/gui/slot_scroll_thumb_pressed.png",
+        "scrollbarDisabledTexture": "yourmod:textures/gui/slot_scroll_thumb_disabled.png",
+        "scrollbarTextureWidth": 18,
+        "scrollbarTextureHeight": 18,
+        "scrollbarU": 0,
+        "scrollbarV": 0,
+        "scrollbarHoverU": 0,
+        "scrollbarHoverV": 0,
+        "scrollbarPressedU": 0,
+        "scrollbarPressedV": 0,
+        "scrollbarDisabledU": 0,
+        "scrollbarDisabledV": 0
+      },
+      {
+        "type": "player_inventory",
+        "x": 8,
+        "y": 84,
+        "hotbarY": 142
+      }
+    ]
+  }
+}
