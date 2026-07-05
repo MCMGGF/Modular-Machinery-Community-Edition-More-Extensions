@@ -3587,6 +3587,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         if (!getSmartInterfaceEditorEnabled(cfg)) {
             return false;
         }
+        if (getSmartInterfaceEditorVirtualKeys(cfg).isEmpty() && getSmartInterfaceDataList().length <= 0) {
+            return false;
+        }
         int configuredX = getSmartInterfaceEditorX(cfg);
         int configuredY = getSmartInterfaceEditorY(cfg);
         if (configuredX >= 0 || configuredY >= 0) {

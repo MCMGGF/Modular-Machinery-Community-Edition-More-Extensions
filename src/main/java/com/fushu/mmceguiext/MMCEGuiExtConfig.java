@@ -120,7 +120,7 @@ public class MMCEGuiExtConfig {
         public int backgroundCorner = 8;
 
         @Config.Comment("Enable Smart Interface editor in controller GUI.")
-        public boolean enableSmartInterfaceEditor = true;
+        public boolean enableSmartInterfaceEditor = false;
 
         @Config.Comment("Smart Interface editor X in GUI. -1 = auto place at right-bottom.")
         @Config.RangeInt(min = -1, max = 2048)
@@ -135,7 +135,7 @@ public class MMCEGuiExtConfig {
         public int smartInterfaceEditorInputWidth = 68;
 
         @Config.Comment("Virtual Smart Interface key when no DataPort is bound. Empty = disabled.")
-        public String smartInterfaceEditorVirtualKey = "mmcege_virtual_port";
+        public String smartInterfaceEditorVirtualKey = "";
     }
 
     public static class FactoryController {
@@ -257,7 +257,7 @@ public class MMCEGuiExtConfig {
         public int threadRowHeight = 32;
 
         @Config.Comment("Enable Smart Interface editor in factory GUI.")
-        public boolean enableSmartInterfaceEditor = true;
+        public boolean enableSmartInterfaceEditor = false;
 
         @Config.Comment("Smart Interface editor X in GUI. -1 = auto place at right-bottom.")
         @Config.RangeInt(min = -1, max = 2048)
@@ -272,7 +272,7 @@ public class MMCEGuiExtConfig {
         public int smartInterfaceEditorInputWidth = 68;
 
         @Config.Comment("Virtual Smart Interface key when no DataPort is bound. Empty = disabled.")
-        public String smartInterfaceEditorVirtualKey = "mmcege_virtual_port";
+        public String smartInterfaceEditorVirtualKey = "";
 
         public static class ThreadScrollbar {
             @Config.Comment("Whether to draw the factory thread scrollbar.")
