@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -891,7 +892,15 @@ public final class CustomHatchRegistry {
     }
 
     private static Path resolveHatchDir() {
-        Path dir = Loader.instance().getConfigDir().toPath().resolve("mmceguiext").resolve("custom_hatches");
+        Path configDir;
+        try {
+            configDir = Loader.instance() != null && Loader.instance().getConfigDir() != null
+                ? Loader.instance().getConfigDir().toPath()
+                : Paths.get("config");
+        } catch (RuntimeException ex) {
+            configDir = Paths.get("config");
+        }
+        Path dir = configDir.resolve("mmceguiext").resolve("custom_hatches");
         try {
             Files.createDirectories(dir);
         } catch (IOException ignored) {
