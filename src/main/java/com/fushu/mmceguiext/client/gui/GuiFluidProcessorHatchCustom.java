@@ -262,39 +262,20 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
             }
             int color = GuiRenderUtils.parseColorARGBOrDefault(component.color, 0xFFFFFF);
             float scale = component.scale == null ? 1.0F : component.scale.floatValue();
-            float charSpacing = GuiRenderUtils.resolveCharSpacing(component.charSpacing, resolveDefaultCharSpacing());
             int alignedX = GuiRenderUtils.resolveAlignedTextX(
                 componentGuiX(component),
-                Math.round(GuiRenderUtils.getStringWidth(this.fontRenderer, value, charSpacing) * scale),
+                Math.round(this.fontRenderer.getStringWidth(value) * scale),
                 component.align
             );
             if (scale != 1.0F) {
                 GlStateManager.pushMatrix();
                 GlStateManager.scale(scale, scale, 1.0F);
-                GuiRenderUtils.drawString(
-                    this.fontRenderer,
-                    value,
-                    Math.round(alignedX / scale),
-                    Math.round(componentGuiY(component) / scale),
-                    color,
-                    true,
-                    charSpacing
-                );
+                this.fontRenderer.drawStringWithShadow(value, Math.round(alignedX / scale), Math.round(componentGuiY(component) / scale), color);
                 GlStateManager.popMatrix();
             } else {
-                GuiRenderUtils.drawString(this.fontRenderer, value, alignedX, componentGuiY(component), color, true, charSpacing);
+                this.fontRenderer.drawStringWithShadow(value, alignedX, componentGuiY(component), color);
             }
         }
-    }
-
-    private float resolveDefaultCharSpacing() {
-        if (this.styleFile.defaultCharSpacing != null) {
-            return GuiRenderUtils.sanitizeCharSpacing(this.styleFile.defaultCharSpacing);
-        }
-        if (this.definition.gui != null && this.definition.gui.defaultCharSpacing != null) {
-            return GuiRenderUtils.sanitizeCharSpacing(this.definition.gui.defaultCharSpacing);
-        }
-        return GuiRenderUtils.sanitizeCharSpacing(this.definition.defaultCharSpacing);
     }
 
     private void drawItemSlotOverlays(@Nullable Integer priorityFilter) {
@@ -1188,8 +1169,7 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
             return;
         }
         float scale = component.scale == null ? 1.0F : component.scale.floatValue();
-        float charSpacing = GuiRenderUtils.resolveCharSpacing(component.charSpacing, resolveDefaultCharSpacing());
-        int width = Math.round(GuiRenderUtils.getStringWidth(this.fontRenderer, value, charSpacing) * scale);
+        int width = Math.round(this.fontRenderer.getStringWidth(value) * scale);
         int height = Math.round(this.fontRenderer.FONT_HEIGHT * scale);
         int x = GuiRenderUtils.resolveAlignedTextX(this.guiLeft + componentGuiX(component), width, component.align);
         union(bounds, x, this.guiTop + componentGuiY(component), width, height);
