@@ -1,6 +1,5 @@
 package com.fushu.mmceguiext.mixin;
 
-import com.fushu.mmceguiext.common.tile.TileCustomAEMixedInputBus;
 import hellfirepvp.modularmachinery.common.crafting.helper.ComponentSelectorTag;
 import hellfirepvp.modularmachinery.common.crafting.helper.ProcessingComponent;
 import hellfirepvp.modularmachinery.common.machine.MachineComponent;
@@ -24,6 +23,8 @@ import java.util.Map;
 
 @Mixin(value = TileMultiblockMachineController.class)
 public abstract class MixinTileMultiblockMachineController {
+    @Unique
+    private static final String MMCEGUIEXT_MIXED_INPUT_BUS_CLASS = "com.fushu.mmceguiext.common.tile.TileCustomAEMixedInputBus";
 
     @Shadow(remap = false)
     protected abstract void checkAndAddSmartInterface(MachineComponent<?> component, BlockPos realPos);
@@ -42,12 +43,11 @@ public abstract class MixinTileMultiblockMachineController {
         TileMultiblockMachineController self = (TileMultiblockMachineController) (Object) this;
         BlockPos realPos = ctrlPos.add(pos);
         TileEntity te = self.getWorld().getTileEntity(realPos);
-        if (!(te instanceof TileCustomAEMixedInputBus)) {
+        if (!mmceguiext$isCustomMixedInputBus(te)) {
             return;
         }
 
-        TileCustomAEMixedInputBus inputBus = (TileCustomAEMixedInputBus) te;
-        Collection<MachineComponent<?>> rawComponents = inputBus.provideComponents();
+        Collection<MachineComponent<?>> rawComponents = mmceguiext$provideComponents(te);
         if (rawComponents.isEmpty()) {
             return;
         }
@@ -78,6 +78,24 @@ public abstract class MixinTileMultiblockMachineController {
             checkAndAddUpgradeBus(component);
             checkAndAddSmartInterface(component, realPos);
         }
+    }
+
+    @Unique
+    private boolean mmceguiext$isCustomMixedInputBus(@Nullable final TileEntity te) {
+        return te != null && MMCEGUIEXT_MIXED_INPUT_BUS_CLASS.equals(te.getClass().getName());
+    }
+
+    @Unique
+    @SuppressWarnings("unchecked")
+    private Collection<MachineComponent<?>> mmceguiext$provideComponents(final TileEntity te) {
+        try {
+            Object result = te.getClass().getMethod("provideComponents").invoke(te);
+            if (result instanceof Collection) {
+                return (Collection<MachineComponent<?>>) result;
+            }
+        } catch (Exception | LinkageError ignored) {
+        }
+        return java.util.Collections.emptyList();
     }
 
     @Unique

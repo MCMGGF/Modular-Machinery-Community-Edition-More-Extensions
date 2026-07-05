@@ -13,9 +13,7 @@
     "screenshots": [],
     "dependencies": [
       "modularmachinery",
-      "appliedenergistics2",
-      "mekanism",
-      "mekeng"
+      "mekanism"
     ]
   }
 ]

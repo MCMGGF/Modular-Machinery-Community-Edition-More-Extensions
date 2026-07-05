@@ -2,13 +2,13 @@ package com.fushu.mmceguiext.common.registry;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedInputBus;
+import com.fushu.mmceguiext.common.integration.ae.AEIntegrationState;
 import com.fushu.mmceguiext.common.item.ItemBlockCustomAEMixedInputBus;
 import com.fushu.mmceguiext.common.tile.TileCustomAEMixedInputBus;
 import com.fushu.mmceguiext.common.util.CustomIdValidator;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraftforge.event.RegistryEvent;
-import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.registry.GameRegistry;
 import org.apache.logging.log4j.LogManager;
@@ -19,7 +19,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@Mod.EventBusSubscriber(modid = MMCEGuiExt.MODID)
 public final class CustomAEMixedInputBusGameRegistry {
     private static final Logger LOGGER = LogManager.getLogger(MMCEGuiExt.MODID);
     private static final Map<String, BlockCustomAEMixedInputBus> BLOCKS = new LinkedHashMap<String, BlockCustomAEMixedInputBus>();
@@ -30,6 +29,9 @@ public final class CustomAEMixedInputBusGameRegistry {
     @SubscribeEvent
     public static void onRegisterBlocks(RegistryEvent.Register<Block> event) {
         BLOCKS.clear();
+        if (!AEIntegrationState.isClassicAEBusEnabled()) {
+            return;
+        }
         List<CustomAEMixedInputBusRegistry.Def> defs = CustomAEMixedInputBusRegistry.getCached();
         if (defs.isEmpty()) {
             defs = CustomAEMixedInputBusRegistry.loadAll();
@@ -59,6 +61,9 @@ public final class CustomAEMixedInputBusGameRegistry {
 
     @SubscribeEvent
     public static void onRegisterItems(RegistryEvent.Register<Item> event) {
+        if (!AEIntegrationState.isClassicAEBusEnabled()) {
+            return;
+        }
         for (BlockCustomAEMixedInputBus block : BLOCKS.values()) {
             CustomAEMixedInputBusRegistry.Def def = block.getDefinition();
             if (def != null) {

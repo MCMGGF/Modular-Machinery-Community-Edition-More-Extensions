@@ -516,7 +516,7 @@ MMCEGE 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常�
 
 # 第三部分 · 自定义 AE2 总线（实验性）
 
-> 这是较新 / 实验性功能，JSON 结构与仓口系统同构，能力依赖 **AE2 + Mekanism Energistics** 同时在场。字段以注册表类中的 `Def` 解析为准，未来可能调整。
+> 这是较新 / 实验性功能，JSON 结构与仓口系统同构。当前自定义 AE 总线注册依赖传统 **AE2（`appliedenergistics2`）+ Mekanism Energistics** 同时在场；AE2S（`ae2`）可用于模组启动，但原生 AE2S 自定义总线尚未实现。字段以注册表类中的 `Def` 解析为准，未来可能调整。
 
 每种总线一个 `.json`，启动时注册为方块 + tile，通过 `AENetworkProxy` 接入 AE2 ME 网络（需要频道、消耗网络能量）。
 

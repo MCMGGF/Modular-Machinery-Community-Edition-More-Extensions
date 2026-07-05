@@ -1,7 +1,7 @@
 package com.fushu.mmceguiext.common.registry;
 
-import appeng.api.AEApi;
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.common.integration.ae.AEIntegrationState;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
 
@@ -200,8 +201,25 @@ public final class CustomCapacityCardRegistry {
     }
 
     private static CapacityModifier resolveOfficialCapacityCard(ItemStack stack) {
+        if (!AEIntegrationState.isClassicAE2Present()) {
+            return CapacityModifier.EMPTY;
+        }
         try {
-            ItemStack official = AEApi.instance().definitions().materials().cardCapacity().maybeStack(1).orElse(ItemStack.EMPTY);
+            Object api = Class.forName("appeng.api.AEApi")
+                .getMethod("instance")
+                .invoke(null);
+            Object definitions = api.getClass().getMethod("definitions").invoke(api);
+            Object materials = definitions.getClass().getMethod("materials").invoke(definitions);
+            Object cardDefinition = materials.getClass().getMethod("cardCapacity").invoke(materials);
+            Object maybeStack = cardDefinition.getClass().getMethod("maybeStack", int.class).invoke(cardDefinition, 1);
+            ItemStack official = ItemStack.EMPTY;
+            if (maybeStack instanceof Optional) {
+                Optional<?> optional = (Optional<?>) maybeStack;
+                Object value = optional.isPresent() ? optional.get() : ItemStack.EMPTY;
+                if (value instanceof ItemStack) {
+                    official = (ItemStack) value;
+                }
+            }
             if (!official.isEmpty() && isSameItem(official, stack)) {
                 return new CapacityModifier(2.0D, 0L, 0L);
             }

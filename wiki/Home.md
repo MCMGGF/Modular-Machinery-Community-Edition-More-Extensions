@@ -15,8 +15,8 @@ MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova 
 
 ### Dependencies
 
-- **Required**: `modularmachinery` (CE), `appliedenergistics2` (AE2 Extended Life), `mekanism`, `mekeng` (Mekanism Energistics)
-- **Optional**: The One Probe, AE2 Fluid Crafting Rework, GregTech CE, HEI/JEI, GeckoLib
+- **Required**: `modularmachinery` (CE), `mekanism`
+- **Optional**: `appliedenergistics2` (AE2 Extended Life) or `ae2` (AE2S), `mekeng` (required only for classic custom AE mixed buses), The One Probe, AE2 Fluid Crafting Rework, GregTech CE, HEI/JEI, GeckoLib
 
 ### Config directories MMCEGE reads at startup
 
@@ -56,8 +56,8 @@ MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附
 
 ### 依赖
 
-- **必需**：`modularmachinery`（CE）、`appliedenergistics2`（AE2 Extended Life）、`mekanism`、`mekeng`（Mekanism Energistics）
-- **可选**：The One Probe、AE2 Fluid Crafting Rework、GregTech CE、HEI/JEI、GeckoLib
+- **必需**：`modularmachinery`（CE）、`mekanism`
+- **可选**：`appliedenergistics2`（AE2 Extended Life）或 `ae2`（AE2S）、`mekeng`（仅传统自定义 AE 混合总线需要）、The One Probe、AE2 Fluid Crafting Rework、GregTech CE、HEI/JEI、GeckoLib
 
 ### MMCEGE 启动时读取的配置目录
 

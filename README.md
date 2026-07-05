@@ -24,12 +24,12 @@ Current version / 当前版本: **`1.2.0`** · MC `1.12.2` · author / 作者: W
 Required (hard) / 必需依赖：
 
 - `modularmachinery` (Community Edition)
-- `appliedenergistics2` (AE2 Extended Life)
 - `mekanism`
-- `mekeng` (Mekanism Energistics — provides the AE gas storage channel / 提供 AE 气体存储通道)
 
 Optional (soft, compile-only) / 可选依赖：
 
+- `appliedenergistics2` (AE2 Extended Life) or `ae2` (AE2S). Current custom AE bus registration uses the classic `appeng.*` API and is enabled only with `appliedenergistics2` + `mekeng`.
+- `mekeng` (Mekanism Energistics; required only for classic custom AE mixed buses / 仅传统自定义 AE 混合总线需要)
 - The One Probe (hatch probe info / 仓口探针信息)
 - AE2 Fluid Crafting Rework, GregTech CE, HEI/JEI, GeckoLib
 
@@ -382,8 +382,8 @@ Probe info / 探针信息: when The One Probe is installed, hatch fill levels an
 
 # Part 3 — Custom AE2 Buses (experimental) | 第三部分 · 自定义 AE2 总线（实验性）
 
-> These are advanced/experimental. JSON shape mirrors the hatch system; capabilities depend on AE2 + Mekanism Energistics being present. Treat the `Def` parsing in the registry classes as the source of truth.
-> 这些功能较新/实验性。JSON 结构与仓口系统同构；能力依赖 AE2 + Mekanism Energistics。字段以注册表类中的 `Def` 解析为准。
+> These are advanced/experimental. JSON shape mirrors the hatch system; current bus registration depends on classic AE2 (`appliedenergistics2`) + Mekanism Energistics being present. AE2S (`ae2`) is accepted as an AE implementation for startup, but native AE2S custom buses are not implemented yet. Treat the `Def` parsing in the registry classes as the source of truth.
+> 这些功能较新/实验性。JSON 结构与仓口系统同构；当前总线注册依赖传统 AE2（`appliedenergistics2`）+ Mekanism Energistics。AE2S（`ae2`）可作为启动阶段的 AE 实现被接受，但原生 AE2S 自定义总线尚未实现。字段以注册表类中的 `Def` 解析为准。
 
 Each bus type is JSON-defined (one `.json` per definition) and registered as a block + tile at startup, connecting to the AE2 ME network via an `AENetworkProxy` (requires a channel, consumes network power).
 每种总线均由 JSON 定义（每个定义一个 `.json`），启动时注册为方块 + tile，通过 `AENetworkProxy` 接入 AE2 ME 网络（需要频道，消耗网络能量）。
