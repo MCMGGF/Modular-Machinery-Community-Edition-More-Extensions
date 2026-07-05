@@ -434,9 +434,68 @@ Supported combine modes:
 
 Supported renderers:
 - `textureSwitch`: ordered `frames[]` using `min`, `max`, `equals`, `texture`, plus optional `fallbackTexture`.
+- `animatedTexture`: time-driven PNG frame animation. Use a sprite sheet (`texture`, `frameWidth`, `frameHeight`, `frameCount`) or ordered PNG files in `frames[]`.
 - `fill`: progress-style fill with `backgroundTexture`, `fillTexture`, `direction` (`right`, `left`, `up`, `down`).
 - `pie`: color pie/ring chart with `mode` (`pie`/`ring`), `startAngle`, `innerRadius`, `segments`, `color`, `backgroundColor`.
 - `lineChart`: uses `history.enabled`, `samples`, `intervalTicks`; renderer fields include `lineColor`, `fillColor`, `gridColor`, `lineWidth`, `showGrid`.
+
+`animatedTexture` aliases: `animated_texture`, `animation`, `spriteSheet`, `spritesheet`.
+Timing fields: `ticksPerFrame` (default `2`), `startFrame` (default `0`), `loop` (default `true`), `reverse` (default `false`), `pingPong` (default `false`).
+Sprite sheet fields: `texture`, `frameWidth`, `frameHeight`, `frameCount`, optional `u`, `v`, `columns`, `textureWidth`, `textureHeight`. If `columns` is omitted, it is inferred from `textureWidth / frameWidth`; if it still cannot be inferred, frames are treated as one row.
+Multi-file fields: `frames[]` may contain strings or frame objects. String frames are texture paths; object frames support `texture`, `u`, `v`, `textureWidth`, `textureHeight`.
+GIF files are not decoded or auto-played; use PNG frames for Minecraft-compatible animation.
+
+Sprite sheet animation example:
+
+```json
+{
+  "id": "fan_anim",
+  "x": 120,
+  "y": 32,
+  "width": 16,
+  "height": 16,
+  "foreground": true,
+  "renderer": {
+    "type": "animatedTexture",
+    "texture": "yourmod:textures/gui/fan_sheet.png",
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "frameCount": 8,
+    "columns": 4,
+    "textureWidth": 64,
+    "textureHeight": 32,
+    "ticksPerFrame": 2,
+    "loop": true
+  }
+}
+```
+
+Multi-file animation example:
+
+```json
+{
+  "id": "spark_anim",
+  "x": 140,
+  "y": 32,
+  "width": 16,
+  "height": 16,
+  "renderer": {
+    "type": "animatedTexture",
+    "ticksPerFrame": 3,
+    "frames": [
+      "yourmod:textures/gui/spark_0.png",
+      "yourmod:textures/gui/spark_1.png",
+      {
+        "texture": "yourmod:textures/gui/spark_2.png",
+        "u": 0,
+        "v": 0,
+        "textureWidth": 16,
+        "textureHeight": 16
+      }
+    ]
+  }
+}
+```
 
 Optional transforms:
 - `transform`: static `offsetX`, `offsetY`, `scale`, `scaleX`, `scaleY`, `rotation`, `alpha`, `pivotX`, `pivotY`, `pivotUnit`, and legacy `origin` (`topLeft`, `topCenter`, `topRight`, `centerLeft`, `center`, `centerRight`, `bottomLeft`, `bottomCenter`, `bottomRight`).

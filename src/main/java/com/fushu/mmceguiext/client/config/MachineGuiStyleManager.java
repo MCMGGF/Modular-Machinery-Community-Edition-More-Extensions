@@ -1317,6 +1317,8 @@ public final class MachineGuiStyleManager {
         @Nullable
         public String fallbackTexture;
         @Nullable
+        public String texture;
+        @Nullable
         public Integer backgroundColor;
         @Nullable
         public Integer fillColor;
@@ -1332,6 +1334,28 @@ public final class MachineGuiStyleManager {
         public Integer textureWidth;
         @Nullable
         public Integer textureHeight;
+        @Nullable
+        public Integer frameWidth;
+        @Nullable
+        public Integer frameHeight;
+        @Nullable
+        public Integer frameCount;
+        @Nullable
+        public Integer ticksPerFrame;
+        @Nullable
+        public Integer startFrame;
+        @Nullable
+        public Integer u;
+        @Nullable
+        public Integer v;
+        @Nullable
+        public Integer columns;
+        @Nullable
+        public Boolean loop;
+        @Nullable
+        public Boolean reverse;
+        @Nullable
+        public Boolean pingPong;
         @Nullable
         public String mode;
         @Nullable
@@ -1358,6 +1382,7 @@ public final class MachineGuiStyleManager {
             copy.backgroundTexture = source.backgroundTexture;
             copy.fillTexture = source.fillTexture;
             copy.fallbackTexture = source.fallbackTexture;
+            copy.texture = source.texture;
             copy.backgroundColor = source.backgroundColor;
             copy.fillColor = source.fillColor;
             copy.borderColor = source.borderColor;
@@ -1366,6 +1391,17 @@ public final class MachineGuiStyleManager {
             copy.gridColor = source.gridColor;
             copy.textureWidth = source.textureWidth;
             copy.textureHeight = source.textureHeight;
+            copy.frameWidth = source.frameWidth;
+            copy.frameHeight = source.frameHeight;
+            copy.frameCount = source.frameCount;
+            copy.ticksPerFrame = source.ticksPerFrame;
+            copy.startFrame = source.startFrame;
+            copy.u = source.u;
+            copy.v = source.v;
+            copy.columns = source.columns;
+            copy.loop = source.loop;
+            copy.reverse = source.reverse;
+            copy.pingPong = source.pingPong;
             copy.mode = source.mode;
             copy.startAngle = source.startAngle;
             copy.innerRadius = source.innerRadius;
@@ -1469,6 +1505,14 @@ public final class MachineGuiStyleManager {
         public Float equals;
         @Nullable
         public String texture;
+        @Nullable
+        public Integer u;
+        @Nullable
+        public Integer v;
+        @Nullable
+        public Integer textureWidth;
+        @Nullable
+        public Integer textureHeight;
 
         public static DynamicVisualFrameStyle copyOf(@Nullable DynamicVisualFrameStyle source) {
             DynamicVisualFrameStyle copy = new DynamicVisualFrameStyle();
@@ -1479,6 +1523,10 @@ public final class MachineGuiStyleManager {
             copy.max = source.max;
             copy.equals = source.equals;
             copy.texture = source.texture;
+            copy.u = source.u;
+            copy.v = source.v;
+            copy.textureWidth = source.textureWidth;
+            copy.textureHeight = source.textureHeight;
             return copy;
         }
     }

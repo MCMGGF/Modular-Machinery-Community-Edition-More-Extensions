@@ -9,6 +9,7 @@ Use them as a starting point:
 - `factory-queue-only.json`: only customizes the factory queue and right expansion
 - `sliders.json`: adds horizontal and vertical controller sliders that write Smart Interface / virtual DataPort values
 - `dynamic-visuals.json`: demonstrates `dynamicVisuals[]`, including weighted multi-source combining, transform-by-value, visibility-by-value, renderer switching, and color interpolation
+- `animated-texture.json`: demonstrates `dynamicVisuals[].renderer.type = "animatedTexture"` with both sprite sheet and ordered PNG frame animations
 - `error-cases.json`: intentionally broken or edge-case examples for log validation
 - `subgui-page-reference.json`: main machine JSON, intended for `config/modularmachinery/machinery`
 - `subgui-page-reference-settings.json`: sub GUI overlay JSON, intended for `config/mmceguiext/subgui`

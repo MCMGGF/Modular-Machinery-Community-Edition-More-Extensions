@@ -380,6 +380,217 @@ public class MachineGuiStyleParserTest {
     }
 
     @Test
+    public void parseMachineJsonParsesAnimatedTextureSpriteSheetAndAliases() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "animated-sheet.json",
+            "{\n" +
+                "  \"registryname\": \"demo:animated_sheet_machine\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"dynamicVisuals\": [\n" +
+                "        {\n" +
+                "          \"id\": \"fan_anim\",\n" +
+                "          \"x\": 120,\n" +
+                "          \"y\": 32,\n" +
+                "          \"width\": 16,\n" +
+                "          \"height\": 16,\n" +
+                "          \"renderer\": {\n" +
+                "            \"type\": \"spriteSheet\",\n" +
+                "            \"texture\": \"demo:textures/gui/fan_sheet.png\",\n" +
+                "            \"frameWidth\": 16,\n" +
+                "            \"frameHeight\": 16,\n" +
+                "            \"frameCount\": 8,\n" +
+                "            \"columns\": 4,\n" +
+                "            \"textureWidth\": 64,\n" +
+                "            \"textureHeight\": 32,\n" +
+                "            \"ticksPerFrame\": 3,\n" +
+                "            \"startFrame\": 1,\n" +
+                "            \"loop\": false,\n" +
+                "            \"reverse\": true,\n" +
+                "            \"pingPong\": true,\n" +
+                "            \"u\": 2,\n" +
+                "            \"v\": 3\n" +
+                "          }\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.dynamicVisuals);
+        assertEquals(1, result.machineStyle.dynamicVisuals.size());
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer = result.machineStyle.dynamicVisuals.get(0).renderer;
+        assertNotNull(renderer);
+        assertEquals("animatedTexture", renderer.type);
+        assertEquals("demo:textures/gui/fan_sheet.png", renderer.texture);
+        assertEquals(Integer.valueOf(16), renderer.frameWidth);
+        assertEquals(Integer.valueOf(16), renderer.frameHeight);
+        assertEquals(Integer.valueOf(8), renderer.frameCount);
+        assertEquals(Integer.valueOf(4), renderer.columns);
+        assertEquals(Integer.valueOf(64), renderer.textureWidth);
+        assertEquals(Integer.valueOf(32), renderer.textureHeight);
+        assertEquals(Integer.valueOf(3), renderer.ticksPerFrame);
+        assertEquals(Integer.valueOf(1), renderer.startFrame);
+        assertEquals(Boolean.FALSE, renderer.loop);
+        assertEquals(Boolean.TRUE, renderer.reverse);
+        assertEquals(Boolean.TRUE, renderer.pingPong);
+        assertEquals(Integer.valueOf(2), renderer.u);
+        assertEquals(Integer.valueOf(3), renderer.v);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesAnimatedTextureFileFrames() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "animated-frames.json",
+            "{\n" +
+                "  \"registryname\": \"demo:animated_frames_machine\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"dynamicVisuals\": [\n" +
+                "        {\n" +
+                "          \"id\": \"spark_anim\",\n" +
+                "          \"x\": 140,\n" +
+                "          \"y\": 32,\n" +
+                "          \"width\": 16,\n" +
+                "          \"height\": 16,\n" +
+                "          \"renderer\": {\n" +
+                "            \"type\": \"animated_texture\",\n" +
+                "            \"ticksPerFrame\": 4,\n" +
+                "            \"frames\": [\n" +
+                "              \"demo:textures/gui/spark_0.png\",\n" +
+                "              {\"texture\": \"demo:textures/gui/spark_1.png\", \"u\": 1, \"v\": 2, \"textureWidth\": 32, \"textureHeight\": 34}\n" +
+                "            ]\n" +
+                "          }\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.dynamicVisuals);
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer = result.machineStyle.dynamicVisuals.get(0).renderer;
+        assertNotNull(renderer);
+        assertEquals("animatedTexture", renderer.type);
+        assertEquals(Integer.valueOf(4), renderer.ticksPerFrame);
+        assertNotNull(renderer.frames);
+        assertEquals(2, renderer.frames.size());
+        assertEquals("demo:textures/gui/spark_0.png", renderer.frames.get(0).texture);
+        assertEquals("demo:textures/gui/spark_1.png", renderer.frames.get(1).texture);
+        assertEquals(Integer.valueOf(1), renderer.frames.get(1).u);
+        assertEquals(Integer.valueOf(2), renderer.frames.get(1).v);
+        assertEquals(Integer.valueOf(32), renderer.frames.get(1).textureWidth);
+        assertEquals(Integer.valueOf(34), renderer.frames.get(1).textureHeight);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonSkipsInvalidAnimatedTextureRenderer() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "animated-invalid.json",
+            "{\n" +
+                "  \"registryname\": \"demo:animated_invalid_machine\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"dynamicVisuals\": [\n" +
+                "        {\n" +
+                "          \"id\": \"bad_anim\",\n" +
+                "          \"x\": 1,\n" +
+                "          \"y\": 2,\n" +
+                "          \"width\": 16,\n" +
+                "          \"height\": 16,\n" +
+                "          \"renderer\": {\"type\": \"animatedTexture\", \"texture\": \"demo:textures/gui/partial.png\"}\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNull(result.machineStyle.dynamicVisuals);
+        assertTrue(containsWarning(result, "animatedTexture requires either texture, frameWidth, frameHeight and frameCount"));
+    }
+
+    @Test
+    public void controllerStyleCopiesAndMergesAnimatedDynamicVisualFields() {
+        MachineGuiStyleManager.ControllerStyle base = new MachineGuiStyleManager.ControllerStyle();
+        MachineGuiStyleManager.DynamicVisualStyle visualA = new MachineGuiStyleManager.DynamicVisualStyle();
+        visualA.id = "a";
+        visualA.x = 1;
+        visualA.y = 2;
+        visualA.width = 3;
+        visualA.height = 4;
+        visualA.renderer = new MachineGuiStyleManager.DynamicVisualRendererStyle();
+        visualA.renderer.type = "animatedTexture";
+        visualA.renderer.texture = "demo:textures/gui/a_sheet.png";
+        visualA.renderer.frameWidth = Integer.valueOf(8);
+        visualA.renderer.frameHeight = Integer.valueOf(9);
+        visualA.renderer.frameCount = Integer.valueOf(5);
+        visualA.renderer.ticksPerFrame = Integer.valueOf(2);
+        visualA.renderer.startFrame = Integer.valueOf(1);
+        visualA.renderer.columns = Integer.valueOf(3);
+        visualA.renderer.loop = Boolean.FALSE;
+        visualA.renderer.reverse = Boolean.TRUE;
+        visualA.renderer.pingPong = Boolean.TRUE;
+        MachineGuiStyleManager.DynamicVisualFrameStyle frame = new MachineGuiStyleManager.DynamicVisualFrameStyle();
+        frame.texture = "demo:textures/gui/a_0.png";
+        frame.u = Integer.valueOf(1);
+        frame.v = Integer.valueOf(2);
+        frame.textureWidth = Integer.valueOf(16);
+        frame.textureHeight = Integer.valueOf(17);
+        visualA.renderer.frames = java.util.Collections.singletonList(frame);
+        base.dynamicVisuals = java.util.Collections.singletonList(visualA);
+
+        MachineGuiStyleManager.ControllerStyle overlay = new MachineGuiStyleManager.ControllerStyle();
+        MachineGuiStyleManager.DynamicVisualStyle visualB = new MachineGuiStyleManager.DynamicVisualStyle();
+        visualB.id = "b";
+        visualB.x = 5;
+        visualB.y = 6;
+        visualB.width = 7;
+        visualB.height = 8;
+        visualB.renderer = new MachineGuiStyleManager.DynamicVisualRendererStyle();
+        visualB.renderer.type = "animatedTexture";
+        visualB.renderer.texture = "demo:textures/gui/b_sheet.png";
+        visualB.renderer.frameWidth = Integer.valueOf(10);
+        visualB.renderer.frameHeight = Integer.valueOf(11);
+        visualB.renderer.frameCount = Integer.valueOf(6);
+        overlay.dynamicVisuals = java.util.Collections.singletonList(visualB);
+
+        MachineGuiStyleManager.ControllerStyle copy = MachineGuiStyleManager.ControllerStyle.copyOf(base);
+        assertNotNull(copy.dynamicVisuals);
+        MachineGuiStyleManager.DynamicVisualRendererStyle copiedRenderer = copy.dynamicVisuals.get(0).renderer;
+        assertNotNull(copiedRenderer);
+        assertEquals("animatedTexture", copiedRenderer.type);
+        assertEquals("demo:textures/gui/a_sheet.png", copiedRenderer.texture);
+        assertEquals(Integer.valueOf(8), copiedRenderer.frameWidth);
+        assertEquals(Integer.valueOf(9), copiedRenderer.frameHeight);
+        assertEquals(Integer.valueOf(5), copiedRenderer.frameCount);
+        assertEquals(Integer.valueOf(2), copiedRenderer.ticksPerFrame);
+        assertEquals(Integer.valueOf(1), copiedRenderer.startFrame);
+        assertEquals(Integer.valueOf(3), copiedRenderer.columns);
+        assertEquals(Boolean.FALSE, copiedRenderer.loop);
+        assertEquals(Boolean.TRUE, copiedRenderer.reverse);
+        assertEquals(Boolean.TRUE, copiedRenderer.pingPong);
+        assertNotNull(copiedRenderer.frames);
+        assertEquals(Integer.valueOf(1), copiedRenderer.frames.get(0).u);
+        assertEquals(Integer.valueOf(2), copiedRenderer.frames.get(0).v);
+        assertEquals(Integer.valueOf(16), copiedRenderer.frames.get(0).textureWidth);
+        assertEquals(Integer.valueOf(17), copiedRenderer.frames.get(0).textureHeight);
+
+        MachineGuiStyleManager.ControllerStyle merged = MachineGuiStyleManager.ControllerStyle.copyOf(base).mergeFrom(overlay);
+        assertNotNull(merged.dynamicVisuals);
+        assertEquals(2, merged.dynamicVisuals.size());
+        assertEquals("a", merged.dynamicVisuals.get(0).id);
+        assertEquals("b", merged.dynamicVisuals.get(1).id);
+        assertEquals("demo:textures/gui/b_sheet.png", merged.dynamicVisuals.get(1).renderer.texture);
+    }
+
+    @Test
     public void parseMachineJsonParsesSlidersAndAliases() {
         MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
             "sliders.json",

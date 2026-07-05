@@ -329,6 +329,78 @@ MMCEGE 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常�
 
 可直接复制的完整示例：`examples/quick-start/progress-bars.json`。
 
+### 4.7 `dynamicVisuals` 帧图动画
+
+`dynamicVisuals[].renderer.type = "animatedTexture"` 用来播放 PNG 帧动画。它是按客户端 / world tick 自动推进的动画，不绑定数值；如果要按数值切换贴图，继续用 `textureSwitch` 或 `rendererSwitchByValue`。
+
+图集模式适合把所有帧放在一张 PNG 里：
+
+```json
+"dynamicVisuals": [
+  {
+    "id": "fan_anim",
+    "x": 120,
+    "y": 32,
+    "width": 16,
+    "height": 16,
+    "foreground": true,
+    "renderer": {
+      "type": "animatedTexture",
+      "texture": "yourmod:textures/gui/fan_sheet.png",
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "frameCount": 8,
+      "columns": 4,
+      "textureWidth": 64,
+      "textureHeight": 32,
+      "ticksPerFrame": 2,
+      "loop": true
+    }
+  }
+]
+```
+
+多文件模式适合直接用多张 PNG 帧：
+
+```json
+"dynamicVisuals": [
+  {
+    "id": "spark_anim",
+    "x": 140,
+    "y": 32,
+    "width": 16,
+    "height": 16,
+    "renderer": {
+      "type": "animatedTexture",
+      "ticksPerFrame": 3,
+      "frames": [
+        "yourmod:textures/gui/spark_0.png",
+        "yourmod:textures/gui/spark_1.png",
+        {
+          "texture": "yourmod:textures/gui/spark_2.png",
+          "u": 0,
+          "v": 0,
+          "textureWidth": 16,
+          "textureHeight": 16
+        }
+      ]
+    }
+  }
+]
+```
+
+可用字段：
+
+- `ticksPerFrame`：每帧持续多少 tick，默认 `2`。
+- `startFrame`：起始帧，默认 `0`。
+- `loop`：是否循环，默认 `true`。
+- `reverse`：倒序播放，默认 `false`。
+- `pingPong`：往返播放，默认 `false`。
+- 图集模式：`texture`、`frameWidth`、`frameHeight`、`frameCount`，可选 `u`、`v`、`columns`、`textureWidth`、`textureHeight`。
+- 多文件模式：`frames[]` 可写字符串，也可写对象；对象支持 `texture`、`u`、`v`、`textureWidth`、`textureHeight`。
+
+不支持 GIF 自动播放；建议把动图导出成 PNG 帧图或一张帧图集。完整示例见 `examples/quick-start/animated-texture.json`。
+
 ## 5. ZS 指令写法（`onControllerGUIRender` 的 `extraInfo`）
 
 ### 5.1 Smart Interface 显示控制

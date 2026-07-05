@@ -1467,6 +1467,7 @@ final class MachineGuiStyleParser {
         renderer.backgroundTexture = getTrimmedString(rendererObj, result, scope, "backgroundTexture", "background_texture", "emptyTexture", "empty_texture");
         renderer.fillTexture = getTrimmedString(rendererObj, result, scope, "fillTexture", "fill_texture", "texture", "fullTexture", "full_texture");
         renderer.fallbackTexture = getTrimmedString(rendererObj, result, scope, "fallbackTexture", "fallback_texture", "defaultTexture", "default_texture");
+        renderer.texture = getTrimmedString(rendererObj, result, scope, "texture", "sheetTexture", "sheet_texture", "spriteSheet", "sprite_sheet");
         renderer.backgroundColor = getColor(rendererObj, result, scope, "backgroundColor", "background_color", "bgColor", "bg_color");
         renderer.fillColor = getColor(rendererObj, result, scope, "fillColor", "fill_color");
         renderer.borderColor = getColor(rendererObj, result, scope, "borderColor", "border_color", "frameColor", "frame_color");
@@ -1475,6 +1476,24 @@ final class MachineGuiStyleParser {
         renderer.gridColor = getColor(rendererObj, result, scope, "gridColor", "grid_color");
         renderer.textureWidth = validateRangeInt(getInt(rendererObj, result, scope, "textureWidth", "texture_width", "texW"), 1, MAX_COMPONENT_SIZE, result, scope, "textureWidth");
         renderer.textureHeight = validateRangeInt(getInt(rendererObj, result, scope, "textureHeight", "texture_height", "texH"), 1, MAX_COMPONENT_SIZE, result, scope, "textureHeight");
+        renderer.frameWidth = validateRangeInt(getInt(rendererObj, result, scope, "frameWidth", "frame_width"), 1, MAX_COMPONENT_SIZE, result, scope, "frameWidth");
+        renderer.frameHeight = validateRangeInt(getInt(rendererObj, result, scope, "frameHeight", "frame_height"), 1, MAX_COMPONENT_SIZE, result, scope, "frameHeight");
+        renderer.frameCount = validateRangeInt(getInt(rendererObj, result, scope, "frameCount", "frame_count"), 1, MAX_ARRAY_ENTRIES, result, scope, "frameCount");
+        renderer.ticksPerFrame = validateRangeInt(
+            getInt(rendererObj, result, scope, "ticksPerFrame", "ticks_per_frame", "frameTicks", "frame_ticks"),
+            1,
+            1200,
+            result,
+            scope,
+            "ticksPerFrame"
+        );
+        renderer.startFrame = validateRangeInt(getInt(rendererObj, result, scope, "startFrame", "start_frame"), 0, MAX_ARRAY_ENTRIES, result, scope, "startFrame");
+        renderer.u = validateMinInt(getInt(rendererObj, result, scope, "u", "textureU", "texture_u"), 0, result, scope, "u");
+        renderer.v = validateMinInt(getInt(rendererObj, result, scope, "v", "textureV", "texture_v"), 0, result, scope, "v");
+        renderer.columns = validateRangeInt(getInt(rendererObj, result, scope, "columns", "cols"), 1, MAX_ARRAY_ENTRIES, result, scope, "columns");
+        renderer.loop = getBoolean(rendererObj, result, scope, "loop", "repeat");
+        renderer.reverse = getBoolean(rendererObj, result, scope, "reverse", "reversed");
+        renderer.pingPong = getBoolean(rendererObj, result, scope, "pingPong", "ping_pong", "bounce", "yoyo");
         renderer.mode = normalizeDynamicPieMode(getTrimmedString(rendererObj, result, scope, "mode", "pieMode", "pie_mode"), result, scope);
         renderer.startAngle = getFloat(rendererObj, result, scope, "startAngle", "start_angle", "angle");
         renderer.innerRadius = validateRangeInt(getInt(rendererObj, result, scope, "innerRadius", "inner_radius"), 0, MAX_COMPONENT_SIZE, result, scope, "innerRadius");
@@ -1482,7 +1501,21 @@ final class MachineGuiStyleParser {
         renderer.lineWidth = validateRangeInt(getInt(rendererObj, result, scope, "lineWidth", "line_width"), 1, 16, result, scope, "lineWidth");
         renderer.showGrid = getBoolean(rendererObj, result, scope, "showGrid", "show_grid", "grid");
         renderer.frames = parseDynamicVisualFrames(rendererObj, result, scope);
+        if ("animatedTexture".equals(renderer.type) && !isValidAnimatedTextureRenderer(renderer)) {
+            result.warnForMachine(scope, field(scope, "renderer") + " animatedTexture requires either texture, frameWidth, frameHeight and frameCount, or at least one valid frames[] entry.");
+            return null;
+        }
         return renderer;
+    }
+
+    private static boolean isValidAnimatedTextureRenderer(MachineGuiStyleManager.DynamicVisualRendererStyle renderer) {
+        boolean hasFrames = renderer.frames != null && !renderer.frames.isEmpty();
+        boolean hasSheet = renderer.texture != null
+            && !renderer.texture.trim().isEmpty()
+            && renderer.frameWidth != null
+            && renderer.frameHeight != null
+            && renderer.frameCount != null;
+        return hasFrames || hasSheet;
     }
 
     @Nullable
@@ -1558,6 +1591,11 @@ final class MachineGuiStyleParser {
             || obj.has("empty_texture")
             || obj.has("fillTexture")
             || obj.has("fill_texture")
+            || obj.has("texture")
+            || obj.has("sheetTexture")
+            || obj.has("sheet_texture")
+            || obj.has("spriteSheet")
+            || obj.has("sprite_sheet")
             || obj.has("fullTexture")
             || obj.has("full_texture")
             || obj.has("fallbackTexture")
@@ -1577,6 +1615,27 @@ final class MachineGuiStyleParser {
             || obj.has("texture_width")
             || obj.has("textureHeight")
             || obj.has("texture_height")
+            || obj.has("frameWidth")
+            || obj.has("frame_width")
+            || obj.has("frameHeight")
+            || obj.has("frame_height")
+            || obj.has("frameCount")
+            || obj.has("frame_count")
+            || obj.has("ticksPerFrame")
+            || obj.has("ticks_per_frame")
+            || obj.has("frameTicks")
+            || obj.has("frame_ticks")
+            || obj.has("startFrame")
+            || obj.has("start_frame")
+            || obj.has("u")
+            || obj.has("v")
+            || obj.has("columns")
+            || obj.has("cols")
+            || obj.has("loop")
+            || obj.has("reverse")
+            || obj.has("reversed")
+            || obj.has("pingPong")
+            || obj.has("ping_pong")
             || obj.has("mode")
             || obj.has("pieMode")
             || obj.has("pie_mode")
@@ -1690,16 +1749,23 @@ final class MachineGuiStyleParser {
         for (int i = 0; i < limit; i++) {
             JsonElement child = array.get(i);
             String itemScope = field(scope, match.key + "[" + i + "]");
-            if (child == null || !child.isJsonObject()) {
-                result.warnForMachine(scope, itemScope + " must be an object.");
+            MachineGuiStyleManager.DynamicVisualFrameStyle frame = new MachineGuiStyleManager.DynamicVisualFrameStyle();
+            if (child != null && child.isJsonPrimitive() && child.getAsJsonPrimitive().isString()) {
+                frame.texture = safeTrim(child.getAsString());
+            } else if (child != null && child.isJsonObject()) {
+                JsonObject obj = child.getAsJsonObject();
+                frame.min = getFloat(obj, result, itemScope, "min", "minimum");
+                frame.max = getFloat(obj, result, itemScope, "max", "maximum");
+                frame.equals = getFloat(obj, result, itemScope, "equals", "eq", "value");
+                frame.texture = getTrimmedString(obj, result, itemScope, "texture", "path", "resource");
+                frame.u = validateMinInt(getInt(obj, result, itemScope, "u", "textureU", "texture_u"), 0, result, itemScope, "u");
+                frame.v = validateMinInt(getInt(obj, result, itemScope, "v", "textureV", "texture_v"), 0, result, itemScope, "v");
+                frame.textureWidth = validateRangeInt(getInt(obj, result, itemScope, "textureWidth", "texture_width", "texW"), 1, MAX_COMPONENT_SIZE, result, itemScope, "textureWidth");
+                frame.textureHeight = validateRangeInt(getInt(obj, result, itemScope, "textureHeight", "texture_height", "texH"), 1, MAX_COMPONENT_SIZE, result, itemScope, "textureHeight");
+            } else {
+                result.warnForMachine(scope, itemScope + " must be a string or object.");
                 continue;
             }
-            JsonObject obj = child.getAsJsonObject();
-            MachineGuiStyleManager.DynamicVisualFrameStyle frame = new MachineGuiStyleManager.DynamicVisualFrameStyle();
-            frame.min = getFloat(obj, result, itemScope, "min", "minimum");
-            frame.max = getFloat(obj, result, itemScope, "max", "maximum");
-            frame.equals = getFloat(obj, result, itemScope, "equals", "eq", "value");
-            frame.texture = getTrimmedString(obj, result, itemScope, "texture", "path", "resource");
             if (frame.texture == null || frame.texture.isEmpty()) {
                 result.warnForMachine(scope, itemScope + " is missing required field texture.");
                 continue;
@@ -2572,6 +2638,13 @@ final class MachineGuiStyleParser {
         if ("textureswitch".equals(text) || "texture_switch".equals(text) || "switch".equals(text) || "state_texture".equals(text)) {
             return "textureSwitch";
         }
+        if ("animatedtexture".equals(text)
+            || "animated_texture".equals(text)
+            || "animation".equals(text)
+            || "spritesheet".equals(text)
+            || "sprite_sheet".equals(text)) {
+            return "animatedTexture";
+        }
         if ("fill".equals(text) || "bar".equals(text) || "progress".equals(text) || "progressbar".equals(text) || "progress_bar".equals(text)) {
             return "fill";
         }
@@ -2581,7 +2654,7 @@ final class MachineGuiStyleParser {
         if ("linechart".equals(text) || "line_chart".equals(text) || "chart".equals(text) || "line".equals(text) || "area".equals(text)) {
             return "lineChart";
         }
-        result.warnForMachine(scope, field(scope, "renderer.type") + " must be textureSwitch, fill, pie or lineChart.");
+        result.warnForMachine(scope, field(scope, "renderer.type") + " must be textureSwitch, animatedTexture, fill, pie or lineChart.");
         return null;
     }
 

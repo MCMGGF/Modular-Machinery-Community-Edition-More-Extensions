@@ -274,6 +274,7 @@ public class DynamicVisualRenderer {
                         renderer,
                         rawValue,
                         normalized,
+                        controller,
                         -Math.round(pivotX),
                         -Math.round(pivotY),
                         visual.width,
@@ -284,7 +285,7 @@ public class DynamicVisualRenderer {
                     GlStateManager.popMatrix();
                 }
             } else {
-                drawResolvedVisual(type, visual, renderer, rawValue, normalized, x, y, visual.width, visual.height, transform.alpha);
+                drawResolvedVisual(type, visual, renderer, rawValue, normalized, controller, x, y, visual.width, visual.height, transform.alpha);
             }
         } finally {
             endVisualRender(transform.alpha);
@@ -381,6 +382,7 @@ public class DynamicVisualRenderer {
         MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
         float rawValue,
         float normalized,
+        @Nullable TileMultiblockMachineController controller,
         int x,
         int y,
         int width,
@@ -389,6 +391,8 @@ public class DynamicVisualRenderer {
     ) {
         if ("textureSwitch".equals(type)) {
             drawTextureSwitch(renderer, rawValue, x, y, width, height);
+        } else if ("animatedTexture".equals(type)) {
+            drawAnimatedTexture(renderer, controller, x, y, width, height);
         } else if ("pie".equals(type)) {
             drawPie(renderer, normalized, x, y, width, height, alpha);
         } else if ("lineChart".equals(type)) {
@@ -625,6 +629,155 @@ public class DynamicVisualRenderer {
             return false;
         }
         return true;
+    }
+
+    private void drawAnimatedTexture(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        @Nullable TileMultiblockMachineController controller,
+        int x,
+        int y,
+        int width,
+        int height
+    ) {
+        long tick = getWorldTime(controller);
+        int ticksPerFrame = renderer.ticksPerFrame == null ? 2 : renderer.ticksPerFrame.intValue();
+        int startFrame = renderer.startFrame == null ? 0 : renderer.startFrame.intValue();
+        boolean loop = renderer.loop == null || renderer.loop.booleanValue();
+        boolean reverse = renderer.reverse != null && renderer.reverse.booleanValue();
+        boolean pingPong = renderer.pingPong != null && renderer.pingPong.booleanValue();
+        if (renderer.frames != null && !renderer.frames.isEmpty()) {
+            int frameIndex = computeAnimatedFrameIndex(tick, renderer.frames.size(), ticksPerFrame, startFrame, loop, reverse, pingPong);
+            drawAnimatedFrame(renderer, renderer.frames.get(frameIndex), x, y, width, height);
+            return;
+        }
+        drawAnimatedSpriteSheet(renderer, tick, ticksPerFrame, startFrame, loop, reverse, pingPong, x, y, width, height);
+    }
+
+    private void drawAnimatedFrame(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        @Nullable MachineGuiStyleManager.DynamicVisualFrameStyle frame,
+        int x,
+        int y,
+        int width,
+        int height
+    ) {
+        if (frame == null || frame.texture == null || frame.texture.trim().isEmpty()) {
+            return;
+        }
+        ResourceLocation resource = GuiRenderUtils.parseOptionalTexture(frame.texture);
+        if (resource == null) {
+            return;
+        }
+        int u = frame.u == null ? resolveNonNegative(renderer.u, 0) : Math.max(0, frame.u.intValue());
+        int v = frame.v == null ? resolveNonNegative(renderer.v, 0) : Math.max(0, frame.v.intValue());
+        int sourceWidth = resolvePositive(renderer.frameWidth, width);
+        int sourceHeight = resolvePositive(renderer.frameHeight, height);
+        int textureWidth = frame.textureWidth == null ? resolvePositive(renderer.textureWidth, sourceWidth + u) : Math.max(1, frame.textureWidth.intValue());
+        int textureHeight = frame.textureHeight == null ? resolvePositive(renderer.textureHeight, sourceHeight + v) : Math.max(1, frame.textureHeight.intValue());
+        Minecraft.getMinecraft().getTextureManager().bindTexture(resource);
+        GuiRenderUtils.drawScaledTexturedRect(x, y, width, height, u, v, sourceWidth, sourceHeight, textureWidth, textureHeight);
+    }
+
+    private void drawAnimatedSpriteSheet(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        long tick,
+        int ticksPerFrame,
+        int startFrame,
+        boolean loop,
+        boolean reverse,
+        boolean pingPong,
+        int x,
+        int y,
+        int width,
+        int height
+    ) {
+        ResourceLocation resource = GuiRenderUtils.parseOptionalTexture(renderer.texture);
+        if (resource == null || renderer.frameWidth == null || renderer.frameHeight == null || renderer.frameCount == null) {
+            return;
+        }
+        int frameWidth = Math.max(1, renderer.frameWidth.intValue());
+        int frameHeight = Math.max(1, renderer.frameHeight.intValue());
+        int frameCount = Math.max(1, renderer.frameCount.intValue());
+        int columns = resolveAnimatedSheetColumns(renderer, frameWidth, frameCount);
+        int frameIndex = computeAnimatedFrameIndex(tick, frameCount, ticksPerFrame, startFrame, loop, reverse, pingPong);
+        int baseU = resolveNonNegative(renderer.u, 0);
+        int baseV = resolveNonNegative(renderer.v, 0);
+        int[] uv = computeSpriteSheetFrameUv(
+            frameIndex,
+            baseU,
+            baseV,
+            frameWidth,
+            frameHeight,
+            columns
+        );
+        int rows = Math.max(1, (frameCount + columns - 1) / columns);
+        int textureWidth = resolvePositive(renderer.textureWidth, baseU + frameWidth * columns);
+        int textureHeight = resolvePositive(renderer.textureHeight, baseV + frameHeight * rows);
+        Minecraft.getMinecraft().getTextureManager().bindTexture(resource);
+        GuiRenderUtils.drawScaledTexturedRect(x, y, width, height, uv[0], uv[1], frameWidth, frameHeight, textureWidth, textureHeight);
+    }
+
+    private int resolveAnimatedSheetColumns(MachineGuiStyleManager.DynamicVisualRendererStyle renderer, int frameWidth, int frameCount) {
+        if (renderer.columns != null) {
+            return Math.max(1, renderer.columns.intValue());
+        }
+        if (renderer.textureWidth != null && frameWidth > 0) {
+            int inferred = renderer.textureWidth.intValue() / frameWidth;
+            if (inferred > 0) {
+                return inferred;
+            }
+        }
+        return Math.max(1, frameCount);
+    }
+
+    private int resolvePositive(@Nullable Integer value, int fallback) {
+        if (value != null && value.intValue() > 0) {
+            return value.intValue();
+        }
+        return Math.max(1, fallback);
+    }
+
+    private int resolveNonNegative(@Nullable Integer value, int fallback) {
+        if (value != null && value.intValue() >= 0) {
+            return value.intValue();
+        }
+        return Math.max(0, fallback);
+    }
+
+    static int computeAnimatedFrameIndex(
+        long tick,
+        int frameCount,
+        int ticksPerFrame,
+        int startFrame,
+        boolean loop,
+        boolean reverse,
+        boolean pingPong
+    ) {
+        int count = Math.max(1, frameCount);
+        int frameTicks = Math.max(1, ticksPerFrame);
+        int start = MathHelper.clamp(startFrame, 0, count - 1);
+        long step = Math.max(0L, tick) / (long) frameTicks;
+        int index;
+        if (pingPong && count > 1) {
+            int period = count * 2 - 2;
+            long position = (long) start + step;
+            int phase = loop ? (int) (position % (long) period) : (int) Math.min(position, (long) period - 1L);
+            index = phase < count ? phase : period - phase;
+        } else {
+            long position = (long) start + step;
+            index = loop ? (int) (position % (long) count) : (int) Math.min(position, (long) count - 1L);
+        }
+        return reverse ? count - 1 - index : index;
+    }
+
+    static int[] computeSpriteSheetFrameUv(int frameIndex, int baseU, int baseV, int frameWidth, int frameHeight, int columns) {
+        int safeColumns = Math.max(1, columns);
+        int safeFrame = Math.max(0, frameIndex);
+        int safeFrameWidth = Math.max(1, frameWidth);
+        int safeFrameHeight = Math.max(1, frameHeight);
+        int u = Math.max(0, baseU) + safeFrame % safeColumns * safeFrameWidth;
+        int v = Math.max(0, baseV) + safeFrame / safeColumns * safeFrameHeight;
+        return new int[] {u, v};
     }
 
     private void drawFill(MachineGuiStyleManager.DynamicVisualRendererStyle renderer, float progress, int x, int y, int width, int height, float alpha) {
