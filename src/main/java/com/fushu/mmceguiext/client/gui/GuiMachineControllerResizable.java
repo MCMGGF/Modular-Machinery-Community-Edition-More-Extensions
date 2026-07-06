@@ -2,6 +2,7 @@ package com.fushu.mmceguiext.client.gui;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
 import com.fushu.mmceguiext.MMCEGuiExtConfig;
+import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.fushu.mmceguiext.client.config.MachineGuiStyleManager;
 import com.fushu.mmceguiext.client.config.ProgressBarStyleSupport;
 import com.fushu.mmceguiext.common.network.PktControllerButtonAction;
@@ -156,7 +157,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
 
     @Override
     public void initGui() {
-        this.baseStyleOverride = MachineGuiStyleManager.resolveMachineController(resolveMachine());
+        this.baseStyleOverride = resolveBaseControllerStyle();
         this.replaceSubGuiStack.clear();
         this.modalSubGuiStack.clear();
         this.styleOverride = this.baseStyleOverride;
@@ -1721,6 +1722,31 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             return found;
         }
         return controller.getBlueprintMachine();
+    }
+
+    private MachineGuiStyleManager.ControllerStyle resolveBaseControllerStyle() {
+        MachineGuiStyleManager.ControllerStyle baseStyle = MachineGuiStyleManager.resolveMachineController(resolveMachine());
+        ResourceLocation styleKey = resolveProvidedStyleKey();
+        if (styleKey == null) {
+            return baseStyle;
+        }
+
+        MachineGuiStyleManager.ControllerStyle keyedStyle = MachineGuiStyleManager.resolveMachineController(styleKey);
+        if (keyedStyle == MachineGuiStyleManager.ControllerStyle.EMPTY || keyedStyle.isEmpty()) {
+            return baseStyle;
+        }
+        if (baseStyle == MachineGuiStyleManager.ControllerStyle.EMPTY || baseStyle.isEmpty()) {
+            return keyedStyle;
+        }
+        return MachineGuiStyleManager.ControllerStyle.copyOf(baseStyle).mergeFrom(keyedStyle);
+    }
+
+    @Nullable
+    private ResourceLocation resolveProvidedStyleKey() {
+        if (controller instanceof IMachineGuiStyleProvider) {
+            return ((IMachineGuiStyleProvider) controller).getMachineControllerGuiStyle();
+        }
+        return null;
     }
 
     @Nullable

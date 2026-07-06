@@ -60,12 +60,8 @@ dependencies {
     val localMixinBooter = fileTree("${System.getProperty("user.home")}/.gradle/caches/modules-2/files-2.1/zone.rong/mixinbooter/8.9") {
         include("**/mixinbooter-8.9.jar")
     }.files.firstOrNull()
-    if (localMixinBooter != null) {
-        api(files(localMixinBooter))
-    } else {
-        api(mixin) {
-            isTransitive = false
-        }
+    api(mixin) {
+        isTransitive = false
     }
     annotationProcessor("org.ow2.asm:asm-debug-all:5.2")
     annotationProcessor("com.google.guava:guava:30.0-jre")

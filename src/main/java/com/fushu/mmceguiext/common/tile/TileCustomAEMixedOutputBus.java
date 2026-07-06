@@ -20,6 +20,7 @@ import appeng.me.helpers.AENetworkProxy;
 import appeng.me.helpers.IGridProxyable;
 import appeng.me.helpers.MachineSource;
 import appeng.util.Platform;
+import com.fushu.mmceguiext.api.machine.IMultiMachineComponentProvider;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedOutputBus;
 import com.fushu.mmceguiext.common.item.ItemBlockCustomAEMixedOutputBus;
 import com.fushu.mmceguiext.common.registry.CustomAEMixedOutputBusRegistry;
@@ -70,6 +71,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent implements
     SelectiveUpdateTileEntity,
     MachineComponentTile,
+    IMultiMachineComponentProvider,
     IActionHost,
     IGridProxyable,
     IGridTickable,
@@ -133,6 +135,11 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
                 return combinedHandler;
             }
         };
+    }
+
+    @Override
+    public long getMachineComponentGroupId() {
+        return this.combinedComponent.getGroupID();
     }
 
     private IOInventory buildInventory() {
@@ -586,7 +593,13 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
 
     @Nonnull
     public Collection<MachineComponent<?>> provideComponents() {
-        return Collections.emptyList();
+        return provideMachineComponents();
+    }
+
+    @Nonnull
+    @Override
+    public Collection<MachineComponent<?>> provideMachineComponents() {
+        return Collections.<MachineComponent<?>>singletonList(this.combinedComponent);
     }
 
     private class CombinedBusHandler extends InfItemFluidHandler {

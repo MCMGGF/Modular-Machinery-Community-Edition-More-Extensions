@@ -2,6 +2,7 @@ package com.fushu.mmceguiext.client.config;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
 import hellfirepvp.modularmachinery.common.machine.DynamicMachine;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.Loader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,6 +22,7 @@ public final class MachineGuiStyleManager {
     private static final long RELOAD_INTERVAL_MS = 5000L;
     private static final long MAX_MACHINE_STYLE_FILE_BYTES = 1024L * 1024L;
     private static final String MACHINERY_DIR = "modularmachinery/machinery";
+    private static final String STYLE_DIR = "mmceguiext/styles";
     private static final Logger LOGGER = LogManager.getLogger(MMCEGuiExt.MODID);
 
     private static final Object LOCK = new Object();
@@ -31,6 +33,8 @@ public final class MachineGuiStyleManager {
     private static final Map<String, ControllerStyle> FACTORY_CONTROLLER_STYLES = new HashMap<String, ControllerStyle>();
     private static final Map<String, ControllerStyle> MACHINE_SUBGUI_STYLES = new HashMap<String, ControllerStyle>();
     private static final Map<String, ControllerStyle> FACTORY_SUBGUI_STYLES = new HashMap<String, ControllerStyle>();
+    private static final Map<String, ControllerStyle> EXTERNAL_MACHINE_CONTROLLER_STYLES = new HashMap<String, ControllerStyle>();
+    private static final Map<String, ControllerStyle> EXTERNAL_FACTORY_CONTROLLER_STYLES = new HashMap<String, ControllerStyle>();
 
     private MachineGuiStyleManager() {
     }
@@ -38,16 +42,44 @@ public final class MachineGuiStyleManager {
     public static ControllerStyle resolveMachineController(@Nullable DynamicMachine machine) {
         ensureLoaded();
         return merge(
-            resolve(machine, MACHINE_CONTROLLER_STYLES),
+            merge(
+                resolve(machine, MACHINE_CONTROLLER_STYLES),
+                resolve(machine, EXTERNAL_MACHINE_CONTROLLER_STYLES)
+            ),
             resolve(machine, MACHINE_SUBGUI_STYLES)
+        );
+    }
+
+    public static ControllerStyle resolveMachineController(@Nullable ResourceLocation machineName) {
+        ensureLoaded();
+        return merge(
+            merge(
+                resolve(machineName, MACHINE_CONTROLLER_STYLES),
+                resolve(machineName, EXTERNAL_MACHINE_CONTROLLER_STYLES)
+            ),
+            resolve(machineName, MACHINE_SUBGUI_STYLES)
         );
     }
 
     public static ControllerStyle resolveFactoryController(@Nullable DynamicMachine machine) {
         ensureLoaded();
         return merge(
-            resolve(machine, FACTORY_CONTROLLER_STYLES),
+            merge(
+                resolve(machine, FACTORY_CONTROLLER_STYLES),
+                resolve(machine, EXTERNAL_FACTORY_CONTROLLER_STYLES)
+            ),
             resolve(machine, FACTORY_SUBGUI_STYLES)
+        );
+    }
+
+    public static ControllerStyle resolveFactoryController(@Nullable ResourceLocation machineName) {
+        ensureLoaded();
+        return merge(
+            merge(
+                resolve(machineName, FACTORY_CONTROLLER_STYLES),
+                resolve(machineName, EXTERNAL_FACTORY_CONTROLLER_STYLES)
+            ),
+            resolve(machineName, FACTORY_SUBGUI_STYLES)
         );
     }
 
@@ -56,13 +88,21 @@ public final class MachineGuiStyleManager {
             return ControllerStyle.EMPTY;
         }
 
-        String fullKey = machine.getRegistryName().toString().toLowerCase(Locale.ROOT);
+        return resolve(machine.getRegistryName(), source);
+    }
+
+    private static ControllerStyle resolve(@Nullable ResourceLocation machineName, Map<String, ControllerStyle> source) {
+        if (machineName == null) {
+            return ControllerStyle.EMPTY;
+        }
+
+        String fullKey = machineName.toString().toLowerCase(Locale.ROOT);
         ControllerStyle fullMatch = source.get(fullKey);
         if (fullMatch != null) {
             return fullMatch;
         }
 
-        String pathKey = machine.getRegistryName().getPath().toLowerCase(Locale.ROOT);
+        String pathKey = machineName.getPath().toLowerCase(Locale.ROOT);
         ControllerStyle pathMatch = source.get(pathKey);
         return pathMatch == null ? ControllerStyle.EMPTY : pathMatch;
     }
@@ -99,34 +139,90 @@ public final class MachineGuiStyleManager {
         }
     }
 
+    public static void registerExternalMachineControllerStyle(ResourceLocation machineName, ControllerStyle style) {
+        registerExternalStyle(EXTERNAL_MACHINE_CONTROLLER_STYLES, machineName, style, true);
+    }
+
+    public static void registerExternalFactoryControllerStyle(ResourceLocation machineName, ControllerStyle style) {
+        registerExternalStyle(EXTERNAL_FACTORY_CONTROLLER_STYLES, machineName, style, true);
+    }
+
+    public static void clearExternalStyles() {
+        synchronized (LOCK) {
+            EXTERNAL_MACHINE_CONTROLLER_STYLES.clear();
+            EXTERNAL_FACTORY_CONTROLLER_STYLES.clear();
+        }
+    }
+
+    private static void registerExternalStyle(Map<String, ControllerStyle> target,
+                                              ResourceLocation machineName,
+                                              ControllerStyle style,
+                                              boolean allowPathFallback) {
+        if (machineName == null || style == null) {
+            return;
+        }
+        synchronized (LOCK) {
+            String namespacedKey = machineName.toString().toLowerCase(Locale.ROOT);
+            String pathKey = machineName.getPath().toLowerCase(Locale.ROOT);
+            replaceStyle(target, namespacedKey, pathKey, allowPathFallback, style);
+        }
+    }
+
     private static void reload() {
         MACHINE_CONTROLLER_STYLES.clear();
         FACTORY_CONTROLLER_STYLES.clear();
         MACHINE_SUBGUI_STYLES.clear();
         FACTORY_SUBGUI_STYLES.clear();
 
-        Path machineryDir = Loader.instance().getConfigDir().toPath().resolve(MACHINERY_DIR);
-        if (Files.exists(machineryDir)) {
-            try (Stream<Path> stream = Files.walk(machineryDir)) {
-                stream
-                    .filter(Files::isRegularFile)
-                    .filter(MachineGuiStyleManager::isMachineJson)
-                    .forEach(MachineGuiStyleManager::loadMachineJson);
-            } catch (IOException ex) {
-                LOGGER.warn("Failed to scan MMCE GUI ext machine configs under {}: {}", machineryDir, ex.getMessage());
+        Path configDir = resolveForgeConfigDir();
+        if (configDir != null) {
+            Path machineryDir = configDir.resolve(MACHINERY_DIR);
+            if (Files.exists(machineryDir)) {
+                try (Stream<Path> stream = Files.walk(machineryDir)) {
+                    stream
+                        .filter(Files::isRegularFile)
+                        .filter(MachineGuiStyleManager::isMachineJson)
+                        .forEach(MachineGuiStyleManager::loadMachineJson);
+                } catch (IOException ex) {
+                    LOGGER.warn("Failed to scan MMCE GUI ext machine configs under {}: {}", machineryDir, ex.getMessage());
+                }
+            }
+
+            Path styleDir = configDir.resolve(STYLE_DIR);
+            if (Files.exists(styleDir)) {
+                try (Stream<Path> stream = Files.walk(styleDir)) {
+                    stream
+                        .filter(Files::isRegularFile)
+                        .filter(MachineGuiStyleManager::isMachineJson)
+                        .forEach(MachineGuiStyleManager::loadStyleJson);
+                } catch (IOException ex) {
+                    LOGGER.warn("Failed to scan MMCE GUI ext standalone style configs under {}: {}", styleDir, ex.getMessage());
+                }
+            }
+
+            Path subGuiDir = SubGuiConfigLoader.getSubGuiRootDir();
+            if (Files.exists(subGuiDir)) {
+                try (Stream<Path> stream = Files.walk(subGuiDir)) {
+                    stream
+                        .filter(Files::isRegularFile)
+                        .filter(MachineGuiStyleManager::isMachineJson)
+                        .forEach(MachineGuiStyleManager::loadSubGuiJson);
+                } catch (IOException ex) {
+                    LOGGER.warn("Failed to scan MMCE GUI ext subGUI configs under {}: {}", subGuiDir, ex.getMessage());
+                }
             }
         }
+    }
 
-        Path subGuiDir = SubGuiConfigLoader.getSubGuiRootDir();
-        if (Files.exists(subGuiDir)) {
-            try (Stream<Path> stream = Files.walk(subGuiDir)) {
-                stream
-                    .filter(Files::isRegularFile)
-                    .filter(MachineGuiStyleManager::isMachineJson)
-                    .forEach(MachineGuiStyleManager::loadSubGuiJson);
-            } catch (IOException ex) {
-                LOGGER.warn("Failed to scan MMCE GUI ext subGUI configs under {}: {}", subGuiDir, ex.getMessage());
+    @Nullable
+    private static Path resolveForgeConfigDir() {
+        try {
+            if (Loader.instance() == null || Loader.instance().getConfigDir() == null) {
+                return null;
             }
+            return Loader.instance().getConfigDir().toPath();
+        } catch (RuntimeException ex) {
+            return null;
         }
     }
 
@@ -136,9 +232,18 @@ public final class MachineGuiStyleManager {
     }
 
     private static void loadMachineJson(Path path) {
+        loadControllerStyleJson(path, "machine");
+    }
+
+    private static void loadStyleJson(Path path) {
+        loadControllerStyleJson(path, "standalone style");
+    }
+
+    private static void loadControllerStyleJson(Path path, String sourceKind) {
         try {
             if (Files.size(path) > MAX_MACHINE_STYLE_FILE_BYTES) {
-                LOGGER.warn("Skipping MMCE GUI ext machine config {} because it is larger than {} bytes.", path, MAX_MACHINE_STYLE_FILE_BYTES);
+                LOGGER.warn("Skipping MMCE GUI ext {} config {} because it is larger than {} bytes.",
+                    sourceKind, path, MAX_MACHINE_STYLE_FILE_BYTES);
                 return;
             }
             String content = new String(Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8);
@@ -167,7 +272,7 @@ public final class MachineGuiStyleManager {
                 putStyle(FACTORY_CONTROLLER_STYLES, parsed.namespacedKey, parsed.pathKey, parsed.allowPathFallback, factoryStyle, "factory", path);
             }
         } catch (Exception ex) {
-            LOGGER.warn("Failed to read MMCE GUI ext config {}: {}", path, ex.getMessage());
+            LOGGER.warn("Failed to read MMCE GUI ext {} config {}: {}", sourceKind, path, ex.getMessage());
         }
     }
 
@@ -213,7 +318,7 @@ public final class MachineGuiStyleManager {
             return ControllerStyle.copyOf(overlay);
         }
         if (overlay == null || overlay == ControllerStyle.EMPTY || overlay.isEmpty()) {
-            return base;
+            return ControllerStyle.copyOf(base);
         }
         return ControllerStyle.copyOf(base).mergeFrom(overlay);
     }
@@ -250,6 +355,23 @@ public final class MachineGuiStyleManager {
         if (allowPathFallback) {
             mergeStyleForKey(target, pathKey, style);
         }
+    }
+
+    private static void replaceStyle(
+        Map<String, ControllerStyle> target,
+        String namespacedKey,
+        String pathKey,
+        boolean allowPathFallback,
+        ControllerStyle style
+    ) {
+        replaceStyleForKey(target, namespacedKey, style);
+        if (allowPathFallback) {
+            replaceStyleForKey(target, pathKey, style);
+        }
+    }
+
+    private static void replaceStyleForKey(Map<String, ControllerStyle> target, String key, ControllerStyle style) {
+        target.put(key, ControllerStyle.copyOf(style));
     }
 
     private static void mergeStyleForKey(Map<String, ControllerStyle> target, String key, ControllerStyle style) {
@@ -468,13 +590,13 @@ public final class MachineGuiStyleManager {
             copy.defaultPageId = source.defaultPageId;
             copy.defaultPanelId = source.defaultPanelId;
             copy.customPanels = source.customPanels == null ? null : new ArrayList<String>(source.customPanels);
-            copy.infoSections = source.infoSections == null ? null : new ArrayList<InfoSectionStyle>(source.infoSections);
-            copy.texts = source.texts == null ? null : new ArrayList<TextStyle>(source.texts);
-            copy.smartInterfaceEditors = source.smartInterfaceEditors == null ? null : new ArrayList<SmartInterfaceEditorStyle>(source.smartInterfaceEditors);
-            copy.buttons = source.buttons == null ? null : new ArrayList<ButtonStyle>(source.buttons);
-            copy.textureLayers = source.textureLayers == null ? null : new ArrayList<TextureLayerStyle>(source.textureLayers);
-            copy.progressBars = source.progressBars == null ? null : new ArrayList<ProgressBarStyle>(source.progressBars);
-            copy.sliders = source.sliders == null ? null : new ArrayList<SliderStyle>(source.sliders);
+            copy.infoSections = copyInfoSectionList(source.infoSections);
+            copy.texts = copyTextList(source.texts);
+            copy.smartInterfaceEditors = copySmartInterfaceEditorList(source.smartInterfaceEditors);
+            copy.buttons = copyButtonList(source.buttons);
+            copy.textureLayers = copyTextureLayerList(source.textureLayers);
+            copy.progressBars = copyProgressBarList(source.progressBars);
+            copy.sliders = copySliderList(source.sliders);
             copy.dynamicVisuals = source.dynamicVisuals == null ? null : copyDynamicVisualList(source.dynamicVisuals);
             copy.subGuis = source.subGuis == null ? null : copySubGuiList(source.subGuis);
             return copy;
@@ -526,13 +648,13 @@ public final class MachineGuiStyleManager {
             if (overlay.defaultPageId != null) this.defaultPageId = overlay.defaultPageId;
             if (overlay.defaultPanelId != null) this.defaultPanelId = overlay.defaultPanelId;
             this.customPanels = appendList(this.customPanels, overlay.customPanels);
-            this.infoSections = appendList(this.infoSections, overlay.infoSections);
-            this.texts = appendList(this.texts, overlay.texts);
-            this.smartInterfaceEditors = appendList(this.smartInterfaceEditors, overlay.smartInterfaceEditors);
-            this.buttons = appendList(this.buttons, overlay.buttons);
-            this.textureLayers = appendList(this.textureLayers, overlay.textureLayers);
-            this.progressBars = appendList(this.progressBars, overlay.progressBars);
-            this.sliders = appendList(this.sliders, overlay.sliders);
+            this.infoSections = appendInfoSectionList(this.infoSections, overlay.infoSections);
+            this.texts = appendTextList(this.texts, overlay.texts);
+            this.smartInterfaceEditors = appendSmartInterfaceEditorList(this.smartInterfaceEditors, overlay.smartInterfaceEditors);
+            this.buttons = appendButtonList(this.buttons, overlay.buttons);
+            this.textureLayers = appendTextureLayerList(this.textureLayers, overlay.textureLayers);
+            this.progressBars = appendProgressBarList(this.progressBars, overlay.progressBars);
+            this.sliders = appendSliderList(this.sliders, overlay.sliders);
             this.dynamicVisuals = appendDynamicVisualList(this.dynamicVisuals, overlay.dynamicVisuals);
             this.subGuis = appendSubGuiList(this.subGuis, overlay.subGuis);
             return this;
@@ -549,9 +671,95 @@ public final class MachineGuiStyleManager {
         }
 
         @Nullable
+        private static List<InfoSectionStyle> copyInfoSectionList(@Nullable List<InfoSectionStyle> source) {
+            if (source == null) {
+                return null;
+            }
+            List<InfoSectionStyle> copy = new ArrayList<InfoSectionStyle>(source.size());
+            for (InfoSectionStyle section : source) {
+                copy.add(InfoSectionStyle.copyOf(section));
+            }
+            return copy;
+        }
+
+        @Nullable
+        private static List<TextStyle> copyTextList(@Nullable List<TextStyle> source) {
+            if (source == null) {
+                return null;
+            }
+            List<TextStyle> copy = new ArrayList<TextStyle>(source.size());
+            for (TextStyle text : source) {
+                copy.add(TextStyle.copyOf(text));
+            }
+            return copy;
+        }
+
+        @Nullable
+        private static List<SmartInterfaceEditorStyle> copySmartInterfaceEditorList(
+            @Nullable List<SmartInterfaceEditorStyle> source
+        ) {
+            if (source == null) {
+                return null;
+            }
+            List<SmartInterfaceEditorStyle> copy = new ArrayList<SmartInterfaceEditorStyle>(source.size());
+            for (SmartInterfaceEditorStyle editor : source) {
+                copy.add(SmartInterfaceEditorStyle.copyOf(editor));
+            }
+            return copy;
+        }
+
+        @Nullable
+        private static List<ButtonStyle> copyButtonList(@Nullable List<ButtonStyle> source) {
+            if (source == null) {
+                return null;
+            }
+            List<ButtonStyle> copy = new ArrayList<ButtonStyle>(source.size());
+            for (ButtonStyle button : source) {
+                copy.add(ButtonStyle.copyOf(button));
+            }
+            return copy;
+        }
+
+        @Nullable
+        private static List<TextureLayerStyle> copyTextureLayerList(@Nullable List<TextureLayerStyle> source) {
+            if (source == null) {
+                return null;
+            }
+            List<TextureLayerStyle> copy = new ArrayList<TextureLayerStyle>(source.size());
+            for (TextureLayerStyle layer : source) {
+                copy.add(TextureLayerStyle.copyOf(layer));
+            }
+            return copy;
+        }
+
+        @Nullable
+        private static List<ProgressBarStyle> copyProgressBarList(@Nullable List<ProgressBarStyle> source) {
+            if (source == null) {
+                return null;
+            }
+            List<ProgressBarStyle> copy = new ArrayList<ProgressBarStyle>(source.size());
+            for (ProgressBarStyle bar : source) {
+                copy.add(ProgressBarStyle.copyOf(bar));
+            }
+            return copy;
+        }
+
+        @Nullable
+        private static List<SliderStyle> copySliderList(@Nullable List<SliderStyle> source) {
+            if (source == null) {
+                return null;
+            }
+            List<SliderStyle> copy = new ArrayList<SliderStyle>(source.size());
+            for (SliderStyle slider : source) {
+                copy.add(SliderStyle.copyOf(slider));
+            }
+            return copy;
+        }
+
+        @Nullable
         private static List<SubGuiStyle> copySubGuiList(@Nullable List<SubGuiStyle> source) {
-            if (source == null || source.isEmpty()) {
-                return source;
+            if (source == null) {
+                return null;
             }
             List<SubGuiStyle> copy = new ArrayList<SubGuiStyle>(source.size());
             for (SubGuiStyle subGui : source) {
@@ -562,14 +770,112 @@ public final class MachineGuiStyleManager {
 
         @Nullable
         private static List<DynamicVisualStyle> copyDynamicVisualList(@Nullable List<DynamicVisualStyle> source) {
-            if (source == null || source.isEmpty()) {
-                return source;
+            if (source == null) {
+                return null;
             }
             List<DynamicVisualStyle> copy = new ArrayList<DynamicVisualStyle>(source.size());
             for (DynamicVisualStyle visual : source) {
                 copy.add(DynamicVisualStyle.copyOf(visual));
             }
             return copy;
+        }
+
+        @Nullable
+        private static List<InfoSectionStyle> appendInfoSectionList(
+            @Nullable List<InfoSectionStyle> base,
+            @Nullable List<InfoSectionStyle> overlay
+        ) {
+            if (overlay == null || overlay.isEmpty()) {
+                return base;
+            }
+            List<InfoSectionStyle> out = base == null ? new ArrayList<InfoSectionStyle>() : copyInfoSectionList(base);
+            for (InfoSectionStyle section : overlay) {
+                out.add(InfoSectionStyle.copyOf(section));
+            }
+            return out;
+        }
+
+        @Nullable
+        private static List<TextStyle> appendTextList(@Nullable List<TextStyle> base, @Nullable List<TextStyle> overlay) {
+            if (overlay == null || overlay.isEmpty()) {
+                return base;
+            }
+            List<TextStyle> out = base == null ? new ArrayList<TextStyle>() : copyTextList(base);
+            for (TextStyle text : overlay) {
+                out.add(TextStyle.copyOf(text));
+            }
+            return out;
+        }
+
+        @Nullable
+        private static List<SmartInterfaceEditorStyle> appendSmartInterfaceEditorList(
+            @Nullable List<SmartInterfaceEditorStyle> base,
+            @Nullable List<SmartInterfaceEditorStyle> overlay
+        ) {
+            if (overlay == null || overlay.isEmpty()) {
+                return base;
+            }
+            List<SmartInterfaceEditorStyle> out = base == null
+                ? new ArrayList<SmartInterfaceEditorStyle>()
+                : copySmartInterfaceEditorList(base);
+            for (SmartInterfaceEditorStyle editor : overlay) {
+                out.add(SmartInterfaceEditorStyle.copyOf(editor));
+            }
+            return out;
+        }
+
+        @Nullable
+        private static List<ButtonStyle> appendButtonList(@Nullable List<ButtonStyle> base, @Nullable List<ButtonStyle> overlay) {
+            if (overlay == null || overlay.isEmpty()) {
+                return base;
+            }
+            List<ButtonStyle> out = base == null ? new ArrayList<ButtonStyle>() : copyButtonList(base);
+            for (ButtonStyle button : overlay) {
+                out.add(ButtonStyle.copyOf(button));
+            }
+            return out;
+        }
+
+        @Nullable
+        private static List<TextureLayerStyle> appendTextureLayerList(
+            @Nullable List<TextureLayerStyle> base,
+            @Nullable List<TextureLayerStyle> overlay
+        ) {
+            if (overlay == null || overlay.isEmpty()) {
+                return base;
+            }
+            List<TextureLayerStyle> out = base == null ? new ArrayList<TextureLayerStyle>() : copyTextureLayerList(base);
+            for (TextureLayerStyle layer : overlay) {
+                out.add(TextureLayerStyle.copyOf(layer));
+            }
+            return out;
+        }
+
+        @Nullable
+        private static List<ProgressBarStyle> appendProgressBarList(
+            @Nullable List<ProgressBarStyle> base,
+            @Nullable List<ProgressBarStyle> overlay
+        ) {
+            if (overlay == null || overlay.isEmpty()) {
+                return base;
+            }
+            List<ProgressBarStyle> out = base == null ? new ArrayList<ProgressBarStyle>() : copyProgressBarList(base);
+            for (ProgressBarStyle bar : overlay) {
+                out.add(ProgressBarStyle.copyOf(bar));
+            }
+            return out;
+        }
+
+        @Nullable
+        private static List<SliderStyle> appendSliderList(@Nullable List<SliderStyle> base, @Nullable List<SliderStyle> overlay) {
+            if (overlay == null || overlay.isEmpty()) {
+                return base;
+            }
+            List<SliderStyle> out = base == null ? new ArrayList<SliderStyle>() : copySliderList(base);
+            for (SliderStyle slider : overlay) {
+                out.add(SliderStyle.copyOf(slider));
+            }
+            return out;
         }
 
         @Nullable
@@ -670,6 +976,17 @@ public final class MachineGuiStyleManager {
         public String panel;
         @Nullable
         public Boolean visible;
+
+        public static InfoSectionStyle copyOf(@Nullable InfoSectionStyle source) {
+            InfoSectionStyle copy = new InfoSectionStyle();
+            if (source == null) {
+                return copy;
+            }
+            copy.id = source.id;
+            copy.panel = source.panel;
+            copy.visible = source.visible;
+            return copy;
+        }
     }
 
     public static class TextStyle {
@@ -694,6 +1011,26 @@ public final class MachineGuiStyleManager {
         public String align;
         @Nullable
         public Float charSpacing;
+
+        public static TextStyle copyOf(@Nullable TextStyle source) {
+            TextStyle copy = new TextStyle();
+            if (source == null) {
+                return copy;
+            }
+            copy.id = source.id;
+            copy.x = source.x;
+            copy.y = source.y;
+            copy.value = source.value;
+            copy.color = source.color;
+            copy.scale = source.scale;
+            copy.priority = source.priority;
+            copy.shadow = source.shadow;
+            copy.visible = source.visible;
+            copy.page = source.page;
+            copy.align = source.align;
+            copy.charSpacing = source.charSpacing;
+            return copy;
+        }
     }
 
     public static class SmartInterfaceEditorStyle {
@@ -718,6 +1055,26 @@ public final class MachineGuiStyleManager {
         public Integer priority;
         @Nullable
         public String page;
+
+        public static SmartInterfaceEditorStyle copyOf(@Nullable SmartInterfaceEditorStyle source) {
+            SmartInterfaceEditorStyle copy = new SmartInterfaceEditorStyle();
+            if (source == null) {
+                return copy;
+            }
+            copy.id = source.id;
+            copy.x = source.x;
+            copy.y = source.y;
+            copy.inputWidth = source.inputWidth;
+            copy.virtualKey = source.virtualKey;
+            copy.title = source.title;
+            copy.showTitle = source.showTitle;
+            copy.showInfo = source.showInfo;
+            copy.showControls = source.showControls;
+            copy.inputBackground = source.inputBackground;
+            copy.priority = source.priority;
+            copy.page = source.page;
+            return copy;
+        }
     }
 
     public static class ButtonStyle {
@@ -813,6 +1170,66 @@ public final class MachineGuiStyleManager {
         public Boolean cycleWrap;
         @Nullable
         public List<ButtonCycleStateStyle> cycleStates;
+
+        public static ButtonStyle copyOf(@Nullable ButtonStyle source) {
+            ButtonStyle copy = new ButtonStyle();
+            if (source == null) {
+                return copy;
+            }
+            copy.id = source.id;
+            copy.x = source.x;
+            copy.y = source.y;
+            copy.width = source.width;
+            copy.height = source.height;
+            copy.label = source.label;
+            copy.action = source.action;
+            copy.buttonId = source.buttonId;
+            copy.key = source.key;
+            copy.value = source.value;
+            copy.shiftValue = source.shiftValue;
+            copy.ctrlValue = source.ctrlValue;
+            copy.ctrlShiftValue = source.ctrlShiftValue;
+            copy.stringValue = source.stringValue;
+            copy.min = source.min;
+            copy.max = source.max;
+            copy.targetPage = source.targetPage;
+            copy.targetSubGui = source.targetSubGui;
+            copy.openMode = source.openMode;
+            copy.priority = source.priority;
+            copy.visible = source.visible;
+            copy.hotkeys = source.hotkeys == null ? null : new ArrayList<String>(source.hotkeys);
+            copy.consumeHotkey = source.consumeHotkey;
+            copy.page = source.page;
+            copy.texture = source.texture;
+            copy.hoverTexture = source.hoverTexture;
+            copy.pressedTexture = source.pressedTexture;
+            copy.disabledTexture = source.disabledTexture;
+            copy.textureWidth = source.textureWidth;
+            copy.textureHeight = source.textureHeight;
+            copy.u = source.u;
+            copy.v = source.v;
+            copy.hoverU = source.hoverU;
+            copy.hoverV = source.hoverV;
+            copy.pressedU = source.pressedU;
+            copy.pressedV = source.pressedV;
+            copy.disabledU = source.disabledU;
+            copy.disabledV = source.disabledV;
+            copy.useNineSlice = source.useNineSlice;
+            copy.corner = source.corner;
+            copy.textColor = source.textColor;
+            copy.hoverTextColor = source.hoverTextColor;
+            copy.disabledTextColor = source.disabledTextColor;
+            copy.charSpacing = source.charSpacing;
+            copy.drawLabel = source.drawLabel;
+            copy.cycleWrap = source.cycleWrap;
+            if (source.cycleStates != null) {
+                copy.cycleStates = new ArrayList<ButtonCycleStateStyle>(source.cycleStates.size());
+                for (ButtonCycleStateStyle state : source.cycleStates) {
+                    copy.cycleStates.add(ButtonCycleStateStyle.copyOf(state));
+                }
+            }
+            return copy;
+        }
     }
 
     public static class ButtonCycleStateStyle {
@@ -858,6 +1275,35 @@ public final class MachineGuiStyleManager {
         public Float charSpacing;
         @Nullable
         public Boolean drawLabel;
+
+        public static ButtonCycleStateStyle copyOf(@Nullable ButtonCycleStateStyle source) {
+            ButtonCycleStateStyle copy = new ButtonCycleStateStyle();
+            if (source == null) {
+                return copy;
+            }
+            copy.value = source.value;
+            copy.label = source.label;
+            copy.texture = source.texture;
+            copy.hoverTexture = source.hoverTexture;
+            copy.pressedTexture = source.pressedTexture;
+            copy.disabledTexture = source.disabledTexture;
+            copy.textureWidth = source.textureWidth;
+            copy.textureHeight = source.textureHeight;
+            copy.u = source.u;
+            copy.v = source.v;
+            copy.hoverU = source.hoverU;
+            copy.hoverV = source.hoverV;
+            copy.pressedU = source.pressedU;
+            copy.pressedV = source.pressedV;
+            copy.disabledU = source.disabledU;
+            copy.disabledV = source.disabledV;
+            copy.textColor = source.textColor;
+            copy.hoverTextColor = source.hoverTextColor;
+            copy.disabledTextColor = source.disabledTextColor;
+            copy.charSpacing = source.charSpacing;
+            copy.drawLabel = source.drawLabel;
+            return copy;
+        }
     }
 
     public static class SubGuiStyle {
@@ -954,6 +1400,28 @@ public final class MachineGuiStyleManager {
         public Float alpha;
         @Nullable
         public String page;
+
+        public static TextureLayerStyle copyOf(@Nullable TextureLayerStyle source) {
+            TextureLayerStyle copy = new TextureLayerStyle();
+            if (source == null) {
+                return copy;
+            }
+            copy.id = source.id;
+            copy.texture = source.texture;
+            copy.offsetX = source.offsetX;
+            copy.offsetY = source.offsetY;
+            copy.width = source.width;
+            copy.height = source.height;
+            copy.textureWidth = source.textureWidth;
+            copy.textureHeight = source.textureHeight;
+            copy.corner = source.corner;
+            copy.useNineSlice = source.useNineSlice;
+            copy.foreground = source.foreground;
+            copy.priority = source.priority;
+            copy.alpha = source.alpha;
+            copy.page = source.page;
+            return copy;
+        }
     }
 
     public static class ProgressBarStyle {
@@ -1003,6 +1471,39 @@ public final class MachineGuiStyleManager {
         public Boolean showText;
         @Nullable
         public Integer textColor;
+
+        public static ProgressBarStyle copyOf(@Nullable ProgressBarStyle source) {
+            ProgressBarStyle copy = new ProgressBarStyle();
+            if (source == null) {
+                return copy;
+            }
+            copy.id = source.id;
+            copy.x = source.x;
+            copy.y = source.y;
+            copy.width = source.width;
+            copy.height = source.height;
+            copy.backgroundColor = source.backgroundColor;
+            copy.fillColor = source.fillColor;
+            copy.borderColor = source.borderColor;
+            copy.texture = source.texture;
+            copy.backgroundTexture = source.backgroundTexture;
+            copy.fillTexture = source.fillTexture;
+            copy.textureWidth = source.textureWidth;
+            copy.textureHeight = source.textureHeight;
+            copy.direction = source.direction;
+            copy.source = source.source;
+            copy.threadIndex = source.threadIndex;
+            copy.coreThreadId = source.coreThreadId;
+            copy.min = source.min;
+            copy.max = source.max;
+            copy.priority = source.priority;
+            copy.foreground = source.foreground;
+            copy.visible = source.visible;
+            copy.page = source.page;
+            copy.showText = source.showText;
+            copy.textColor = source.textColor;
+            return copy;
+        }
     }
 
     public static class SliderStyle {
@@ -1048,6 +1549,37 @@ public final class MachineGuiStyleManager {
         public Boolean showText;
         @Nullable
         public Integer textColor;
+
+        public static SliderStyle copyOf(@Nullable SliderStyle source) {
+            SliderStyle copy = new SliderStyle();
+            if (source == null) {
+                return copy;
+            }
+            copy.id = source.id;
+            copy.x = source.x;
+            copy.y = source.y;
+            copy.width = source.width;
+            copy.height = source.height;
+            copy.key = source.key;
+            copy.min = source.min;
+            copy.max = source.max;
+            copy.step = source.step;
+            copy.initialValue = source.initialValue;
+            copy.direction = source.direction;
+            copy.trackColor = source.trackColor;
+            copy.fillColor = source.fillColor;
+            copy.thumbColor = source.thumbColor;
+            copy.borderColor = source.borderColor;
+            copy.thumbWidth = source.thumbWidth;
+            copy.thumbHeight = source.thumbHeight;
+            copy.priority = source.priority;
+            copy.foreground = source.foreground;
+            copy.visible = source.visible;
+            copy.page = source.page;
+            copy.showText = source.showText;
+            copy.textColor = source.textColor;
+            return copy;
+        }
     }
 
     public static class DynamicVisualStyle {

@@ -1,10 +1,12 @@
 package com.fushu.mmceguiext.mixin;
 
+import com.fushu.mmceguiext.common.util.MultiMachineComponentProviderSupport;
 import hellfirepvp.modularmachinery.common.crafting.helper.ComponentSelectorTag;
 import hellfirepvp.modularmachinery.common.crafting.helper.ProcessingComponent;
 import hellfirepvp.modularmachinery.common.machine.MachineComponent;
 import hellfirepvp.modularmachinery.common.machine.TaggedPositionBlockArray;
 import hellfirepvp.modularmachinery.common.tiles.base.TileMultiblockMachineController;
+import github.kasuminova.mmce.common.world.MachineComponentManager;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
@@ -15,7 +17,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,8 +24,6 @@ import java.util.Map;
 
 @Mixin(value = TileMultiblockMachineController.class)
 public abstract class MixinTileMultiblockMachineController {
-    @Unique
-    private static final String MMCEGUIEXT_MIXED_INPUT_BUS_CLASS = "com.fushu.mmceguiext.common.tile.TileCustomAEMixedInputBus";
 
     @Shadow(remap = false)
     protected abstract void checkAndAddSmartInterface(MachineComponent<?> component, BlockPos realPos);
@@ -35,19 +34,25 @@ public abstract class MixinTileMultiblockMachineController {
     @Shadow(remap = false)
     protected TaggedPositionBlockArray foundPattern;
 
-    @Inject(method = "checkAndAddComponents", at = @At("TAIL"), remap = false)
+    @Shadow(remap = false)
+    protected TileMultiblockMachineController.WorkMode workMode;
+
+    @Shadow(remap = false)
+    protected Map<TileEntity, ProcessingComponent<?>> generalComponents;
+
+    @Inject(method = "checkAndAddComponents", at = @At("HEAD"), cancellable = true, remap = false)
     private void mmceguiext$mergeCustomMixedInputComponents(final BlockPos pos,
                                                             final BlockPos ctrlPos,
                                                             final Map<Long, Map<TileEntity, ProcessingComponent<?>>> found,
                                                             final CallbackInfo ci) {
         TileMultiblockMachineController self = (TileMultiblockMachineController) (Object) this;
         BlockPos realPos = ctrlPos.add(pos);
-        TileEntity te = self.getWorld().getTileEntity(realPos);
-        if (!mmceguiext$isCustomMixedInputBus(te)) {
+        if (!self.getWorld().isBlockLoaded(realPos)) {
             return;
         }
 
-        Collection<MachineComponent<?>> rawComponents = mmceguiext$provideComponents(te);
+        TileEntity te = self.getWorld().getTileEntity(realPos);
+        Collection<MachineComponent<?>> rawComponents = MultiMachineComponentProviderSupport.resolveMachineComponents(te);
         if (rawComponents.isEmpty()) {
             return;
         }
@@ -58,61 +63,31 @@ public abstract class MixinTileMultiblockMachineController {
         }
 
         ComponentSelectorTag tag = mmceguiext$readTag(pos);
-        long mergedGroupId = components.iterator().next().getGroupID();
+        long mergedGroupId = MultiMachineComponentProviderSupport.resolveStableGroupId(te, components);
+        Map<TileEntity, ProcessingComponent<?>> merged;
         if (mergedGroupId < 0L) {
-            return;
+            merged = generalComponents;
+        } else {
+            merged = found.get(mergedGroupId);
+            if (merged == null) {
+                merged = new LinkedHashMap<TileEntity, ProcessingComponent<?>>();
+                found.put(mergedGroupId, merged);
+            }
         }
 
-        Map<TileEntity, ProcessingComponent<?>> merged = found.get(mergedGroupId);
-        if (merged == null) {
-            merged = new LinkedHashMap<TileEntity, ProcessingComponent<?>>();
-        }
-
-        mmceguiext$removeOriginalEntries(found, te, components);
-        found.put(mergedGroupId, merged);
+        MachineComponentManager.INSTANCE.checkComponentShared(te, self);
 
         int index = 0;
         for (MachineComponent<?> component : components) {
+            if (!component.isAsyncSupported()) {
+                workMode = TileMultiblockMachineController.WorkMode.SEMI_SYNC;
+            }
             TileEntity key = new VirtualComponentTile(te, index++);
             merged.put(key, new ProcessingComponent(component, component.getContainerProvider(), tag));
             checkAndAddUpgradeBus(component);
             checkAndAddSmartInterface(component, realPos);
         }
-    }
-
-    @Unique
-    private boolean mmceguiext$isCustomMixedInputBus(@Nullable final TileEntity te) {
-        return te != null && MMCEGUIEXT_MIXED_INPUT_BUS_CLASS.equals(te.getClass().getName());
-    }
-
-    @Unique
-    @SuppressWarnings("unchecked")
-    private Collection<MachineComponent<?>> mmceguiext$provideComponents(final TileEntity te) {
-        try {
-            Object result = te.getClass().getMethod("provideComponents").invoke(te);
-            if (result instanceof Collection) {
-                return (Collection<MachineComponent<?>>) result;
-            }
-        } catch (Exception | LinkageError ignored) {
-        }
-        return java.util.Collections.emptyList();
-    }
-
-    @Unique
-    private void mmceguiext$removeOriginalEntries(final Map<Long, Map<TileEntity, ProcessingComponent<?>>> found,
-                                                  final TileEntity originalTile,
-                                                  final Collection<MachineComponent<?>> components) {
-        for (MachineComponent<?> component : components) {
-            long groupId = component.getGroupID();
-            Map<TileEntity, ProcessingComponent<?>> grouped = found.get(groupId);
-            if (grouped == null) {
-                continue;
-            }
-            grouped.remove(originalTile);
-            if (grouped.isEmpty()) {
-                found.remove(groupId);
-            }
-        }
+        ci.cancel();
     }
 
     @Unique

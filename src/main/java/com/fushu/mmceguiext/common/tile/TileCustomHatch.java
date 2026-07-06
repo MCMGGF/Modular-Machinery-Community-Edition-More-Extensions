@@ -1,5 +1,6 @@
 package com.fushu.mmceguiext.common.tile;
 
+import com.fushu.mmceguiext.api.machine.IMultiMachineComponentProvider;
 import com.fushu.mmceguiext.common.block.BlockCustomHatch;
 import com.fushu.mmceguiext.common.energy.ILongEnergyStorage;
 import com.fushu.mmceguiext.common.energy.LongEnergyCapability;
@@ -77,7 +78,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
     @Optional.Interface(modid = "mekanism", iface = "mekanism.api.gas.IGasHandler"),
     @Optional.Interface(modid = "mekanism", iface = "mekanism.api.gas.ITubeConnection")
 })
-public class TileCustomHatch extends TileEntityRestrictedTick implements MachineComponentTile, github.kasuminova.mmce.common.tile.base.MachineCombinationComponent, SelectiveUpdateTileEntity, ReadWriteLockProvider, IBigPower, IStrictEnergyAcceptor, IStrictEnergyOutputter, IGasHandler, ITubeConnection {
+public class TileCustomHatch extends TileEntityRestrictedTick implements MachineComponentTile, github.kasuminova.mmce.common.tile.base.MachineCombinationComponent, IMultiMachineComponentProvider, SelectiveUpdateTileEntity, ReadWriteLockProvider, IBigPower, IStrictEnergyAcceptor, IStrictEnergyOutputter, IGasHandler, ITubeConnection {
     public static final int INPUT_SLOT = 0;
     public static final int OUTPUT_SLOT = 1;
     private static final long GT_ENERGY_MULTIPLIER = 4L;
@@ -177,6 +178,11 @@ public class TileCustomHatch extends TileEntityRestrictedTick implements Machine
 
     @Override
     public long getUniqueGroupID() {
+        return this.componentGroupId;
+    }
+
+    @Override
+    public long getMachineComponentGroupId() {
         return this.componentGroupId;
     }
 
@@ -321,9 +327,16 @@ public class TileCustomHatch extends TileEntityRestrictedTick implements Machine
     @Nonnull
     @Override
     public Collection<MachineComponent<?>> provideComponents() {
+        return provideMachineComponents();
+    }
+
+    @Nonnull
+    @Override
+    public Collection<MachineComponent<?>> provideMachineComponents() {
         CustomHatchRegistry.CustomHatchDef def = getDefinition();
         if (def == null || def.machineComponents == null || def.machineComponents.isEmpty()) {
-            return Collections.emptyList();
+            MachineComponent<?> component = provideComponent();
+            return component == null ? Collections.<MachineComponent<?>>emptyList() : Collections.<MachineComponent<?>>singletonList(component);
         }
         List<MachineComponent<?>> out = new ArrayList<MachineComponent<?>>();
         long baseGroupId = getUniqueGroupID();

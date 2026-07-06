@@ -27,6 +27,31 @@ public class MachineGuiStyleParserTest {
     }
 
     @Test
+    public void parseStandaloneStyleJsonCanUseNamespacedRegistryName() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "mmceguiext/styles/starter_controller.json",
+            "{\n" +
+                "  \"registryname\": \"mmceoneblock:starter_controller\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"guiWidth\": 240,\n" +
+                "      \"texts\": [{\"x\": 8, \"y\": 6, \"value\": \"One Block Smoke\"}]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertEquals("mmceoneblock:starter_controller", result.namespacedKey);
+        assertEquals("starter_controller", result.pathKey);
+        assertFalse(result.allowPathFallback);
+        assertTrue(result.machineNodePresent);
+        assertNotNull(result.machineStyle);
+        assertEquals(Integer.valueOf(240), result.machineStyle.guiWidth);
+        assertNotNull(result.machineStyle.texts);
+        assertEquals("One Block Smoke", result.machineStyle.texts.get(0).value);
+    }
+
+    @Test
     public void parseMachineJsonSkipsInvalidEditorAndLayerEntriesWithWarnings() {
         MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
             "invalid-fields.json",

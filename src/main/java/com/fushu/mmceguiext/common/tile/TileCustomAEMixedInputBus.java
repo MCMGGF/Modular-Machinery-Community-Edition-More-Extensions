@@ -23,6 +23,7 @@ import appeng.me.helpers.AENetworkProxy;
 import appeng.me.helpers.IGridProxyable;
 import appeng.me.helpers.MachineSource;
 import appeng.util.Platform;
+import com.fushu.mmceguiext.api.machine.IMultiMachineComponentProvider;
 import com.fushu.mmceguiext.common.registry.CustomAEMixedInputBusRegistry;
 import com.fushu.mmceguiext.common.registry.CustomCapacityCardRegistry;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedInputBus;
@@ -78,6 +79,7 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
     SelectiveUpdateTileEntity,
     MachineComponentTile,
     MachineCombinationComponent,
+    IMultiMachineComponentProvider,
     IActionHost,
     IGridProxyable,
     IGridTickable,
@@ -726,6 +728,11 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
         return CustomAEMixedInputBusRegistry.findById(this.definitionId);
     }
 
+    @Override
+    public long getMachineComponentGroupId() {
+        return this.mixedInputGroupId;
+    }
+
     public boolean configInvHasItem() {
         for (int i = 0; i < getActiveItemSlotBound(); i++) {
             if (isItemSlotDefined(i) && !this.configInventory.getStackInSlot(i).isEmpty()) {
@@ -754,6 +761,12 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
     @Nonnull
     @Override
     public Collection<MachineComponent<?>> provideComponents() {
+        return provideMachineComponents();
+    }
+
+    @Nonnull
+    @Override
+    public Collection<MachineComponent<?>> provideMachineComponents() {
         return Arrays.asList(itemComponent, fluidComponent, gasComponent);
     }
 
