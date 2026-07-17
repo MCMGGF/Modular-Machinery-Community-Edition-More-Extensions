@@ -2727,7 +2727,19 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
     private MachineGuiStyleManager.ControllerStyle resolveBaseControllerStyle() {
         MachineGuiStyleManager.ControllerStyle baseStyle = MachineGuiStyleManager.resolveFactoryController(resolveMachine());
-        ResourceLocation styleKey = resolveProvidedStyleKey();
+        IMachineGuiStyleProvider styleProvider = factory instanceof IMachineGuiStyleProvider
+            ? (IMachineGuiStyleProvider) factory
+            : null;
+        return mergeProvidedFactoryStyle(baseStyle, styleProvider);
+    }
+
+    private static MachineGuiStyleManager.ControllerStyle mergeProvidedFactoryStyle(
+        final MachineGuiStyleManager.ControllerStyle baseStyle,
+        @Nullable final IMachineGuiStyleProvider styleProvider
+    ) {
+        ResourceLocation styleKey = styleProvider == null
+            ? null
+            : styleProvider.getMachineControllerGuiStyle();
         if (styleKey == null) {
             return baseStyle;
         }
@@ -2740,14 +2752,6 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             return keyedStyle;
         }
         return MachineGuiStyleManager.ControllerStyle.copyOf(baseStyle).mergeFrom(keyedStyle);
-    }
-
-    @Nullable
-    private ResourceLocation resolveProvidedStyleKey() {
-        if (factory instanceof IMachineGuiStyleProvider) {
-            return ((IMachineGuiStyleProvider) factory).getMachineControllerGuiStyle();
-        }
-        return null;
     }
 
     @Nullable

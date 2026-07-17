@@ -4,7 +4,6 @@ import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.fushu.mmceguiext.api.gui.MachineGuiStyleApi;
 import com.fushu.mmceguiext.client.config.MachineGuiStyleManager;
-import hellfirepvp.modularmachinery.common.tiles.TileFactoryController;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.util.ResourceLocation;
 import org.junit.Test;
@@ -209,11 +208,16 @@ public class GuiFactoryControllerRuntimeStateTest {
         MachineGuiStyleManager.clearExternalStyles();
         try {
             MachineGuiStyleApi.registerFactoryControllerStyle(styleKey, style);
-            GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
-            set(gui, "factory", new StyleProvidingFactory(styleKey));
-
             MachineGuiStyleManager.ControllerStyle resolved =
-                (MachineGuiStyleManager.ControllerStyle) invoke(gui, "resolveBaseControllerStyle");
+                (MachineGuiStyleManager.ControllerStyle) invokeStatic(
+                    "mergeProvidedFactoryStyle",
+                    new Class<?>[] {
+                        MachineGuiStyleManager.ControllerStyle.class,
+                        IMachineGuiStyleProvider.class
+                    },
+                    MachineGuiStyleManager.ControllerStyle.EMPTY,
+                    new StyleProvider(styleKey)
+                );
 
             assertEquals(1, resolved.texts.size());
             assertEquals("factory-provider-style", resolved.texts.get(0).value);
@@ -258,6 +262,12 @@ public class GuiFactoryControllerRuntimeStateTest {
         return method.invoke(target, args);
     }
 
+    private static Object invokeStatic(String methodName, Class<?>[] parameterTypes, Object... args) throws Exception {
+        Method method = GuiFactoryControllerResizable.class.getDeclaredMethod(methodName, parameterTypes);
+        method.setAccessible(true);
+        return method.invoke(null, args);
+    }
+
     private static Object invoke(GuiFactoryControllerResizable target, String methodName, Class<?>[] parameterTypes, Object... args) throws Exception {
         Method method = GuiFactoryControllerResizable.class.getDeclaredMethod(methodName, parameterTypes);
         method.setAccessible(true);
@@ -297,10 +307,10 @@ public class GuiFactoryControllerRuntimeStateTest {
         return customButton;
     }
 
-    private static final class StyleProvidingFactory extends TileFactoryController implements IMachineGuiStyleProvider {
+    private static final class StyleProvider implements IMachineGuiStyleProvider {
         private final ResourceLocation styleKey;
 
-        private StyleProvidingFactory(ResourceLocation styleKey) {
+        private StyleProvider(ResourceLocation styleKey) {
             this.styleKey = styleKey;
         }
 
