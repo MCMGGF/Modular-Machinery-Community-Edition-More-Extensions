@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,21 +25,33 @@ public final class MultiMachineComponentProviderSupport {
             return Collections.emptyList();
         }
         if (tileEntity instanceof IMultiMachineComponentProvider) {
-            return sanitize(((IMultiMachineComponentProvider) tileEntity).provideMachineComponents());
+            try {
+                return sanitize(((IMultiMachineComponentProvider) tileEntity).provideMachineComponents());
+            } catch (RuntimeException | LinkageError error) {
+                LOGGER.warn(
+                    "Failed to resolve machine components from {}: {}",
+                    tileEntity.getClass().getName(),
+                    error.toString()
+                );
+            }
         }
-        Collection<MachineComponent<?>> provided = invokeComponentProvider(tileEntity, "provideMachineComponents");
-        if (!provided.isEmpty()) {
-            return provided;
-        }
-        return invokeComponentProvider(tileEntity, "provideComponents");
+        return Collections.emptyList();
     }
 
     public static long resolveStableGroupId(@Nullable final TileEntity tileEntity,
                                             @Nonnull final Collection<MachineComponent<?>> components) {
         if (tileEntity instanceof IMultiMachineComponentProvider) {
-            long groupId = ((IMultiMachineComponentProvider) tileEntity).getMachineComponentGroupId();
-            if (groupId >= 0L) {
-                return groupId;
+            try {
+                long groupId = ((IMultiMachineComponentProvider) tileEntity).getMachineComponentGroupId();
+                if (groupId >= 0L) {
+                    return groupId;
+                }
+            } catch (RuntimeException | LinkageError error) {
+                LOGGER.warn(
+                    "Failed to resolve machine component group id from {}: {}",
+                    tileEntity.getClass().getName(),
+                    error.toString()
+                );
             }
         }
         for (MachineComponent<?> component : components) {
@@ -53,42 +64,6 @@ public final class MultiMachineComponentProviderSupport {
             }
         }
         return -1L;
-    }
-
-    @Nonnull
-    private static Collection<MachineComponent<?>> invokeComponentProvider(@Nonnull final TileEntity tileEntity,
-                                                                           @Nonnull final String methodName) {
-        try {
-            Method method = tileEntity.getClass().getMethod(methodName);
-            Object result = method.invoke(tileEntity);
-            if (result instanceof Collection) {
-                return sanitize((Collection<?>) result);
-            }
-            if (result != null) {
-                LOGGER.warn(
-                    "Ignoring custom machine component provider {}#{} because it returned {} instead of Collection",
-                    tileEntity.getClass().getName(),
-                    methodName,
-                    result.getClass().getName()
-                );
-            }
-        } catch (NoSuchMethodException ignored) {
-        } catch (LinkageError error) {
-            LOGGER.warn(
-                "Failed to inspect custom machine component provider {}#{} because of a linkage error: {}",
-                tileEntity.getClass().getName(),
-                methodName,
-                error.toString()
-            );
-        } catch (Exception ex) {
-            LOGGER.warn(
-                "Failed to invoke custom machine component provider {}#{}: {}",
-                tileEntity.getClass().getName(),
-                methodName,
-                ex.toString()
-            );
-        }
-        return Collections.emptyList();
     }
 
     @Nonnull

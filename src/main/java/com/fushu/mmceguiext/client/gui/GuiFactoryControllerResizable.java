@@ -2,6 +2,7 @@ package com.fushu.mmceguiext.client.gui;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
 import com.fushu.mmceguiext.MMCEGuiExtConfig;
+import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.fushu.mmceguiext.client.config.MachineGuiStyleManager;
 import com.fushu.mmceguiext.client.config.ProgressBarStyleSupport;
 import com.fushu.mmceguiext.common.network.PktControllerButtonAction;
@@ -180,7 +181,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
     @Override
     public void initGui() {
-        this.styleOverride = MachineGuiStyleManager.resolveFactoryController(resolveMachine());
+        this.styleOverride = resolveBaseControllerStyle();
         this.customBackgroundTexture = resolveCustomTexture();
         this.specialThreadBgColor = resolveSpecialThreadBgColor();
         resolveGuiScaleConfig();
@@ -2722,6 +2723,31 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             return found;
         }
         return factory.getBlueprintMachine();
+    }
+
+    private MachineGuiStyleManager.ControllerStyle resolveBaseControllerStyle() {
+        MachineGuiStyleManager.ControllerStyle baseStyle = MachineGuiStyleManager.resolveFactoryController(resolveMachine());
+        ResourceLocation styleKey = resolveProvidedStyleKey();
+        if (styleKey == null) {
+            return baseStyle;
+        }
+
+        MachineGuiStyleManager.ControllerStyle keyedStyle = MachineGuiStyleManager.resolveFactoryController(styleKey);
+        if (keyedStyle == MachineGuiStyleManager.ControllerStyle.EMPTY || keyedStyle.isEmpty()) {
+            return baseStyle;
+        }
+        if (baseStyle == MachineGuiStyleManager.ControllerStyle.EMPTY || baseStyle.isEmpty()) {
+            return keyedStyle;
+        }
+        return MachineGuiStyleManager.ControllerStyle.copyOf(baseStyle).mergeFrom(keyedStyle);
+    }
+
+    @Nullable
+    private ResourceLocation resolveProvidedStyleKey() {
+        if (factory instanceof IMachineGuiStyleProvider) {
+            return ((IMachineGuiStyleProvider) factory).getMachineControllerGuiStyle();
+        }
+        return null;
     }
 
     @Nullable

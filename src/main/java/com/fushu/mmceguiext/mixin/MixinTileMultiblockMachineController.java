@@ -5,11 +5,16 @@ import hellfirepvp.modularmachinery.common.crafting.helper.ComponentSelectorTag;
 import hellfirepvp.modularmachinery.common.crafting.helper.ProcessingComponent;
 import hellfirepvp.modularmachinery.common.machine.MachineComponent;
 import hellfirepvp.modularmachinery.common.machine.TaggedPositionBlockArray;
+import hellfirepvp.modularmachinery.common.tiles.TileParallelController;
 import hellfirepvp.modularmachinery.common.tiles.base.TileMultiblockMachineController;
 import github.kasuminova.mmce.common.world.MachineComponentManager;
+import github.kasuminova.mmce.common.util.InfItemFluidHandler;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -18,9 +23,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Mixin(value = TileMultiblockMachineController.class)
 public abstract class MixinTileMultiblockMachineController {
@@ -37,8 +43,21 @@ public abstract class MixinTileMultiblockMachineController {
     @Shadow(remap = false)
     protected TileMultiblockMachineController.WorkMode workMode;
 
+    @Final
     @Shadow(remap = false)
     protected Map<TileEntity, ProcessingComponent<?>> generalComponents;
+
+    @Final
+    @Shadow(remap = false)
+    protected Set<InfItemFluidHandler> generalComponentSet;
+
+    @Final
+    @Shadow(remap = false)
+    protected Long2ObjectMap<Set<InfItemFluidHandler>> componentSet;
+
+    @Final
+    @Shadow(remap = false)
+    protected List<TileParallelController.ParallelControllerProvider> foundParallelControllers;
 
     @Inject(method = "checkAndAddComponents", at = @At("HEAD"), cancellable = true, remap = false)
     private void mmceguiext$mergeCustomMixedInputComponents(final BlockPos pos,
@@ -64,18 +83,6 @@ public abstract class MixinTileMultiblockMachineController {
 
         ComponentSelectorTag tag = mmceguiext$readTag(pos);
         long mergedGroupId = MultiMachineComponentProviderSupport.resolveStableGroupId(te, components);
-        Map<TileEntity, ProcessingComponent<?>> merged;
-        if (mergedGroupId < 0L) {
-            merged = generalComponents;
-        } else {
-            merged = found.get(mergedGroupId);
-            if (merged == null) {
-                merged = new LinkedHashMap<TileEntity, ProcessingComponent<?>>();
-                found.put(mergedGroupId, merged);
-            }
-        }
-
-        MachineComponentManager.INSTANCE.checkComponentShared(te, self);
 
         int index = 0;
         for (MachineComponent<?> component : components) {
@@ -83,11 +90,56 @@ public abstract class MixinTileMultiblockMachineController {
                 workMode = TileMultiblockMachineController.WorkMode.SEMI_SYNC;
             }
             TileEntity key = new VirtualComponentTile(te, index++);
-            merged.put(key, new ProcessingComponent(component, component.getContainerProvider(), tag));
+            mmceguiext$addProvidedComponent(component, tag, te, key, found, mergedGroupId);
+            if (component instanceof TileParallelController.ParallelControllerProvider) {
+                foundParallelControllers.add((TileParallelController.ParallelControllerProvider) component);
+                break;
+            }
             checkAndAddUpgradeBus(component);
             checkAndAddSmartInterface(component, realPos);
         }
         ci.cancel();
+    }
+
+    @Unique
+    private <T> void mmceguiext$addProvidedComponent(final MachineComponent<T> component,
+                                                     final ComponentSelectorTag tag,
+                                                     final TileEntity owner,
+                                                     final TileEntity key,
+                                                     final Map<Long, Map<TileEntity, ProcessingComponent<?>>> found,
+                                                     final long mergedGroupId) {
+        T handler = component.getContainerProvider();
+        if (handler instanceof InfItemFluidHandler
+            && !mmceguiext$registerCombinedHandler((InfItemFluidHandler) handler, mergedGroupId)) {
+            return;
+        }
+
+        MachineComponentManager.INSTANCE.checkComponentShared(owner, (TileMultiblockMachineController) (Object) this);
+        ProcessingComponent<T> processing = new ProcessingComponent<T>(component, handler, tag);
+        if (mergedGroupId < 0L) {
+            generalComponents.put(key, processing);
+            return;
+        }
+
+        Map<TileEntity, ProcessingComponent<?>> group = found.get(Long.valueOf(mergedGroupId));
+        if (group == null) {
+            group = new ConcurrentHashMap<TileEntity, ProcessingComponent<?>>();
+            found.put(Long.valueOf(mergedGroupId), group);
+        }
+        group.put(key, processing);
+    }
+
+    @Unique
+    private boolean mmceguiext$registerCombinedHandler(final InfItemFluidHandler handler, final long groupId) {
+        if (groupId < 0L) {
+            return generalComponentSet.add(handler);
+        }
+        Set<InfItemFluidHandler> handlers = componentSet.get(groupId);
+        if (handlers == null) {
+            handlers = new ObjectOpenHashSet<InfItemFluidHandler>();
+            componentSet.put(groupId, handlers);
+        }
+        return handlers.add(handler);
     }
 
     @Unique

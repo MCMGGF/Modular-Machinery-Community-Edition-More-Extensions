@@ -1,8 +1,12 @@
 package com.fushu.mmceguiext.client.gui;
 
 import com.fushu.mmceguiext.MMCEGuiExtConfig;
+import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
+import com.fushu.mmceguiext.api.gui.MachineGuiStyleApi;
 import com.fushu.mmceguiext.client.config.MachineGuiStyleManager;
+import hellfirepvp.modularmachinery.common.tiles.TileFactoryController;
 import net.minecraft.client.gui.GuiButton;
+import net.minecraft.util.ResourceLocation;
 import org.junit.Test;
 import sun.misc.Unsafe;
 
@@ -193,6 +197,31 @@ public class GuiFactoryControllerRuntimeStateTest {
         )).booleanValue());
     }
 
+    @Test
+    public void factoryControllerUsesProvidedExternalStyleKey() throws Exception {
+        ResourceLocation styleKey = new ResourceLocation("mmceoneblock", "factory_style");
+        MachineGuiStyleManager.ControllerStyle style = new MachineGuiStyleManager.ControllerStyle();
+        style.texts = new ArrayList<MachineGuiStyleManager.TextStyle>();
+        MachineGuiStyleManager.TextStyle text = new MachineGuiStyleManager.TextStyle();
+        text.value = "factory-provider-style";
+        style.texts.add(text);
+
+        MachineGuiStyleManager.clearExternalStyles();
+        try {
+            MachineGuiStyleApi.registerFactoryControllerStyle(styleKey, style);
+            GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
+            set(gui, "factory", new StyleProvidingFactory(styleKey));
+
+            MachineGuiStyleManager.ControllerStyle resolved =
+                (MachineGuiStyleManager.ControllerStyle) invoke(gui, "resolveBaseControllerStyle");
+
+            assertEquals(1, resolved.texts.size());
+            assertEquals("factory-provider-style", resolved.texts.get(0).value);
+        } finally {
+            MachineGuiStyleManager.clearExternalStyles();
+        }
+    }
+
     private static GuiFactoryControllerResizable allocateGui() throws Exception {
         Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
         unsafeField.setAccessible(true);
@@ -266,6 +295,19 @@ public class GuiFactoryControllerRuntimeStateTest {
         set(customButton, "hotkeys", new ArrayList<String>(Collections.singletonList(hotkey)));
         set(customButton, "consumeHotkey", Boolean.TRUE);
         return customButton;
+    }
+
+    private static final class StyleProvidingFactory extends TileFactoryController implements IMachineGuiStyleProvider {
+        private final ResourceLocation styleKey;
+
+        private StyleProvidingFactory(ResourceLocation styleKey) {
+            this.styleKey = styleKey;
+        }
+
+        @Override
+        public ResourceLocation getMachineControllerGuiStyle() {
+            return this.styleKey;
+        }
     }
 
     private static void set(Object target, String fieldName, Object value) throws Exception {
