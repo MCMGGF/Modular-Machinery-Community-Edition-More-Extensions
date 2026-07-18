@@ -1,5 +1,6 @@
 package com.fushu.mmceguiext.common.config;
 
+import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.fushu.mmceguiext.MMCEGuiExt;
 import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.google.gson.JsonArray;
@@ -9,6 +10,7 @@ import com.google.gson.JsonParser;
 import hellfirepvp.modularmachinery.common.machine.DynamicMachine;
 import hellfirepvp.modularmachinery.common.tiles.TileFactoryController;
 import hellfirepvp.modularmachinery.common.tiles.base.TileMultiblockMachineController;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.Loader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -129,18 +131,27 @@ public final class ControllerButtonPolicyManager {
         if (machine == null) {
             machine = controller.getBlueprintMachine();
         }
-        if (machine == null || machine.getRegistryName() == null) {
-            return java.util.Collections.emptyList();
-        }
 
         Map<String, List<ButtonPolicy>> source = controller instanceof TileFactoryController ? FACTORY_BUTTONS : MACHINE_BUTTONS;
-        String fullKey = machine.getRegistryName().toString().toLowerCase(Locale.ROOT);
-        List<ButtonPolicy> fullMatch = source.get(fullKey);
-        if (fullMatch != null) {
-            return fullMatch;
+        String styleKey = resolveProvidedStyleKey(controller);
+        if (machine != null && machine.getRegistryName() != null) {
+            String fullKey = machine.getRegistryName().toString().toLowerCase(Locale.ROOT);
+            List<ButtonPolicy> fullMatch = source.get(fullKey);
+            if (fullMatch != null) {
+                return fullMatch;
+            }
+            List<ButtonPolicy> pathMatch = source.get(machine.getRegistryName().getPath().toLowerCase(Locale.ROOT));
+            if (pathMatch != null) {
+                return pathMatch;
+            }
         }
-        List<ButtonPolicy> pathMatch = source.get(machine.getRegistryName().getPath().toLowerCase(Locale.ROOT));
-        return pathMatch == null ? java.util.Collections.emptyList() : pathMatch;
+        if (styleKey != null) {
+            List<ButtonPolicy> styleMatch = source.get(styleKey);
+            if (styleMatch != null) {
+                return styleMatch;
+            }
+        }
+        return java.util.Collections.emptyList();
     }
 
     private static List<String> resolveEditorKeys(TileMultiblockMachineController controller) {
@@ -152,18 +163,40 @@ public final class ControllerButtonPolicyManager {
         if (machine == null) {
             machine = controller.getBlueprintMachine();
         }
-        if (machine == null || machine.getRegistryName() == null) {
-            return configuredFallbackEditorKeys(controller);
-        }
 
         Map<String, List<String>> source = controller instanceof TileFactoryController ? FACTORY_EDITOR_KEYS : MACHINE_EDITOR_KEYS;
-        String fullKey = machine.getRegistryName().toString().toLowerCase(Locale.ROOT);
-        List<String> fullMatch = source.get(fullKey);
-        if (fullMatch != null) {
-            return fullMatch;
+        String styleKey = resolveProvidedStyleKey(controller);
+        if (machine != null && machine.getRegistryName() != null) {
+            String fullKey = machine.getRegistryName().toString().toLowerCase(Locale.ROOT);
+            List<String> fullMatch = source.get(fullKey);
+            if (fullMatch != null) {
+                return fullMatch;
+            }
+            List<String> pathMatch = source.get(machine.getRegistryName().getPath().toLowerCase(Locale.ROOT));
+            if (pathMatch != null) {
+                return pathMatch;
+            }
         }
-        List<String> pathMatch = source.get(machine.getRegistryName().getPath().toLowerCase(Locale.ROOT));
-        return pathMatch == null ? configuredFallbackEditorKeys(controller) : pathMatch;
+        if (styleKey != null) {
+            List<String> styleMatch = source.get(styleKey);
+            if (styleMatch != null) {
+                return styleMatch;
+            }
+        }
+        return configuredFallbackEditorKeys(controller);
+    }
+
+    @Nullable
+    private static String resolveProvidedStyleKey(TileMultiblockMachineController controller) {
+        if (!(controller instanceof IMachineGuiStyleProvider)) {
+            return null;
+        }
+        try {
+            ResourceLocation style = ((IMachineGuiStyleProvider) controller).getMachineControllerGuiStyle();
+            return style == null ? null : style.toString().toLowerCase(Locale.ROOT);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     private static void ensureLoaded() {

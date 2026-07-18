@@ -1,7 +1,9 @@
 package com.fushu.mmceguiext.common.config;
 
+import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import hellfirepvp.modularmachinery.common.tiles.base.TileMultiblockMachineController;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
@@ -11,6 +13,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+
+import net.minecraft.util.ResourceLocation;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -180,6 +184,46 @@ public class ControllerButtonPolicyManagerTest {
             (Map<String, List<String>>) machineEditorKeys.get(null);
         List<String> editorKeys = editorKeyMap.get("mmceoneblock:starter_controller");
         assertTrue(editorKeys.contains("target"));
+    }
+
+    @Test
+    public void smartPolicyResolvesThroughProvidedStyleKey() throws Exception {
+        Path configDir = Files.createTempDirectory("mmceguiext-style-key-test");
+        Path stylesDir = configDir.resolve("mmceguiext").resolve("styles");
+        Files.createDirectories(stylesDir);
+        Files.write(
+            stylesDir.resolve("starter_controller.json"),
+            (
+                "{\n" +
+                    "  \"registryname\": \"mmceoneblock:starter_controller\",\n" +
+                    "  \"mmce_gui_ext\": {\n" +
+                    "    \"machineController\": {\n" +
+                    "      \"buttons\": [{\"action\": \"smart_set\", \"key\": \"target\", \"value\": 42}]\n" +
+                    "    }\n" +
+                    "  }\n" +
+                    "}\n"
+            ).getBytes(StandardCharsets.UTF_8)
+        );
+        ControllerButtonPolicyManager.reload(configDir);
+
+        ControllerButtonPolicyManager.ButtonPolicy policy =
+            ControllerButtonPolicyManager.matchSmart(
+                new StyleKeyController(),
+                (byte) 0,
+                "target",
+                42.0F
+            );
+        assertNotNull(policy);
+        assertEquals("smart_set", policy.action);
+        assertEquals("target", policy.key);
+    }
+
+    private static final class StyleKeyController extends TileMultiblockMachineController
+        implements IMachineGuiStyleProvider {
+        @Override
+        public ResourceLocation getMachineControllerGuiStyle() {
+            return new ResourceLocation("mmceoneblock:starter_controller");
+        }
     }
 
     private static ControllerButtonPolicyManager.ButtonPolicy parseButton(String json) throws Exception {
