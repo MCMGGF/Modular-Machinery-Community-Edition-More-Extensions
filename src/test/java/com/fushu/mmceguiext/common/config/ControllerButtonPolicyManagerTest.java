@@ -221,6 +221,10 @@ public class ControllerButtonPolicyManagerTest {
     private static final class StyleKeyController extends TileMultiblockMachineController
         implements IMachineGuiStyleProvider {
         @Override
+        public void flushContextModifier() {
+        }
+
+        @Override
         public ResourceLocation getMachineControllerGuiStyle() {
             return new ResourceLocation("mmceoneblock:starter_controller");
         }
