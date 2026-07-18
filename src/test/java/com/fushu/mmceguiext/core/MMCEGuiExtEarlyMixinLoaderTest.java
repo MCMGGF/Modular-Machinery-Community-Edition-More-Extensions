@@ -5,9 +5,21 @@ import org.junit.Test;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class MMCEGuiExtEarlyMixinLoaderTest {
+    @Test
+    public void mouseTweaksMixinCanBeDiscoveredWithoutLoadingItsMainClass() {
+        assertTrue(MMCEGuiExtEarlyMixinLoader.isClassResourcePresent(
+            MMCEGuiExtEarlyMixinLoader.MOUSE_TWEAKS_MAIN_RESOURCE
+        ));
+        assertNotNull(getClass().getClassLoader().getResource(
+            "mixins.mmceguiext.mousetweaks.json"
+        ));
+        assertFalse(MMCEGuiExtEarlyMixinLoader.isClassResourcePresent(""));
+    }
+
     @Test
     public void longFluidGasRequirementMixinsAreDisabledWhenConfigIsMissingOrFalse() {
         assertFalse(MMCEGuiExtEarlyMixinLoader.isLongFluidGasRequirementsEnabled(Arrays.asList(

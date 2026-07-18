@@ -14,6 +14,7 @@ import java.util.Map;
 @SuppressWarnings("unused")
 public class MMCEGuiExtEarlyMixinLoader implements IFMLLoadingPlugin {
     static final String LONG_FLUID_GAS_REQUIREMENTS_KEY = "enableLongFluidGasRequirements";
+    static final String MOUSE_TWEAKS_MAIN_RESOURCE = "yalter/mousetweaks/Main.class";
 
     @Override
     public String[] getASMTransformerClass() {
@@ -34,6 +35,9 @@ public class MMCEGuiExtEarlyMixinLoader implements IFMLLoadingPlugin {
     @Override
     public void injectData(final Map<String, Object> data) {
         Mixins.addConfiguration("mixins.mmceguiext.json");
+        if (isClassResourcePresent(MOUSE_TWEAKS_MAIN_RESOURCE)) {
+            Mixins.addConfiguration("mixins.mmceguiext.mousetweaks.json");
+        }
 
         if (!isLongFluidGasRequirementsEnabled(data)) {
             return;
@@ -57,6 +61,14 @@ public class MMCEGuiExtEarlyMixinLoader implements IFMLLoadingPlugin {
         } catch (ClassNotFoundException | LinkageError ignored) {
             return false;
         }
+    }
+
+    static boolean isClassResourcePresent(final String resourceName) {
+        if (resourceName == null || resourceName.trim().isEmpty()) {
+            return false;
+        }
+        ClassLoader loader = MMCEGuiExtEarlyMixinLoader.class.getClassLoader();
+        return loader != null && loader.getResource(resourceName) != null;
     }
 
     private static boolean isLongFluidGasRequirementsEnabled(final Map<String, Object> data) {

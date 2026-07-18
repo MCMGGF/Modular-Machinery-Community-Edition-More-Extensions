@@ -1,0 +1,12 @@
+{
+  "required": false,
+  "package": "com.fushu.mmceguiext.mixin",
+  "refmap": "mixins.mmceguiext.refmap.json",
+  "target": "@env(DEFAULT)",
+  "minVersion": "0.8",
+  "compatibilityLevel": "JAVA_8",
+  "priority": 1001,
+  "client": [
+    "MixinMouseTweaksMain"
+  ]
+}
