@@ -128,17 +128,40 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
     public IMessage onMessage(PktControllerButtonAction message, MessageContext ctx) {
         EntityPlayerMP player = ctx.getServerHandler().player;
         if (player == null) {
+            LOGGER.info("Rejected controller button action packet because the server player was null.");
             return null;
         }
-        player.getServerWorld().addScheduledTask(() -> handle(message, player));
+        LOGGER.info(
+            "Received controller button action packet for {} key={} kind={} on thread={}.",
+            message == null ? null : message.controllerPos,
+            message == null ? null : message.key,
+            message == null ? null : message.kind,
+            Thread.currentThread().getName()
+        );
+        player.getServerWorld().addScheduledTask(() -> {
+            LOGGER.info(
+                "Handling controller button action packet for {} on thread={}.",
+                message == null ? null : message.controllerPos,
+                Thread.currentThread().getName()
+            );
+            handle(message, player);
+        });
         return null;
     }
 
     private static void handle(PktControllerButtonAction message, EntityPlayerMP player) {
         if (message == null) {
+            LOGGER.info("Rejected controller button action because the decoded message was null.");
             return;
         }
         if (player == null || player.world == null || !player.world.isBlockLoaded(message.controllerPos)) {
+            LOGGER.info(
+                "Rejected controller button action at {} because player/world/chunk state was invalid. player={} world={} loaded={}.",
+                message.controllerPos,
+                player == null ? "null" : player.getName(),
+                player == null || player.world == null ? "null" : player.world.provider.getDimension(),
+                player != null && player.world != null && player.world.isBlockLoaded(message.controllerPos)
+            );
             return;
         }
         if (!isPlayerEditingThisController(player, message.controllerPos)) {
@@ -152,6 +175,11 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
 
         TileEntity tile = player.world.getTileEntity(message.controllerPos);
         if (!(tile instanceof TileMultiblockMachineController)) {
+            LOGGER.info(
+                "Rejected controller button action at {} because the server tile was {}.",
+                message.controllerPos,
+                tile == null ? "null" : tile.getClass().getName()
+            );
             return;
         }
         TileMultiblockMachineController controller = (TileMultiblockMachineController) tile;
@@ -170,6 +198,7 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
 
         String key = normalizeBounded(message.key, MAX_KEY_LENGTH);
         if (key == null) {
+            LOGGER.info("Rejected controller smart action at {} because the key was invalid.", message.controllerPos);
             return;
         }
         if (message.stringValue) {
@@ -216,6 +245,11 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
         } else if (controller.getSmartInterfaceData(key) == null
             && !ControllerButtonPolicyManager.isConfiguredSmartKey(controller, key)
             && !PktControllerSmartInterfaceUpdate.hasControllerCustomData(controller, key)) {
+            LOGGER.info(
+                "Rejected numeric smart action at {} because key={} had no Smart Interface data, configured editor, or custom data.",
+                message.controllerPos,
+                key
+            );
             return;
         }
         if (!Float.isFinite(resolved)) {
