@@ -15,7 +15,7 @@ It started as a controller-GUI editor, but now bundles four subsystems:
 4. **Long-capacity recipe requirements (experimental opt-in)** — fluid/gas recipe amounts beyond the vanilla `int` limit.
    **Long 容量配方需求（实验性，需要手动开启）** — 流体/气体配方量可突破原版 `int`（约 21 亿 mB）上限。
 
-Current version / 当前版本: **`1.3.1`** · API level **`1`** · MC `1.12.2` · author / 作者: WuXiaoYa
+Current version / 当前版本: **`1.3.2`** · API level **`1`** · MC `1.12.2` · author / 作者: WuXiaoYa
 
 ---
 
@@ -32,8 +32,8 @@ Optional (soft, compile-only) / 可选依赖：
 - `mekeng` (Mekanism Energistics; required only for classic custom AE mixed buses / 仅传统自定义 AE 混合总线需要)
 - The One Probe (hatch probe info / 仓口探针信息)
 - AE2 Fluid Crafting Rework, GregTech CE, HEI/JEI, GeckoLib
-- Mouse Tweaks Unofficial is optional. MMCEGE 1.3.1 prevents a missing specialized Mouse Tweaks handler from crashing compatible GUIs under Cleanroom.
-- Mouse Tweaks Unofficial 为可选依赖。MMCEGE 1.3.1 会在 Cleanroom 下专用 handler 缺失时仅禁用当前 GUI 的 Mouse Tweaks，避免客户端崩溃。
+- Mouse Tweaks Unofficial is optional. MMCEGE 1.3.2 registers its pseudo mixin without relying on early classpath discovery, then disables Mouse Tweaks only for a GUI whose specialized handler is unavailable under Cleanroom.
+- Mouse Tweaks Unofficial 为可选依赖。MMCEGE 1.3.2 不再依赖早期类路径探测来注册兼容 Mixin，并只在当前 GUI 的专用 handler 不可用时局部禁用 Mouse Tweaks。
 
 ---
 
@@ -50,7 +50,7 @@ From the repo root / 在仓库根目录执行：
 
 Output / 产物：
 
-- `mmce-gui-ext/build/libs/MMCEGE-1.3.1.jar`
+- `mmce-gui-ext/build/libs/MMCEGE-1.3.2.jar`
 
 GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `MMCEGE-<commit-sha>` artifact to let testers build without using the local machine.
 GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `MMCEGE-<commit-sha>` artifact 即可，不需要本机编译。
