@@ -202,7 +202,10 @@ public class PktControllerSmartInterfaceUpdate implements IMessage, IMessageHand
         return false;
     }
 
-    private static boolean tryInvokeControllerSmartUpdate(TileMultiblockMachineController controller, String interfaceType, float value) {
+    private static boolean tryInvokeControllerSmartUpdate(Object controller, String interfaceType, float value) {
+        if (controller == null) {
+            return false;
+        }
         if (controller instanceof ControllerSmartInterfaceAccess) {
             return ((ControllerSmartInterfaceAccess) controller)
                 .mmceguiext$updateSmartInterfaceValue(interfaceType, value);

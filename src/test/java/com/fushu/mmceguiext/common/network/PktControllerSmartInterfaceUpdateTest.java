@@ -1,7 +1,6 @@
 package com.fushu.mmceguiext.common.network;
 
 import com.fushu.mmceguiext.common.util.ControllerSmartInterfaceAccess;
-import hellfirepvp.modularmachinery.common.tiles.TileMachineController;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
@@ -15,7 +14,7 @@ public class PktControllerSmartInterfaceUpdateTest {
         AccessController controller = new AccessController();
         Method method = PktControllerSmartInterfaceUpdate.class.getDeclaredMethod(
             "tryInvokeControllerSmartUpdate",
-            hellfirepvp.modularmachinery.common.tiles.base.TileMultiblockMachineController.class,
+            Object.class,
             String.class,
             float.class
         );
@@ -29,8 +28,7 @@ public class PktControllerSmartInterfaceUpdateTest {
         assertEquals(42.0F, controller.value, 0.0001F);
     }
 
-    private static final class AccessController extends TileMachineController
-        implements ControllerSmartInterfaceAccess {
+    private static final class AccessController implements ControllerSmartInterfaceAccess {
 
         private boolean called;
         private String interfaceType;
