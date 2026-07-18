@@ -191,8 +191,13 @@ public final class ControllerButtonPolicyManager {
         if (!(controller instanceof IMachineGuiStyleProvider)) {
             return null;
         }
+        return resolveProvidedStyleKey((IMachineGuiStyleProvider) controller);
+    }
+
+    @Nullable
+    static String resolveProvidedStyleKey(IMachineGuiStyleProvider provider) {
         try {
-            ResourceLocation style = ((IMachineGuiStyleProvider) controller).getMachineControllerGuiStyle();
+            ResourceLocation style = provider.getMachineControllerGuiStyle();
             return style == null ? null : style.toString().toLowerCase(Locale.ROOT);
         } catch (RuntimeException ignored) {
             return null;

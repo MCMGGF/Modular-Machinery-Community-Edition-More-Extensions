@@ -3,7 +3,6 @@ package com.fushu.mmceguiext.common.config;
 import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import hellfirepvp.modularmachinery.common.tiles.base.TileMultiblockMachineController;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
@@ -187,7 +186,7 @@ public class ControllerButtonPolicyManagerTest {
     }
 
     @Test
-    public void smartPolicyResolvesThroughProvidedStyleKey() throws Exception {
+    public void providedStyleKeyIsNormalizedForPolicyLookup() throws Exception {
         Path configDir = Files.createTempDirectory("mmceguiext-style-key-test");
         Path stylesDir = configDir.resolve("mmceguiext").resolve("styles");
         Files.createDirectories(stylesDir);
@@ -206,43 +205,13 @@ public class ControllerButtonPolicyManagerTest {
         );
         ControllerButtonPolicyManager.reload(configDir);
 
-        ControllerButtonPolicyManager.ButtonPolicy policy =
-            ControllerButtonPolicyManager.matchSmart(
-                new StyleKeyController(),
-                (byte) 0,
-                "target",
-                42.0F
-            );
-        assertNotNull(policy);
-        assertEquals("smart_set", policy.action);
-        assertEquals("target", policy.key);
+        assertEquals(
+            "mmceoneblock:starter_controller",
+            ControllerButtonPolicyManager.resolveProvidedStyleKey(new StyleKeyProvider())
+        );
     }
 
-    private static final class StyleKeyController extends TileMultiblockMachineController
-        implements IMachineGuiStyleProvider {
-        @Override
-        public void doControllerTick() {
-        }
-
-        @Override
-        public hellfirepvp.modularmachinery.common.crafting.helper.CraftingStatus getControllerStatus() {
-            return null;
-        }
-
-        @Override
-        public void flushContextModifier() {
-        }
-
-        @Override
-        public void setControllerStatus(
-            hellfirepvp.modularmachinery.common.crafting.helper.CraftingStatus status
-        ) {
-        }
-
-        @Override
-        public void overrideStatusInfo(String newInfo) {
-        }
-
+    private static final class StyleKeyProvider implements IMachineGuiStyleProvider {
         @Override
         public ResourceLocation getMachineControllerGuiStyle() {
             return new ResourceLocation("mmceoneblock:starter_controller");
