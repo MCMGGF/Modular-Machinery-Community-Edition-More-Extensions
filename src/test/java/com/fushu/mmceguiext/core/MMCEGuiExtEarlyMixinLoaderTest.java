@@ -5,7 +5,6 @@ import org.junit.Test;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class MMCEGuiExtEarlyMixinLoaderTest {
@@ -14,7 +13,7 @@ public class MMCEGuiExtEarlyMixinLoaderTest {
         assertTrue(MMCEGuiExtEarlyMixinLoader.isClassResourcePresent(
             MMCEGuiExtEarlyMixinLoader.MOUSE_TWEAKS_MAIN_RESOURCE
         ));
-        assertNotNull(getClass().getClassLoader().getResource(
+        assertTrue(MMCEGuiExtEarlyMixinLoader.isClassResourcePresent(
             "mixins.mmceguiext.mousetweaks.json"
         ));
         assertFalse(MMCEGuiExtEarlyMixinLoader.isClassResourcePresent(""));
