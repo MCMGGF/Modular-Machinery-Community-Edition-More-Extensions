@@ -1,13 +1,17 @@
 package com.fushu.mmceguiext.client.config;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import net.minecraftforge.fml.common.Loader;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 final class SubGuiConfigLoader {
     private static final String SUBGUI_DIR = "mmceguiext/subgui";
@@ -68,7 +72,7 @@ final class SubGuiConfigLoader {
 
         JsonObject extNode = new JsonObject();
         JsonObject controllerNode = new JsonObject();
-        controllerNode.add("subGuis", singleElementArray(root.deepCopy()));
+        controllerNode.add("subGuis", singleElementArray(copyJsonObject(root)));
         extNode.add(controllerKey, controllerNode);
         wrappedRoot.add("mmce_gui_ext", extNode);
 
@@ -82,8 +86,41 @@ final class SubGuiConfigLoader {
         return wrappedResult;
     }
 
-    private static com.google.gson.JsonArray singleElementArray(JsonObject object) {
-        com.google.gson.JsonArray array = new com.google.gson.JsonArray();
+    static JsonObject copyJsonObject(JsonObject source) {
+        JsonObject copy = new JsonObject();
+        for (Map.Entry<String, JsonElement> entry : source.entrySet()) {
+            copy.add(entry.getKey(), copyJsonElement(entry.getValue()));
+        }
+        return copy;
+    }
+
+    private static JsonElement copyJsonElement(JsonElement source) {
+        if (source == null || source.isJsonNull()) {
+            return JsonNull.INSTANCE;
+        }
+        if (source.isJsonObject()) {
+            return copyJsonObject(source.getAsJsonObject());
+        }
+        if (source.isJsonArray()) {
+            JsonArray copy = new JsonArray();
+            for (JsonElement element : source.getAsJsonArray()) {
+                copy.add(copyJsonElement(element));
+            }
+            return copy;
+        }
+
+        JsonPrimitive primitive = source.getAsJsonPrimitive();
+        if (primitive.isBoolean()) {
+            return new JsonPrimitive(primitive.getAsBoolean());
+        }
+        if (primitive.isNumber()) {
+            return new JsonPrimitive(primitive.getAsNumber());
+        }
+        return new JsonPrimitive(primitive.getAsString());
+    }
+
+    private static JsonArray singleElementArray(JsonObject object) {
+        JsonArray array = new JsonArray();
         array.add(object);
         return array;
     }
