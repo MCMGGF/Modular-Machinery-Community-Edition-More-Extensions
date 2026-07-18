@@ -29,6 +29,8 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.input.Keyboard;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
 import java.awt.Rectangle;
@@ -46,6 +48,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class GuiMachineControllerResizable extends GuiContainerBase<ContainerController> {
+    private static final Logger LOGGER = LogManager.getLogger(MMCEGuiExt.MODID);
     private static final int BASE_WIDTH = 176;
     private static final int BASE_HEIGHT = 213;
     private static final int PLAYER_INVENTORY_LEFT = 8;
@@ -3892,6 +3895,13 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         if (!Float.isFinite(effectiveValue)) {
             return;
         }
+        LOGGER.info(
+            "Sending controller smart button action at {} key={} action={} value={}",
+            this.controller.getPos(),
+            button.key,
+            button.action,
+            effectiveValue
+        );
         MMCEGuiExt.NET_CHANNEL.sendToServer(PktControllerButtonAction.smart(
             this.controller.getPos(),
             button.key,
