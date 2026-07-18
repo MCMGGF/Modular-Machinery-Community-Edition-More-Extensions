@@ -80,6 +80,10 @@ public class PktControllerSmartInterfaceUpdateTest {
         }
 
         @Override
+        public void overrideStatusInfo(String newInfo) {
+        }
+
+        @Override
         public boolean mmceguiext$updateSmartInterfaceValue(String interfaceType, float value) {
             return true;
         }
