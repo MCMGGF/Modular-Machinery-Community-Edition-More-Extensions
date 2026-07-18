@@ -20,6 +20,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -297,6 +298,28 @@ public class GuiFactoryControllerRuntimeStateTest {
         }
     }
 
+    @Test
+    public void factoryPressedTextureOnlyButtonCreatesVisibleWidget() throws Exception {
+        GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
+        MachineGuiStyleManager.ControllerStyle style = new MachineGuiStyleManager.ControllerStyle();
+        style.buttons = Collections.singletonList(pressedTextureOnlyButtonStyle());
+        set(gui, "styleOverride", style);
+        set(gui, "renderWidth", Integer.valueOf(176));
+        set(gui, "renderHeight", Integer.valueOf(166));
+
+        invoke(
+            gui,
+            "initCustomButtons",
+            new Class<?>[] {MMCEGuiExtConfig.FactoryController.class},
+            new MMCEGuiExtConfig.FactoryController()
+        );
+
+        List<?> buttons = (List<?>) get(gui, "customButtons");
+        assertEquals(1, buttons.size());
+        assertNotNull(get(buttons.get(0), "button"));
+        assertTrue(get(buttons.get(0), "button") instanceof GuiTexturedButton);
+    }
+
     private static GuiFactoryControllerResizable allocateGui() throws Exception {
         Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
         unsafeField.setAccessible(true);
@@ -399,6 +422,17 @@ public class GuiFactoryControllerRuntimeStateTest {
         set(customButton, "hotkeys", new ArrayList<String>(Collections.singletonList(hotkey)));
         set(customButton, "consumeHotkey", Boolean.TRUE);
         return customButton;
+    }
+
+    private static MachineGuiStyleManager.ButtonStyle pressedTextureOnlyButtonStyle() {
+        MachineGuiStyleManager.ButtonStyle style = new MachineGuiStyleManager.ButtonStyle();
+        style.id = "pressed_only";
+        style.action = "page";
+        style.targetPage = "main";
+        style.width = Integer.valueOf(16);
+        style.height = Integer.valueOf(16);
+        style.pressedTexture = "mmceguiext:textures/gui/pressed_only.png";
+        return style;
     }
 
     private static final class StyleProvider implements IMachineGuiStyleProvider {

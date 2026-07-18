@@ -23,4 +23,11 @@ public class GuiRenderUtilsTest {
         assertEquals(2, GuiRenderUtils.countVisibleTextChars("\u00A7aA\u00A7lB"));
         assertEquals(3, GuiRenderUtils.countVisibleTextChars("A B"));
     }
+
+    @Test
+    public void guiCoordinateHelperOffsetsOnlyScreenSpaceRendering() {
+        assertEquals(12, GuiRenderUtils.resolveGuiCoordinate(12, 100, false));
+        assertEquals(112, GuiRenderUtils.resolveGuiCoordinate(12, 100, true));
+        assertEquals(88, GuiRenderUtils.resolveGuiCoordinate(-12, 100, true));
+    }
 }

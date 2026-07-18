@@ -2,8 +2,7 @@ package com.fushu.mmceguiext.common.network;
 
 import com.fushu.mmceguiext.common.util.ControllerSmartInterfaceAccess;
 import com.fushu.mmceguiext.common.util.ControllerCustomDataAccess;
-import hellfirepvp.modularmachinery.common.crafting.helper.CraftingStatus;
-import hellfirepvp.modularmachinery.common.tiles.base.TileMultiblockMachineController;
+import hellfirepvp.modularmachinery.common.tiles.TileMachineController;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
@@ -59,29 +58,8 @@ public class PktControllerSmartInterfaceUpdateTest {
     }
 
     private static final class MirroringController
-        extends TileMultiblockMachineController
+        extends TileMachineController
         implements ControllerSmartInterfaceAccess {
-
-        @Override
-        public void doControllerTick() {
-        }
-
-        @Override
-        public CraftingStatus getControllerStatus() {
-            return null;
-        }
-
-        @Override
-        public void setControllerStatus(CraftingStatus status) {
-        }
-
-        @Override
-        public void flushContextModifier() {
-        }
-
-        @Override
-        public void overrideStatusInfo(String newInfo) {
-        }
 
         @Override
         public boolean mmceguiext$updateSmartInterfaceValue(String interfaceType, float value) {

@@ -79,6 +79,8 @@ dependencies {
 
     compileOnly("CraftTweaker2:CraftTweaker2-API:4.1.20.715")
     compileOnly("CraftTweaker2:CraftTweaker2-MC1120-Main:1.12-4.1.20.715")
+    testRuntimeOnly("CraftTweaker2:CraftTweaker2-API:4.1.20.715")
+    testRuntimeOnly("CraftTweaker2:CraftTweaker2-MC1120-Main:1.12-4.1.20.715")
     val craftTweakerModsDir = System.getenv("MMCEGE_CRAFTTWEAKER_MODS_DIR")
     val localCraftTweakerJars = if (!craftTweakerModsDir.isNullOrBlank()) {
         fileTree(craftTweakerModsDir) {

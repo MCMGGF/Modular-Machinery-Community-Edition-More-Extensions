@@ -64,7 +64,12 @@ public final class ControllerSlotLayoutEngine {
             applyPlayerInventory(slots, player, occupied, warnings);
         }
 
-        List<SlotGroupDescriptor> groups = resolveSlotGroups(provider, styleGroups, warnings);
+        List<SlotGroupDescriptor> groups = resolveSlotGroups(
+            provider,
+            styleGroups,
+            resolveMachineSlotStart(player),
+            warnings
+        );
         for (SlotGroupDescriptor group : groups) {
             applyGroup(slots, group, occupied, warnings);
         }
@@ -102,6 +107,15 @@ public final class ControllerSlotLayoutEngine {
     static List<SlotGroupDescriptor> resolveSlotGroups(
         @Nullable SlotLayoutProvider provider,
         @Nullable List<MachineGuiStyleManager.SlotGroupStyle> styles,
+        @Nullable WarningSink warningSink
+    ) {
+        return resolveSlotGroups(provider, styles, DEFAULT_MACHINE_SLOT_START, warningSink);
+    }
+
+    private static List<SlotGroupDescriptor> resolveSlotGroups(
+        @Nullable SlotLayoutProvider provider,
+        @Nullable List<MachineGuiStyleManager.SlotGroupStyle> styles,
+        int sequentialStart,
         @Nullable WarningSink warningSink
     ) {
         WarningSink warnings = warningSink == null ? new WarningSink() {
@@ -150,14 +164,22 @@ public final class ControllerSlotLayoutEngine {
             }
         }
 
-        int nextSequential = DEFAULT_MACHINE_SLOT_START;
+        int nextSequential = Math.max(0, sequentialStart);
         for (UnallocatedGroup group : merged) {
+            int geometryCapacity = Math.max(1, group.rows) * Math.max(1, group.columns);
             if (group.slotIndices != null) {
-                for (int index : group.slotIndices) {
+                int mappedCount = group.enabled
+                    ? Math.min(group.slotIndices.length, geometryCapacity)
+                    : group.slotIndices.length;
+                for (int i = 0; i < mappedCount; i++) {
+                    int index = group.slotIndices[i];
                     nextSequential = Math.max(nextSequential, index + 1);
                 }
             } else if (group.firstSlot >= 0) {
-                nextSequential = Math.max(nextSequential, group.firstSlot + group.slotCount);
+                int mappedCount = group.enabled
+                    ? Math.min(group.slotCount, geometryCapacity)
+                    : group.slotCount;
+                nextSequential = Math.max(nextSequential, group.firstSlot + mappedCount);
             }
         }
 
@@ -202,6 +224,16 @@ public final class ControllerSlotLayoutEngine {
             }
         }
         return resolved;
+    }
+
+    private static int resolveMachineSlotStart(@Nullable PlayerInventoryDescriptor player) {
+        if (player == null) {
+            return DEFAULT_MACHINE_SLOT_START;
+        }
+        long mainEnd = (long) player.mainStart + 27L;
+        long hotbarEnd = (long) player.hotbarStart + 9L;
+        long next = Math.max(0L, Math.max(mainEnd, hotbarEnd));
+        return next > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) next;
     }
 
     private static UnallocatedGroup merge(
@@ -321,6 +353,9 @@ public final class ControllerSlotLayoutEngine {
                 + " slots into geometry capacity " + geometryCapacity + "; excess mappings skipped.");
         }
         for (int i = 0; i < indices.length; i++) {
+            if (group.enabled && i >= geometryCapacity) {
+                continue;
+            }
             int slotIndex = indices[i];
             if (!isValidIndex(slots, slotIndex)) {
                 warnings.warn("Slot group '" + group.id + "' index " + slotIndex
@@ -339,9 +374,6 @@ public final class ControllerSlotLayoutEngine {
             if (!group.enabled) {
                 slot.xPos = HIDDEN_SLOT_COORDINATE;
                 slot.yPos = HIDDEN_SLOT_COORDINATE;
-                continue;
-            }
-            if (i >= geometryCapacity) {
                 continue;
             }
             int row = i / group.columns;

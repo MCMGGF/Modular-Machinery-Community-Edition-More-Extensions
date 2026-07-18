@@ -64,6 +64,10 @@ public final class GuiRenderUtils {
         return parseOptionalTexture(value) != null;
     }
 
+    public static int resolveGuiCoordinate(int localCoordinate, int guiOrigin, boolean screenCoordinates) {
+        return localCoordinate + (screenCoordinates ? guiOrigin : 0);
+    }
+
     @Nullable
     private static String normalizeRawTexturePath(String value) {
         if (value == null) {
@@ -110,7 +114,7 @@ public final class GuiRenderUtils {
             }
             manager.getResource(texture);
             return true;
-        } catch (Exception ignored) {
+        } catch (Exception | LinkageError ignored) {
             return false;
         }
     }

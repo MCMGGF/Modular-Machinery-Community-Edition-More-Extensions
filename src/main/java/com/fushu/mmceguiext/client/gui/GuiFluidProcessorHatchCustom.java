@@ -181,8 +181,9 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws java.io.IOException {
-        if (mouseButton == 0) {
-            clickSlotGridScrollbars(mouseX, mouseY);
+        boolean scrollbarHandled = mouseButton == 0 && clickSlotGridScrollbars(mouseX, mouseY);
+        if (shouldConsumeSlotGridPointerEvent(mouseButton, scrollbarHandled)) {
+            return;
         }
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
@@ -195,10 +196,15 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
 
     @Override
     protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
-        if (clickedMouseButton == 0) {
-            dragSlotGridScrollbars(mouseX, mouseY);
+        boolean scrollbarHandled = clickedMouseButton == 0 && dragSlotGridScrollbars(mouseX, mouseY);
+        if (shouldConsumeSlotGridPointerEvent(clickedMouseButton, scrollbarHandled)) {
+            return;
         }
         super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
+    }
+
+    static boolean shouldConsumeSlotGridPointerEvent(int mouseButton, boolean scrollbarHandled) {
+        return mouseButton == 0 && scrollbarHandled;
     }
 
     @Override
@@ -979,14 +985,15 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
         }
     }
 
-    private void clickSlotGridScrollbars(int mouseX, int mouseY) {
+    private boolean clickSlotGridScrollbars(int mouseX, int mouseY) {
         for (ScrollableSlotGrid state : this.slotGridStates.values()) {
             if (!state.clickScrollbar(mouseX, mouseY)) {
                 continue;
             }
             applyConfiguredSlotPositions();
-            return;
+            return true;
         }
+        return false;
     }
 
     private void releaseSlotGridScrollbars() {
@@ -995,7 +1002,7 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
         }
     }
 
-    private void dragSlotGridScrollbars(int mouseX, int mouseY) {
+    private boolean dragSlotGridScrollbars(int mouseX, int mouseY) {
         for (ScrollableSlotGrid state : this.slotGridStates.values()) {
             if (!state.isDraggingScrollbar()) {
                 continue;
@@ -1003,8 +1010,9 @@ public class GuiFluidProcessorHatchCustom extends GuiContainer {
             if (state.dragScrollbar(mouseX, mouseY)) {
                 applyConfiguredSlotPositions();
             }
-            return;
+            return true;
         }
+        return false;
     }
 
     private void drawSlotGridScrollbars(int mouseX, int mouseY) {

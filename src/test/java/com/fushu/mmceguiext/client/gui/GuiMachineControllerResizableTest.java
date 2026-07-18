@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -236,6 +237,29 @@ public class GuiMachineControllerResizableTest {
         assertEquals("demo_default_port_b", keys.get(1));
     }
 
+    @Test
+    public void pressedTextureOnlyButtonCreatesVisibleWidget() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        MachineGuiStyleManager.ControllerStyle style = new MachineGuiStyleManager.ControllerStyle();
+        MachineGuiStyleManager.ButtonStyle buttonStyle = pressedTextureOnlyButtonStyle();
+        style.buttons = Collections.singletonList(buttonStyle);
+        set(gui, "styleOverride", style);
+        set(gui, "renderWidth", Integer.valueOf(176));
+        set(gui, "renderHeight", Integer.valueOf(166));
+
+        invoke(
+            gui,
+            "initCustomButtons",
+            new Class<?>[] {MMCEGuiExtConfig.MachineController.class},
+            new MMCEGuiExtConfig.MachineController()
+        );
+
+        List<?> buttons = (List<?>) get(gui, "customButtons");
+        assertEquals(1, buttons.size());
+        assertNotNull(get(buttons.get(0), "button"));
+        assertTrue(get(buttons.get(0), "button") instanceof GuiTexturedButton);
+    }
+
     private static GuiMachineControllerResizable allocateGui() throws Exception {
         Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
         unsafeField.setAccessible(true);
@@ -291,6 +315,17 @@ public class GuiMachineControllerResizableTest {
         set(button, "hotkeys", new ArrayList<String>(Collections.singletonList(hotkey)));
         set(button, "consumeHotkey", Boolean.valueOf(consumeHotkey));
         return button;
+    }
+
+    private static MachineGuiStyleManager.ButtonStyle pressedTextureOnlyButtonStyle() {
+        MachineGuiStyleManager.ButtonStyle style = new MachineGuiStyleManager.ButtonStyle();
+        style.id = "pressed_only";
+        style.action = "page";
+        style.targetPage = "main";
+        style.width = Integer.valueOf(16);
+        style.height = Integer.valueOf(16);
+        style.pressedTexture = "mmceguiext:textures/gui/pressed_only.png";
+        return style;
     }
 
     private static Object newRuntimeState() throws Exception {

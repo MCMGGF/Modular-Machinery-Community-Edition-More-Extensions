@@ -146,6 +146,54 @@ public class ControllerSlotLayoutEngineTest {
         assertPosition(slots.get(48), 152, 158);
     }
 
+    @Test
+    public void styleOnlyGroupsAllocateAfterCustomPlayerSlotIndicesEvenWhenHidden() {
+        List<Slot> slots = slots(64);
+        SlotLayoutProvider provider = provider(
+            Collections.<SlotGroupDescriptor>emptyList(),
+            new PlayerInventoryDescriptor(8, 100, 8, 158, 10, 50, false)
+        );
+        MachineGuiStyleManager.SlotGroupStyle style = style("machine", 20, 30, 1, 1);
+        style.slotCount = Integer.valueOf(1);
+
+        ControllerSlotLayoutEngine.apply(
+            slots,
+            provider,
+            Collections.singletonList(style),
+            null,
+            new RecordingWarnings()
+        );
+
+        assertPosition(
+            slots.get(10),
+            ControllerSlotLayoutEngine.HIDDEN_SLOT_COORDINATE,
+            ControllerSlotLayoutEngine.HIDDEN_SLOT_COORDINATE
+        );
+        assertPosition(slots.get(59), 20, 30);
+    }
+
+    @Test
+    public void excessEnabledMappingsDoNotReserveSlotsForLaterGroups() {
+        List<Slot> slots = slots(48);
+        MachineGuiStyleManager.SlotGroupStyle overflow = style("overflow", 10, 10, 1, 1);
+        overflow.slotIndices = new int[] {40, 41};
+        MachineGuiStyleManager.SlotGroupStyle later = style("later", 30, 30, 1, 1);
+        later.slotCount = Integer.valueOf(1);
+        RecordingWarnings warnings = new RecordingWarnings();
+
+        ControllerSlotLayoutEngine.apply(
+            slots,
+            null,
+            Arrays.asList(overflow, later),
+            null,
+            warnings
+        );
+
+        assertPosition(slots.get(40), 10, 10);
+        assertPosition(slots.get(41), 30, 30);
+        assertTrue(warnings.contains("excess mappings skipped"));
+    }
+
     private static List<Slot> slots(int count) {
         InventoryBasic inventory = new InventoryBasic("test", false, count);
         List<Slot> slots = new ArrayList<Slot>(count);

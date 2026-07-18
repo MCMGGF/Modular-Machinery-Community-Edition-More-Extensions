@@ -432,10 +432,10 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             if (priority.intValue() >= 0) {
                 continue;
             }
-            drawProgressBars(priority);
-            drawDynamicVisuals(true, priority);
+            drawProgressBars(priority, true);
+            drawDynamicVisuals(true, priority, true);
             drawNegativeForegroundSliders(priority);
-            drawConfiguredTextureLayers(true, cfg, priority);
+            drawConfiguredTextureLayers(true, cfg, priority, true);
         }
     }
 
@@ -3118,12 +3118,16 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private void drawDynamicVisuals(boolean foreground, @Nullable Integer priorityFilter) {
+        drawDynamicVisuals(foreground, priorityFilter, !foreground);
+    }
+
+    private void drawDynamicVisuals(boolean foreground, @Nullable Integer priorityFilter, boolean screenCoordinates) {
         this.dynamicVisualRenderer.render(
             this.styleOverride.dynamicVisuals,
             this.factory,
             this::resolveDynamicVisualMetric,
-            foreground ? 0 : this.guiLeft,
-            foreground ? 0 : this.guiTop,
+            screenCoordinates ? this.guiLeft : 0,
+            screenCoordinates ? this.guiTop : 0,
             foreground,
             priorityFilter,
             this::isPageVisible,
@@ -3186,11 +3190,15 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private void drawProgressBars(@Nullable Integer priorityFilter) {
+        drawProgressBars(priorityFilter, false);
+    }
+
+    private void drawProgressBars(@Nullable Integer priorityFilter, boolean screenCoordinates) {
         if (styleOverride.progressBars == null || styleOverride.progressBars.isEmpty()) {
             return;
         }
         for (MachineGuiStyleManager.ProgressBarStyle bar : styleOverride.progressBars) {
-            if (bar == null) {
+            if (bar == null || Boolean.FALSE.equals(bar.foreground)) {
                 continue;
             }
             if (bar.visible != null && !bar.visible.booleanValue()) {
@@ -3203,7 +3211,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             if (priorityFilter != null && priority != priorityFilter.intValue()) {
                 continue;
             }
-            drawProgressBar(bar, resolveProgressBarValue(bar));
+            drawProgressBar(bar, resolveProgressBarValue(bar), screenCoordinates);
         }
     }
 
@@ -3221,7 +3229,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             if (!isPageVisible(bar.page)) {
                 continue;
             }
-            drawProgressBar(bar, resolveProgressBarValue(bar));
+            drawProgressBar(bar, resolveProgressBarValue(bar), true);
         }
     }
 
@@ -3304,18 +3312,29 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         return null;
     }
 
-    private void drawProgressBar(MachineGuiStyleManager.ProgressBarStyle bar, float progress) {
-        drawProgressBarBody(bar, progress);
+    private void drawProgressBar(
+        MachineGuiStyleManager.ProgressBarStyle bar,
+        float progress,
+        boolean screenCoordinates
+    ) {
+        int drawX = GuiRenderUtils.resolveGuiCoordinate(bar.x, this.guiLeft, screenCoordinates);
+        int drawY = GuiRenderUtils.resolveGuiCoordinate(bar.y, this.guiTop, screenCoordinates);
+        drawProgressBarBody(bar, progress, drawX, drawY);
         if (Boolean.TRUE.equals(bar.showText)) {
             String text = Math.round(progress * 100.0F) + "%";
             int color = bar.textColor == null ? 0xFFFFFFFF : bar.textColor.intValue();
-            int textX = bar.x + Math.max(0, (bar.width - getTextWidth(text)) / 2);
-            int textY = bar.y + Math.max(0, (bar.height - this.fontRenderer.FONT_HEIGHT) / 2);
+            int textX = drawX + Math.max(0, (bar.width - getTextWidth(text)) / 2);
+            int textY = drawY + Math.max(0, (bar.height - this.fontRenderer.FONT_HEIGHT) / 2);
             drawStringWithShadow(text, textX, textY, color);
         }
     }
 
-    private void drawProgressBarBody(MachineGuiStyleManager.ProgressBarStyle bar, float progress) {
+    private void drawProgressBarBody(
+        MachineGuiStyleManager.ProgressBarStyle bar,
+        float progress,
+        int drawX,
+        int drawY
+    ) {
         int bg = bar.backgroundColor == null ? 0x66000000 : bar.backgroundColor.intValue();
         int fill = bar.fillColor == null ? 0xFF55CC66 : bar.fillColor.intValue();
         int textureWidth = bar.textureWidth == null ? bar.width : Math.max(1, bar.textureWidth.intValue());
@@ -3324,15 +3343,22 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
         if (backgroundTexture != null) {
             this.mc.getTextureManager().bindTexture(backgroundTexture);
-            GuiRenderUtils.drawTexturedRect(bar.x, bar.y, 0, 0, bar.width, bar.height, textureWidth, textureHeight);
+            GuiRenderUtils.drawTexturedRect(drawX, drawY, 0, 0, bar.width, bar.height, textureWidth, textureHeight);
         } else {
-            drawRect(bar.x, bar.y, bar.x + bar.width, bar.y + bar.height, bg);
+            drawRect(drawX, drawY, drawX + bar.width, drawY + bar.height, bg);
         }
         if (bar.borderColor != null) {
-            drawProgressBorder(bar.x, bar.y, bar.width, bar.height, bar.borderColor.intValue());
+            drawProgressBorder(drawX, drawY, bar.width, bar.height, bar.borderColor.intValue());
         }
 
-        int[] fillBounds = ProgressBarStyleSupport.computeFillBounds(bar.x, bar.y, bar.width, bar.height, bar.direction, progress);
+        int[] fillBounds = ProgressBarStyleSupport.computeFillBounds(
+            drawX,
+            drawY,
+            bar.width,
+            bar.height,
+            bar.direction,
+            progress
+        );
         if (fillBounds[2] > 0 && fillBounds[3] > 0) {
             ResourceLocation fillTexture = resolveProgressBarTexture(bar, true);
             if (fillTexture != null) {
@@ -3617,10 +3643,19 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private void drawConfiguredTextureLayers(boolean foreground, MMCEGuiExtConfig.FactoryController cfg) {
-        drawConfiguredTextureLayers(foreground, cfg, null);
+        drawConfiguredTextureLayers(foreground, cfg, null, !foreground);
     }
 
     private void drawConfiguredTextureLayers(boolean foreground, MMCEGuiExtConfig.FactoryController cfg, @Nullable Integer priorityFilter) {
+        drawConfiguredTextureLayers(foreground, cfg, priorityFilter, !foreground);
+    }
+
+    private void drawConfiguredTextureLayers(
+        boolean foreground,
+        MMCEGuiExtConfig.FactoryController cfg,
+        @Nullable Integer priorityFilter,
+        boolean screenCoordinates
+    ) {
         List<TextureLayerDef> layers = foreground ? this.foregroundTextureLayers : this.backgroundTextureLayers;
         if (layers.isEmpty()) {
             return;
@@ -3647,8 +3682,8 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             int texH = layer.textureHeight == null ? getBackgroundTextureHeight(cfg) : Math.max(16, layer.textureHeight.intValue());
             int corner = layer.corner == null ? getBackgroundCorner(cfg) : Math.max(2, layer.corner.intValue());
             boolean useNineSlice = layer.useNineSlice == null ? getUseNineSlice(cfg) : layer.useNineSlice.booleanValue();
-            int drawX = foreground ? offX : this.guiLeft + offX;
-            int drawY = foreground ? offY : this.guiTop + offY;
+            int drawX = GuiRenderUtils.resolveGuiCoordinate(offX, this.guiLeft, screenCoordinates);
+            int drawY = GuiRenderUtils.resolveGuiCoordinate(offY, this.guiTop, screenCoordinates);
             float scaleX = resolveLayerScaleX(layer);
             float scaleY = resolveLayerScaleY(layer);
             float rotation = resolveLayerRotation(layer);
@@ -4343,8 +4378,8 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     private void drawSlider(CustomSlider slider, boolean screenCoordinates) {
         int offsetX = screenCoordinates ? this.guiLeft : 0;
         int offsetY = screenCoordinates ? this.guiTop : 0;
-        int x = offsetX + slider.x;
-        int y = offsetY + slider.y;
+        int x = GuiRenderUtils.resolveGuiCoordinate(slider.x, this.guiLeft, screenCoordinates);
+        int y = GuiRenderUtils.resolveGuiCoordinate(slider.y, this.guiTop, screenCoordinates);
         drawRect(x, y, x + slider.width, y + slider.height, slider.trackColor);
         if (slider.borderColor != null) {
             drawProgressBorder(x, y, slider.width, slider.height, slider.borderColor.intValue());
@@ -4507,7 +4542,8 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 boolean hasLabel = style.label != null && !style.label.trim().isEmpty();
                 boolean hasTexture = style.texture != null && !style.texture.trim().isEmpty()
                     || style.hoverTexture != null && !style.hoverTexture.trim().isEmpty()
-                    || style.disabledTexture != null && !style.disabledTexture.trim().isEmpty();
+                    || style.disabledTexture != null && !style.disabledTexture.trim().isEmpty()
+                    || style.pressedTexture != null && !style.pressedTexture.trim().isEmpty();
                 boolean hasHotkey = style.hotkeys != null && !style.hotkeys.isEmpty();
                 if (!hasLabel && !hasTexture && !hasHotkey) {
                     continue;
