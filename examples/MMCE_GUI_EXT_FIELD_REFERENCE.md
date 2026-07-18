@@ -607,7 +607,28 @@ EN: Common tweaks:
 - `height` controls the bar thickness
 - `priority` controls what it draws over
 
-## 10. Dynamic visuals / 动态可视化组件
+## 10. Controller slot layouts / 控制器槽位布局
+
+`slotGroups[]` is supported by both `machineController` and `factoryController`.
+
+- `id`: required stable group id.
+- `firstSlot` / `first_slot`: first container slot for a continuous mapping.
+- `slotCount` / `slot_count`: number of mapped slots. It may be smaller than `rows * columns`, so the last row may be partial.
+- `slotIndices[]` / `slot_indices[]`: sparse container-slot mapping. When present, it takes precedence over `firstSlot + slotCount`.
+- `x`, `y`, `rows`, `columns` (`cols` alias): geometry.
+- `spacingX`, `spacingY`: per-slot spacing. Legacy `slotWidth` / `slotHeight` remain aliases.
+- `enabled`: disabled groups move their mapped slots offscreen.
+- `shiftTarget`: compatibility metadata only; it does not control server-side Shift-click routing.
+
+When a `SlotLayoutProvider` group and JSON group share the same `id`, fields merge individually. JSON geometry wins, while omitted index fields inherit the provider mapping. A JSON-only legacy group without explicit indices is allocated sequentially after the default player slots. Duplicate and out-of-range indices are warned and skipped.
+
+`playerInventory` fields:
+
+- `x`, `y`, `hotbarX`, `hotbarY`
+- `mainStart`, `hotbarStart` (defaults `0` and `27`)
+- `enabled`
+
+## 11. Dynamic visuals / 动态可视化组件
 
 - `dynamicVisuals`
   - CN: 控制器动态可视化数组，普通控制器和集成控制器都支持。统一支持贴图切换、动态填充、圆饼/环形图、曲线图。
@@ -642,6 +663,17 @@ EN: Common tweaks:
 
 ```json
 "source": {
+  "type": "customData",
+  "key": "amount",
+  "default": 0,
+  "min": 0,
+  "max": 1,
+  "maxSource": { "type": "customData", "key": "capacity", "default": 1 }
+}
+```
+
+```json
+"source": {
   "type": "combined",
   "combine": "weightedSum",
   "sources": [
@@ -668,6 +700,9 @@ Metrics: `recipeProgress`, `recipeMaxProgress`, `energyStored`, `energyCapacity`
 - `weight`
   - CN: 仅子 source 使用。`weightedSum` / `weightedAverage` 会先用 `weight` 缩放每个子项的原始值，再参与组合；不写时默认 `1`。
   - EN: Used on child sources. `weightedSum` / `weightedAverage` scale each child's raw value by `weight` before combining; defaults to `1`.
+- `minSource`, `maxSource` (aliases: `min_source`, `max_source`)
+  - CN: 接受完整 `customData` / `machine` / `combined` source。有限动态值覆盖静态 `min` / `max`；缺失或非有限值回退静态值。bound source 按原始值读取，不执行自己的归一化。最终 `max <= min` 时输出 `0`。
+  - EN: Accept complete `customData`, `machine`, or `combined` sources. Finite dynamic values override static `min` / `max`; missing or non-finite values fall back to the static bounds. Bound sources are read raw without applying their own normalization. Final `max <= min` produces `0`.
 - 规则 / rule
   - CN: 会先把各子 source 当作原始数值读取并完成组合，再对父级 source 执行 `min`、`max`、`clamp`、`invert`。
   - EN: Child sources are resolved as raw numeric values and combined first; then the parent source applies `min`, `max`, `clamp`, and `invert`.

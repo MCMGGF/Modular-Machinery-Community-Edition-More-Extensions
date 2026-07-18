@@ -53,7 +53,7 @@ public class DynamicVisualRenderer {
                 continue;
             }
             float raw = resolveRawValue(visual.source, controller, metricProvider);
-            float normalized = normalizeValue(raw, visual.source);
+            float normalized = normalizeValue(raw, visual.source, controller, metricProvider);
             if (!resolveVisibilityByValue(visual.visibleByValue, normalized, controller, metricProvider)) {
                 continue;
             }
@@ -117,6 +117,15 @@ public class DynamicVisualRenderer {
         MetricProvider metricProvider
     ) {
         float fallback = source == null || source.defaultValue == null ? 0.0F : source.defaultValue.floatValue();
+        return resolveRawValue(source, controller, metricProvider, fallback);
+    }
+
+    private float resolveRawValue(
+        @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle source,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider,
+        float fallback
+    ) {
         if (source == null) {
             return fallback;
         }
@@ -157,7 +166,7 @@ public class DynamicVisualRenderer {
                 continue;
             }
             float childFallback = child.defaultValue == null ? fallback : child.defaultValue.floatValue();
-            float value = resolveRawValue(child, controller, metricProvider);
+            float value = resolveRawValue(child, controller, metricProvider, childFallback);
             if (!Float.isFinite(value)) {
                 value = childFallback;
             }
@@ -222,24 +231,57 @@ public class DynamicVisualRenderer {
         return result;
     }
 
-    private float normalizeValue(float raw, @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle source) {
+    private float normalizeValue(
+        float raw,
+        @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle source,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
         float value = Float.isFinite(raw) ? raw : 0.0F;
-        float min = source == null || source.min == null ? 0.0F : source.min.floatValue();
-        float max = source == null || source.max == null ? 1.0F : source.max.floatValue();
-        if (Math.abs(max - min) > EPSILON) {
-            value = (value - min) / (max - min);
-        }
+        float staticMin = source == null || source.min == null ? 0.0F : source.min.floatValue();
+        float staticMax = source == null || source.max == null ? 1.0F : source.max.floatValue();
+        float min = resolveDynamicBound(source == null ? null : source.minSource, staticMin, controller, metricProvider);
+        float max = resolveDynamicBound(source == null ? null : source.maxSource, staticMax, controller, metricProvider);
         boolean clamp = source == null || source.clamp == null || source.clamp.booleanValue();
+        boolean invert = source != null && Boolean.TRUE.equals(source.invert);
+        return normalizeValueWithBounds(value, min, max, clamp, invert);
+    }
+
+    static float normalizeValueWithBounds(float raw,
+                                          float min,
+                                          float max,
+                                          boolean clamp,
+                                          boolean invert) {
+        if (!Float.isFinite(raw) || !Float.isFinite(min) || !Float.isFinite(max) || max <= min) {
+            return 0.0F;
+        }
+        float value = (raw - min) / (max - min);
         if (clamp) {
             value = ProgressBarStyleSupport.clamp01(value);
         }
-        if (source != null && Boolean.TRUE.equals(source.invert)) {
+        if (invert) {
             value = 1.0F - value;
             if (clamp) {
                 value = ProgressBarStyleSupport.clamp01(value);
             }
         }
         return value;
+    }
+
+    float resolveDynamicBound(
+        @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle boundSource,
+        float fallback,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        if (boundSource == null) {
+            return Float.isFinite(fallback) ? fallback : 0.0F;
+        }
+        float boundFallback = boundSource.defaultValue == null
+            ? Float.NaN
+            : boundSource.defaultValue.floatValue();
+        float resolved = resolveRawValue(boundSource, controller, metricProvider, boundFallback);
+        return Float.isFinite(resolved) ? resolved : (Float.isFinite(fallback) ? fallback : 0.0F);
     }
 
     private void renderVisual(
@@ -514,7 +556,7 @@ public class DynamicVisualRenderer {
         float input = fallbackNormalized;
         if (source != null) {
             float raw = resolveRawValue(source, controller, metricProvider);
-            input = normalizeValue(raw, source);
+            input = normalizeValue(raw, source, controller, metricProvider);
         }
         return Float.isFinite(input) ? input : 0.0F;
     }

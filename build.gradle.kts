@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.fushu.mmce"
-version = "1.2.0"
+version = "1.3.0"
 
 java {
     withSourcesJar()
@@ -96,6 +96,9 @@ dependencies {
     compileOnly(rfg.deobf("curse.maven:ae2-extended-life-570458:6302098"))
     compileOnly(rfg.deobf("curse.maven:ae2-fluid-crafting-rework-623955:5504001"))
     testImplementation(rfg.deobf("curse.maven:ae2-extended-life-570458:6302098"))
+    compileOnly(rfg.deobf("curse.maven:mouse-tweaks-unofficial-461660:5876158"))
+    testCompileOnly(rfg.deobf("curse.maven:mouse-tweaks-unofficial-461660:5876158"))
+    testRuntimeOnly(rfg.deobf("curse.maven:mouse-tweaks-unofficial-461660:5876158"))
     compileOnly(rfg.deobf("curse.maven:Mekanism-268560:2835175"))
     testCompileOnly(rfg.deobf("curse.maven:Mekanism-268560:2835175"))
     testRuntimeOnly(rfg.deobf("curse.maven:Mekanism-268560:2835175"))
@@ -161,4 +164,25 @@ tasks.jar.configure {
         attributes["FMLCorePlugin"] = "com.fushu.mmceguiext.core.MMCEGuiExtEarlyMixinLoader"
         attributes["FMLCorePluginContainsFMLMod"] = true
     }
+}
+
+val verifyJarDoesNotBundleMouseTweaks by tasks.registering {
+    group = "verification"
+    description = "Fails when the release jar contains Mouse Tweaks implementation or API classes."
+    dependsOn(tasks.jar)
+
+    doLast {
+        val outputJar = tasks.jar.get().archiveFile.get().asFile
+        val forbiddenEntries = zipTree(outputJar).matching {
+            include("yalter/mousetweaks/**")
+        }.files
+        check(forbiddenEntries.isEmpty()) {
+            "MMCEGE must not bundle Mouse Tweaks classes: " +
+                forbiddenEntries.joinToString { it.name }
+        }
+    }
+}
+
+tasks.check.configure {
+    dependsOn(verifyJarDoesNotBundleMouseTweaks)
 }

@@ -30,25 +30,33 @@ public class MultiMachineComponentProviderSupportTest {
     }
 
     @Test
-    public void fallsBackToProvideMachineComponentsReflection() {
+    public void ignoresReflectiveProvideMachineComponentsWithoutApiMarker() {
         ReflectiveProviderTile tile = new ReflectiveProviderTile();
 
         Collection<MachineComponent<?>> resolved = MultiMachineComponentProviderSupport.resolveMachineComponents(tile);
 
-        assertEquals(1, resolved.size());
-        assertSame(tile.component, resolved.iterator().next());
-        assertEquals(888L, MultiMachineComponentProviderSupport.resolveStableGroupId(tile, resolved));
+        assertEquals(0, resolved.size());
     }
 
     @Test
-    public void fallsBackToProvideComponentsReflection() {
+    public void ignoresLegacyProvideComponentsWithoutApiMarker() {
         LegacyReflectiveProviderTile tile = new LegacyReflectiveProviderTile();
 
         Collection<MachineComponent<?>> resolved = MultiMachineComponentProviderSupport.resolveMachineComponents(tile);
 
+        assertEquals(0, resolved.size());
+    }
+
+    @Test
+    public void removesNullEntriesAndFallsBackToFirstValidComponentGroup() {
+        MachineComponent<Object> component = component(321L);
+        InvalidEntryProviderTile tile = new InvalidEntryProviderTile(component);
+
+        Collection<MachineComponent<?>> resolved = MultiMachineComponentProviderSupport.resolveMachineComponents(tile);
+
         assertEquals(1, resolved.size());
-        assertSame(tile.component, resolved.iterator().next());
-        assertEquals(999L, MultiMachineComponentProviderSupport.resolveStableGroupId(tile, resolved));
+        assertSame(component, resolved.iterator().next());
+        assertEquals(321L, MultiMachineComponentProviderSupport.resolveStableGroupId(tile, resolved));
     }
 
     private static MachineComponent<Object> component(final long groupId) {
@@ -83,6 +91,20 @@ public class MultiMachineComponentProviderSupportTest {
         @Override
         public long getMachineComponentGroupId() {
             return 777L;
+        }
+    }
+
+    private static final class InvalidEntryProviderTile extends TileEntity implements IMultiMachineComponentProvider {
+        private final MachineComponent<Object> component;
+
+        private InvalidEntryProviderTile(MachineComponent<Object> component) {
+            this.component = component;
+        }
+
+        @Nonnull
+        @Override
+        public Collection<MachineComponent<?>> provideMachineComponents() {
+            return Arrays.<MachineComponent<?>>asList(null, this.component, null);
         }
     }
 

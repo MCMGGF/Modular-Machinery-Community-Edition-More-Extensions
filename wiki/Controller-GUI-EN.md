@@ -201,6 +201,23 @@ Renderers supported now: `textureSwitch`, `fill`, `pie`/`ring`, and `lineChart`.
 
 `combined` first resolves multiple child sources as raw numeric values, then applies the parent source's `min`, `max`, `clamp`, and `invert`. Supported `combine` modes: `sum`, `average`, `weightedSum`, `weightedAverage`, `min`, `max`, `multiply`, `subtract`, `divide`, `first`, `last`. Child entries may be `customData`, `machine`, or nested `combined`. Each child may also define `weight`, used by `weightedSum` / `weightedAverage`.
 
+Use `minSource` / `maxSource` (aliases `min_source` / `max_source`) for dynamic bounds. Each accepts a complete `customData`, `machine`, or `combined` source. Finite dynamic values override static `min` / `max`; missing or non-finite values fall back to the static bounds. Bound sources are read raw without applying their own normalization. Final `max <= min` produces normalized value `0`.
+
+```json
+"source": {
+  "type": "customData",
+  "key": "oneblock.component.energy_in.amount",
+  "default": 0,
+  "min": 0,
+  "max": 1,
+  "maxSource": {
+    "type": "customData",
+    "key": "oneblock.component.energy_in.capacity",
+    "default": 1
+  }
+}
+```
+
 Optional transforms are also supported:
 - `transform`: static `offsetX`, `offsetY`, `scale`, `scaleX`, `scaleY`, `rotation`, `alpha`, `pivotX`, `pivotY`, `pivotUnit`, and legacy `origin` (`topLeft`, `topCenter`, `topRight`, `centerLeft`, `center`, `centerRight`, `bottomLeft`, `bottomCenter`, `bottomRight`).
 - `transformByValue`: variable-driven `offsetX`, `offsetY`, `scale`, `scaleX`, `scaleY`, `rotation`, `alpha`, `pivotX`, `pivotY`.

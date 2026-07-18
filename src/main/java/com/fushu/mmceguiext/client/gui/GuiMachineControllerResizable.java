@@ -164,6 +164,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         this.customBackgroundTexture = resolveCustomTexture();
         resolveGuiScaleConfig();
         super.initGui();
+        applySlotLayout();
         initializeCurrentContext(null, false, null, this.activePageId);
         this.dynamicVisualRenderer.reset();
         this.currentRuntimeState = captureRuntimeState(null, false);
@@ -1228,6 +1229,29 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
     private int resolveLayerPriority(TextureLayerDef layer) {
         LayerRuntimeState runtime = this.layerRuntimeStates.get(layer.id);
         return runtime != null && runtime.priority != null ? runtime.priority.intValue() : layer.priority;
+    }
+
+    private void applySlotLayout() {
+        if (this.inventorySlots == null || this.inventorySlots.inventorySlots == null) {
+            return;
+        }
+        ControllerSlotLayoutEngine.apply(
+            this.inventorySlots.inventorySlots,
+            getSlotLayoutProvider(),
+            this.styleOverride == null ? null : this.styleOverride.slotGroups,
+            this.styleOverride == null ? null : this.styleOverride.playerInventory
+        );
+    }
+
+    @Nullable
+    private com.fushu.mmceguiext.api.gui.SlotLayoutProvider getSlotLayoutProvider() {
+        if (this.inventorySlots instanceof com.fushu.mmceguiext.api.gui.SlotLayoutProvider) {
+            return (com.fushu.mmceguiext.api.gui.SlotLayoutProvider) this.inventorySlots;
+        }
+        if (this.controller instanceof com.fushu.mmceguiext.api.gui.SlotLayoutProvider) {
+            return (com.fushu.mmceguiext.api.gui.SlotLayoutProvider) this.controller;
+        }
+        return null;
     }
 
     private void applyPlayerInventoryVisibility(MMCEGuiExtConfig.MachineController cfg) {

@@ -485,6 +485,11 @@ final class MachineGuiStyleParser {
         style.dynamicVisuals = parseDynamicVisuals(node, result, scope);
         style.subGuis = parseSubGuis(node, result, scope);
 
+        style.slotGroups = parseSlotGroups(node, result, scope);
+        style.playerInventory = parsePlayerInventory(node, result, scope);
+        style.threadQueueMode = getTrimmedString(node, result, scope, "threadQueueMode", "thread_queue_mode", "queueMode", "queue_mode");
+        style.threadTooltip = getBoolean(node, result, scope, "threadTooltip", "thread_tooltip", "queueTooltip", "queue_tooltip");
+
         Boolean useDefaultBackground = getBoolean(node, result, scope, "useDefaultBackground");
         if (useDefaultBackground != null) {
             style.hideDefaultBackground = !useDefaultBackground.booleanValue();
@@ -1354,7 +1359,11 @@ final class MachineGuiStyleParser {
             || obj.has("default_value")
             || obj.has("fallback")
             || obj.has("fallbackValue")
-            || obj.has("fallback_value");
+            || obj.has("fallback_value")
+            || obj.has("minSource")
+            || obj.has("min_source")
+            || obj.has("maxSource")
+            || obj.has("max_source");
     }
 
     private static MachineGuiStyleManager.DynamicVisualSourceStyle parseDynamicVisualSource(
@@ -1391,6 +1400,14 @@ final class MachineGuiStyleParser {
         source.defaultValue = getFloat(sourceObj, result, scope, "default", "defaultValue", "default_value", "fallback", "fallbackValue", "fallback_value");
         source.min = getFloat(sourceObj, result, scope, "min", "minimum");
         source.max = getFloat(sourceObj, result, scope, "max", "maximum");
+        JsonObject minSource = getObject(sourceObj, result, scope, "minSource", "min_source");
+        if (minSource != null) {
+            source.minSource = parseDynamicVisualSource(minSource, result, scope + ".minSource");
+        }
+        JsonObject maxSource = getObject(sourceObj, result, scope, "maxSource", "max_source");
+        if (maxSource != null) {
+            source.maxSource = parseDynamicVisualSource(maxSource, result, scope + ".maxSource");
+        }
         source.clamp = getBoolean(sourceObj, result, scope, "clamp", "bounded");
         source.invert = getBoolean(sourceObj, result, scope, "invert", "inverted", "reverse");
         if (source.sources != null && !source.sources.isEmpty()) {
@@ -1790,6 +1807,165 @@ final class MachineGuiStyleParser {
             frames.add(frame);
         }
         return frames.isEmpty() ? null : frames;
+    }
+
+    @Nullable
+    private static List<MachineGuiStyleManager.SlotGroupStyle> parseSlotGroups(
+        JsonObject node,
+        MachineFileParseResult result,
+        String scope
+    ) {
+        MatchedElement match = findElement(node, "slotGroups", "slot_groups", "inventoryGroups", "inventory_groups");
+        if (match == null) {
+            return null;
+        }
+        if (!match.element.isJsonArray()) {
+            result.warnForMachine(scope, field(scope, match.key) + " must be an array.");
+            return null;
+        }
+
+        JsonArray array = match.element.getAsJsonArray();
+        int limit = cappedArraySize(array, result, scope, match.key, MAX_ARRAY_ENTRIES);
+        List<MachineGuiStyleManager.SlotGroupStyle> groups =
+            new ArrayList<MachineGuiStyleManager.SlotGroupStyle>();
+        for (int i = 0; i < limit; i++) {
+            JsonElement entry = array.get(i);
+            if (!entry.isJsonObject()) {
+                result.warnForMachine(scope, field(scope, match.key) + "[" + i + "] must be an object.");
+                continue;
+            }
+            JsonObject obj = entry.getAsJsonObject();
+            String itemScope = field(scope, match.key + "[" + i + "]");
+
+            String id = getTrimmedString(obj, result, itemScope, "id");
+            if (id == null || id.trim().isEmpty()) {
+                result.warnForMachine(scope, itemScope + " is missing required field id.");
+                continue;
+            }
+
+            MachineGuiStyleManager.SlotGroupStyle group =
+                new MachineGuiStyleManager.SlotGroupStyle();
+            group.id = id.trim();
+            group.firstSlot = validateMinInt(
+                getInt(obj, result, itemScope, "firstSlot", "first_slot", "slotStart", "slot_start"),
+                0, result, itemScope, "firstSlot"
+            );
+            group.slotCount = validateMinInt(
+                getInt(obj, result, itemScope, "slotCount", "slot_count", "count"),
+                0, result, itemScope, "slotCount"
+            );
+            group.slotIndices = parseSlotIndices(obj, result, scope, itemScope);
+            group.x = getInt(obj, result, itemScope, "x");
+            group.y = getInt(obj, result, itemScope, "y");
+            group.rows = validateMinInt(
+                getInt(obj, result, itemScope, "rows"),
+                1, result, itemScope, "rows"
+            );
+            group.columns = validateMinInt(
+                getInt(obj, result, itemScope, "columns", "cols"),
+                1, result, itemScope, "columns"
+            );
+            group.spacingX = validateMinInt(
+                getInt(obj, result, itemScope,
+                    "spacingX", "spacing_x", "slotWidth", "slot_width", "slotW", "slot_w"),
+                1, result, itemScope, "spacingX"
+            );
+            group.spacingY = validateMinInt(
+                getInt(obj, result, itemScope,
+                    "spacingY", "spacing_y", "slotHeight", "slot_height", "slotH", "slot_h"),
+                1, result, itemScope, "spacingY"
+            );
+            group.shiftTarget = getTrimmedString(
+                obj, result, itemScope,
+                "shiftTarget", "shift_target", "shiftClickTarget", "shift_click_target"
+            );
+            group.enabled = getBoolean(obj, result, itemScope, "enabled", "visible", "active");
+
+            groups.add(group);
+        }
+        return groups.isEmpty() ? null : groups;
+    }
+
+    @Nullable
+    private static int[] parseSlotIndices(JsonObject obj,
+                                          MachineFileParseResult result,
+                                          String machineScope,
+                                          String itemScope) {
+        MatchedElement match = findElement(obj, "slotIndices", "slot_indices", "indices");
+        if (match == null) {
+            return null;
+        }
+        if (!match.element.isJsonArray()) {
+            result.warnForMachine(machineScope, field(itemScope, match.key) + " must be an array.");
+            return null;
+        }
+        JsonArray array = match.element.getAsJsonArray();
+        int limit = cappedArraySize(array, result, machineScope, match.key, MAX_ARRAY_ENTRIES);
+        List<Integer> indices = new ArrayList<Integer>(limit);
+        for (int i = 0; i < limit; i++) {
+            JsonElement entry = array.get(i);
+            if (!entry.isJsonPrimitive() || !entry.getAsJsonPrimitive().isNumber()) {
+                result.warnForMachine(machineScope,
+                    field(itemScope, match.key) + "[" + i + "] must be a non-negative integer.");
+                continue;
+            }
+            try {
+                int value = entry.getAsInt();
+                if (value < 0) {
+                    result.warnForMachine(machineScope,
+                        field(itemScope, match.key) + "[" + i + "] must be a non-negative integer.");
+                    continue;
+                }
+                indices.add(Integer.valueOf(value));
+            } catch (RuntimeException ex) {
+                result.warnForMachine(machineScope,
+                    field(itemScope, match.key) + "[" + i + "] must be a non-negative integer.");
+            }
+        }
+        if (indices.isEmpty()) {
+            return null;
+        }
+        int[] out = new int[indices.size()];
+        for (int i = 0; i < indices.size(); i++) {
+            out[i] = indices.get(i).intValue();
+        }
+        return out;
+    }
+
+    @Nullable
+    private static MachineGuiStyleManager.PlayerInventoryStyle parsePlayerInventory(
+        JsonObject node,
+        MachineFileParseResult result,
+        String scope
+    ) {
+        MatchedElement match = findElement(node, "playerInventory", "player_inventory", "playerInv", "player_inv");
+        if (match == null) {
+            return null;
+        }
+        if (!match.element.isJsonObject()) {
+            result.warnForMachine(scope, field(scope, match.key) + " must be an object.");
+            return null;
+        }
+
+        JsonObject obj = match.element.getAsJsonObject();
+        String itemScope = field(scope, match.key);
+
+        MachineGuiStyleManager.PlayerInventoryStyle style =
+            new MachineGuiStyleManager.PlayerInventoryStyle();
+        style.x = getInt(obj, result, itemScope, "x");
+        style.y = getInt(obj, result, itemScope, "y");
+        style.hotbarX = getInt(obj, result, itemScope, "hotbarX", "hotbar_x");
+        style.hotbarY = getInt(obj, result, itemScope, "hotbarY", "hotbar_y");
+        style.mainStart = validateMinInt(
+            getInt(obj, result, itemScope, "mainStart", "main_start"),
+            0, result, itemScope, "mainStart"
+        );
+        style.hotbarStart = validateMinInt(
+            getInt(obj, result, itemScope, "hotbarStart", "hotbar_start"),
+            0, result, itemScope, "hotbarStart"
+        );
+        style.enabled = getBoolean(obj, result, itemScope, "enabled", "visible", "active");
+        return style;
     }
 
     @Nullable

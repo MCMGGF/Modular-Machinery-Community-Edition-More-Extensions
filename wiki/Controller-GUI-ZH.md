@@ -201,6 +201,23 @@ MMCEGE 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineContro
 
 `combined` 会先把多个子 source 解析成原始数值并完成组合，然后再对父级 source 应用 `min`、`max`、`clamp`、`invert`。`combine` 支持：`sum`、`average`、`weightedSum`、`weightedAverage`、`min`、`max`、`multiply`、`subtract`、`divide`、`first`、`last`。子项可以是 `customData`、`machine`，也可以继续嵌套 `combined`。每个子项还可以写 `weight`，供 `weightedSum` / `weightedAverage` 使用。
 
+动态上下限使用 `minSource` / `maxSource`（也支持 `min_source` / `max_source`）。两者都接受完整的 `customData`、`machine` 或 `combined` source；有限动态值覆盖静态 `min` / `max`，缺失或非有限值回退静态值。bound source 按原始值读取，不执行自己的归一化。最终 `max <= min` 时归一化结果固定为 `0`。
+
+```json
+"source": {
+  "type": "customData",
+  "key": "oneblock.component.energy_in.amount",
+  "default": 0,
+  "min": 0,
+  "max": 1,
+  "maxSource": {
+    "type": "customData",
+    "key": "oneblock.component.energy_in.capacity",
+    "default": 1
+  }
+}
+```
+
 还支持可选变换：
 - `transform`：静态 `offsetX`、`offsetY`、`scale`、`scaleX`、`scaleY`、`rotation`、`alpha`、`pivotX`、`pivotY`、`pivotUnit`，以及兼容旧写法的 `origin`（`topLeft`、`topCenter`、`topRight`、`centerLeft`、`center`、`centerRight`、`bottomLeft`、`bottomCenter`、`bottomRight`）。
 - `transformByValue`：按变量驱动 `offsetX`、`offsetY`、`scale`、`scaleX`、`scaleY`、`rotation`、`alpha`、`pivotX`、`pivotY`。

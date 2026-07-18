@@ -24,9 +24,4 @@ public interface IMultiMachineComponentProvider {
     default long getMachineComponentGroupId() {
         return -1L;
     }
-
-    @Nonnull
-    default Collection<MachineComponent<?>> provideComponents() {
-        return provideMachineComponents();
-    }
 }

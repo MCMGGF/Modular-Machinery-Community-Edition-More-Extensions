@@ -487,10 +487,18 @@ public final class MachineGuiStyleManager {
         @Nullable
         public List<DynamicVisualStyle> dynamicVisuals;
         @Nullable
-        public List<SubGuiStyle> subGuis;
+       public List<SubGuiStyle> subGuis;
+        @Nullable
+        public List<SlotGroupStyle> slotGroups;
+        @Nullable
+        public PlayerInventoryStyle playerInventory;
+        @Nullable
+        public String threadQueueMode;
+        @Nullable
+        public Boolean threadTooltip;
 
-        public boolean isEmpty() {
-            return (backgroundTexture == null || backgroundTexture.trim().isEmpty())
+       public boolean isEmpty() {
+           return (backgroundTexture == null || backgroundTexture.trim().isEmpty())
                    && backgroundTextureOffsetX == null
                    && backgroundTextureOffsetY == null
                    && centerFullGui == null
@@ -540,7 +548,11 @@ public final class MachineGuiStyleManager {
                    && (progressBars == null || progressBars.isEmpty())
                    && (sliders == null || sliders.isEmpty())
                    && (dynamicVisuals == null || dynamicVisuals.isEmpty())
-                   && (subGuis == null || subGuis.isEmpty());
+                   && (subGuis == null || subGuis.isEmpty())
+                   && (slotGroups == null || slotGroups.isEmpty())
+                   && playerInventory == null
+                   && (threadQueueMode == null || threadQueueMode.trim().isEmpty())
+                   && threadTooltip == null;
         }
 
         public static ControllerStyle copyOf(ControllerStyle source) {
@@ -599,6 +611,10 @@ public final class MachineGuiStyleManager {
             copy.sliders = copySliderList(source.sliders);
             copy.dynamicVisuals = source.dynamicVisuals == null ? null : copyDynamicVisualList(source.dynamicVisuals);
             copy.subGuis = source.subGuis == null ? null : copySubGuiList(source.subGuis);
+            copy.slotGroups = source.slotGroups == null ? null : copySlotGroupList(source.slotGroups);
+            copy.playerInventory = PlayerInventoryStyle.copyOf(source.playerInventory);
+            copy.threadQueueMode = source.threadQueueMode;
+            copy.threadTooltip = source.threadTooltip;
             return copy;
         }
 
@@ -657,6 +673,10 @@ public final class MachineGuiStyleManager {
             this.sliders = appendSliderList(this.sliders, overlay.sliders);
             this.dynamicVisuals = appendDynamicVisualList(this.dynamicVisuals, overlay.dynamicVisuals);
             this.subGuis = appendSubGuiList(this.subGuis, overlay.subGuis);
+            if (overlay.slotGroups != null) this.slotGroups = appendSlotGroupList(this.slotGroups, overlay.slotGroups);
+            if (overlay.playerInventory != null) this.playerInventory = PlayerInventoryStyle.copyOf(overlay.playerInventory);
+            if (overlay.threadQueueMode != null) this.threadQueueMode = overlay.threadQueueMode;
+            if (overlay.threadTooltip != null) this.threadTooltip = overlay.threadTooltip;
             return this;
         }
 
@@ -894,7 +914,30 @@ public final class MachineGuiStyleManager {
         }
 
         @Nullable
-        private static List<SubGuiStyle> appendSubGuiList(@Nullable List<SubGuiStyle> base, @Nullable List<SubGuiStyle> overlay) {
+        private static List<SlotGroupStyle> copySlotGroupList(@Nullable List<SlotGroupStyle> source) {
+            if (source == null) {
+                return null;
+            }
+            List<SlotGroupStyle> copy = new ArrayList<SlotGroupStyle>(source.size());
+            for (SlotGroupStyle group : source) {
+                copy.add(SlotGroupStyle.copyOf(group));
+            }
+            return copy;
+        }
+
+        @Nullable
+        private static List<SlotGroupStyle> appendSlotGroupList(@Nullable List<SlotGroupStyle> base,
+                                                                @Nullable List<SlotGroupStyle> overlay) {
+            if (overlay == null || overlay.isEmpty()) {
+                return base;
+            }
+            List<SlotGroupStyle> out = base == null ? new ArrayList<SlotGroupStyle>() : copySlotGroupList(base);
+            for (SlotGroupStyle group : overlay) {
+                out.add(SlotGroupStyle.copyOf(group));
+            }
+            return out;
+        }
+      private static List<SubGuiStyle> appendSubGuiList(@Nullable List<SubGuiStyle> base, @Nullable List<SubGuiStyle> overlay) {
             if (overlay == null || overlay.isEmpty()) {
                 return base;
             }
@@ -903,6 +946,75 @@ public final class MachineGuiStyleManager {
                 out.add(SubGuiStyle.copyOf(subGui));
             }
             return out;
+        }
+    }
+
+    /**
+     * Internal JSON style overlay. Nullable fields distinguish omitted values
+     * from values that intentionally override a provider descriptor.
+     */
+    public static class SlotGroupStyle {
+        @Nullable public String id;
+        @Nullable public Integer firstSlot;
+        @Nullable public Integer slotCount;
+        @Nullable public int[] slotIndices;
+        @Nullable public Integer x;
+        @Nullable public Integer y;
+        @Nullable public Integer rows;
+        @Nullable public Integer columns;
+        @Nullable public Integer spacingX;
+        @Nullable public Integer spacingY;
+        @Nullable public String shiftTarget;
+        @Nullable public Boolean enabled;
+
+        @Nullable
+        public static SlotGroupStyle copyOf(@Nullable SlotGroupStyle source) {
+            if (source == null) {
+                return null;
+            }
+            SlotGroupStyle copy = new SlotGroupStyle();
+            copy.id = source.id;
+            copy.firstSlot = source.firstSlot;
+            copy.slotCount = source.slotCount;
+            copy.slotIndices = source.slotIndices == null ? null : source.slotIndices.clone();
+            copy.x = source.x;
+            copy.y = source.y;
+            copy.rows = source.rows;
+            copy.columns = source.columns;
+            copy.spacingX = source.spacingX;
+            copy.spacingY = source.spacingY;
+            copy.shiftTarget = source.shiftTarget;
+            copy.enabled = source.enabled;
+            return copy;
+        }
+    }
+
+    /**
+     * Internal JSON style overlay for the player inventory.
+     */
+    public static class PlayerInventoryStyle {
+        @Nullable public Integer x;
+        @Nullable public Integer y;
+        @Nullable public Integer hotbarX;
+        @Nullable public Integer hotbarY;
+        @Nullable public Integer mainStart;
+        @Nullable public Integer hotbarStart;
+        @Nullable public Boolean enabled;
+
+        @Nullable
+        public static PlayerInventoryStyle copyOf(@Nullable PlayerInventoryStyle source) {
+            if (source == null) {
+                return null;
+            }
+            PlayerInventoryStyle copy = new PlayerInventoryStyle();
+            copy.x = source.x;
+            copy.y = source.y;
+            copy.hotbarX = source.hotbarX;
+            copy.hotbarY = source.hotbarY;
+            copy.mainStart = source.mainStart;
+            copy.hotbarStart = source.hotbarStart;
+            copy.enabled = source.enabled;
+            return copy;
         }
     }
 
@@ -1797,6 +1909,10 @@ public final class MachineGuiStyleManager {
         @Nullable
         public Float max;
         @Nullable
+        public DynamicVisualSourceStyle minSource;
+        @Nullable
+        public DynamicVisualSourceStyle maxSource;
+        @Nullable
         public Boolean clamp;
         @Nullable
         public Boolean invert;
@@ -1821,6 +1937,8 @@ public final class MachineGuiStyleManager {
             copy.defaultValue = source.defaultValue;
             copy.min = source.min;
             copy.max = source.max;
+            copy.minSource = DynamicVisualSourceStyle.copyOf(source.minSource);
+            copy.maxSource = DynamicVisualSourceStyle.copyOf(source.maxSource);
             copy.clamp = source.clamp;
             copy.invert = source.invert;
             return copy;

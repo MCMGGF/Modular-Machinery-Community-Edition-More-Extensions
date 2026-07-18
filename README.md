@@ -15,7 +15,7 @@ It started as a controller-GUI editor, but now bundles four subsystems:
 4. **Long-capacity recipe requirements (experimental opt-in)** — fluid/gas recipe amounts beyond the vanilla `int` limit.
    **Long 容量配方需求（实验性，需要手动开启）** — 流体/气体配方量可突破原版 `int`（约 21 亿 mB）上限。
 
-Current version / 当前版本: **`1.2.0`** · MC `1.12.2` · author / 作者: WuXiaoYa
+Current version / 当前版本: **`1.3.0`** · API level **`1`** · MC `1.12.2` · author / 作者: WuXiaoYa
 
 ---
 
@@ -48,7 +48,7 @@ From the repo root / 在仓库根目录执行：
 
 Output / 产物：
 
-- `mmce-gui-ext/build/libs/MMCEGE-1.2.0.jar`
+- `mmce-gui-ext/build/libs/MMCEGE-1.3.0.jar`
 
 GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `MMCEGE-<commit-sha>` artifact to let testers build without using the local machine.
 GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `MMCEGE-<commit-sha>` artifact 即可，不需要本机编译。
@@ -426,9 +426,29 @@ See the MMCE source license. / 见 MMCE 源码许可。
 Common fields: `id`, `x`, `y`, `width`, `height`, `priority`, `foreground`, `page`, `visible`, `visibleByValue`, `source`, `history`, `renderer`, `rendererSwitchByValue`, `rendererByValue`, `transform`, `transformByValue`.
 
 Supported sources:
-- `customData`: reads a numeric value from controller custom data / Smart Interface virtual key: `key`, `default`, `min`, `max`, `clamp`, `invert`.
+- `customData`: reads a numeric value from controller custom data / Smart Interface virtual key: `key`, `default`, `min`, `max`, `minSource`, `maxSource`, `clamp`, `invert`.
 - `machine`: built-in metrics: `recipeProgress`, `recipeMaxProgress`, `energyStored`, `energyCapacity`, `energyRatio`, `parallelism`, `threadCount`, `activeThreadCount`, `idleThreadCount`; factory also supports `factoryThreadCount`, `factoryActiveThreadCount`, `factoryIdleThreadCount`.
 - `combined`: combines multiple child sources first, then applies the parent source's `min` / `max` / `clamp` / `invert`. Fields: `combine`, `sources[]`. Child entries can themselves be `customData`, `machine`, or nested `combined`. Each child may also define `weight`, used by `weightedSum` / `weightedAverage`.
+
+`minSource` / `maxSource` (aliases `min_source` / `max_source`) accept a complete `customData`, `machine`, or `combined` source. A finite dynamic bound overrides static `min` / `max`; a missing or non-finite bound falls back to the static value. Bound sources are read as raw values and do not normalize themselves. If the final `max <= min`, the normalized result is `0`.
+
+Dynamic-capacity example:
+
+```json
+"source": {
+  "type": "customData",
+  "key": "oneblock.component.energy_in.amount",
+  "default": 0,
+  "min": 0,
+  "max": 1,
+  "maxSource": {
+    "type": "customData",
+    "key": "oneblock.component.energy_in.capacity",
+    "default": 1
+  },
+  "clamp": true
+}
+```
 
 Supported combine modes:
 - `sum`, `average`, `weightedSum`, `weightedAverage`, `min`, `max`, `multiply`

@@ -2,6 +2,7 @@ package com.fushu.mmceguiext.client.config;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -1411,6 +1412,273 @@ public class MachineGuiStyleParserTest {
         assertEquals("close_subgui", subGui.style.buttons.get(0).action);
         assertTrue(base.warnings.isEmpty());
         assertTrue(sub.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesDynamicVisualBoundSources() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "dynamic-bounds.json",
+            "{\"registryname\":\"demo:dynamic_bounds\",\"mmce_gui_ext\":{\"machineController\":{" +
+                "\"dynamicVisuals\":[{" +
+                "\"id\":\"tank\",\"x\":0,\"y\":0,\"width\":16,\"height\":16," +
+                "\"source\":{\"type\":\"customData\",\"key\":\"amount\",\"min\":0," +
+                "\"maxSource\":{\"type\":\"customData\",\"key\":\"capacity\",\"default\":1}}," +
+                "\"renderer\":{\"type\":\"fill\"}}]}}}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.dynamicVisuals);
+        MachineGuiStyleManager.DynamicVisualSourceStyle source =
+            result.machineStyle.dynamicVisuals.get(0).source;
+        assertNotNull(source);
+        assertEquals("amount", source.key);
+        assertNotNull(source.maxSource);
+        assertEquals("customData", source.maxSource.type);
+        assertEquals("capacity", source.maxSource.key);
+        assertEquals(Float.valueOf(1.0F), source.maxSource.defaultValue);
+
+        MachineGuiStyleManager.DynamicVisualSourceStyle copy =
+            MachineGuiStyleManager.DynamicVisualSourceStyle.copyOf(source);
+        assertNotNull(copy.maxSource);
+        assertTrue(copy.maxSource != source.maxSource);
+        assertEquals("capacity", copy.maxSource.key);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesSlotGroups() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "slot-groups.json",
+            "{\"registryname\": \"demo:slot_group_machine\"," +
+            "  \"mmce_gui_ext\": {" +
+            "    \"machineController\": {" +
+            "      \"slotGroups\": [" +
+            "        {\"id\": \"input\", \"x\": 8, \"y\": 18, \"rows\": 2, \"cols\": 3}," +
+            "        {\"id\": \"output\", \"x\": 98, \"y\": 18, \"rows\": 2, \"cols\": 3," +
+            "         \"slotWidth\": 20, \"slotHeight\": 20," +
+            "         \"shiftTarget\": \"input\", \"enabled\": false}" +
+            "      ]" +
+            "    }" +
+            "  }" +
+            "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.slotGroups);
+        assertEquals(2, result.machineStyle.slotGroups.size());
+
+        MachineGuiStyleManager.SlotGroupStyle input = result.machineStyle.slotGroups.get(0);
+        assertEquals("input", input.id);
+        assertEquals(Integer.valueOf(8), input.x);
+        assertEquals(Integer.valueOf(18), input.y);
+        assertEquals(Integer.valueOf(2), input.rows);
+        assertEquals(Integer.valueOf(3), input.columns);
+        assertNull(input.spacingX);
+        assertNull(input.spacingY);
+        assertNull(input.shiftTarget);
+        assertNull(input.enabled);
+
+        MachineGuiStyleManager.SlotGroupStyle output = result.machineStyle.slotGroups.get(1);
+        assertEquals("output", output.id);
+        assertEquals(Integer.valueOf(20), output.spacingX);
+        assertEquals(Integer.valueOf(20), output.spacingY);
+        assertEquals("input", output.shiftTarget);
+        assertEquals(Boolean.FALSE, output.enabled);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesPlayerInventory() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "player-inventory.json",
+            "{\"registryname\": \"demo:player_inv_machine\"," +
+            "  \"mmce_gui_ext\": {" +
+            "    \"machineController\": {" +
+            "      \"playerInventory\": {" +
+            "        \"x\": 7, \"y\": 148," +
+            "        \"hotbarX\": 7, \"hotbarY\": 206," +
+            "        \"enabled\": true" +
+            "      }" +
+            "    }" +
+            "  }" +
+            "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.playerInventory);
+        assertEquals(Integer.valueOf(7), result.machineStyle.playerInventory.x);
+        assertEquals(Integer.valueOf(148), result.machineStyle.playerInventory.y);
+        assertEquals(Integer.valueOf(7), result.machineStyle.playerInventory.hotbarX);
+        assertEquals(Integer.valueOf(206), result.machineStyle.playerInventory.hotbarY);
+        assertEquals(Boolean.TRUE, result.machineStyle.playerInventory.enabled);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonKeepsOmittedPlayerInventoryFieldsUnsetForProviderMerge() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "player-inventory-defaults.json",
+            "{\"registryname\": \"demo:player_inv_defaults\"," +
+            "  \"mmce_gui_ext\": {" +
+            "    \"machineController\": {" +
+            "      \"playerInventory\": {" +
+            "        \"x\": 8, \"y\": 140" +
+            "      }" +
+            "    }" +
+            "  }" +
+            "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.playerInventory);
+        assertEquals(Integer.valueOf(8), result.machineStyle.playerInventory.x);
+        assertEquals(Integer.valueOf(140), result.machineStyle.playerInventory.y);
+        assertNull(result.machineStyle.playerInventory.hotbarX);
+        assertNull(result.machineStyle.playerInventory.hotbarY);
+        assertNull(result.machineStyle.playerInventory.mainStart);
+        assertNull(result.machineStyle.playerInventory.hotbarStart);
+        assertNull(result.machineStyle.playerInventory.enabled);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesThreadQueueModeAndTooltip() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "thread-queue-mode.json",
+            "{\"registryname\": \"demo:thread_queue_machine\"," +
+            "  \"mmce_gui_ext\": {" +
+            "    \"factoryController\": {" +
+            "      \"threadQueueMode\": \"compact\"," +
+            "      \"threadTooltip\": true" +
+            "    }" +
+            "  }" +
+            "}"
+        );
+
+        assertNotNull(result.factoryStyle);
+        assertEquals("compact", result.factoryStyle.threadQueueMode);
+        assertEquals(Boolean.TRUE, result.factoryStyle.threadTooltip);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesSlotGroupsWithAliases() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "slot-groups-aliases.json",
+            "{\"registryname\": \"demo:slot_group_aliases\"," +
+            "  \"mmce_gui_ext\": {" +
+            "    \"factoryController\": {" +
+            "      \"slot_groups\": [" +
+            "        {\"id\": \"catalyst\", \"x\": 80, \"y\": 36, \"rows\": 1, \"cols\": 1}" +
+            "      ]" +
+            "    }" +
+            "  }" +
+            "}"
+        );
+
+        assertNotNull(result.factoryStyle);
+        assertNotNull(result.factoryStyle.slotGroups);
+        assertEquals(1, result.factoryStyle.slotGroups.size());
+        assertEquals("catalyst", result.factoryStyle.slotGroups.get(0).id);
+        assertEquals(Integer.valueOf(1), result.factoryStyle.slotGroups.get(0).rows);
+        assertEquals(Integer.valueOf(1), result.factoryStyle.slotGroups.get(0).columns);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void controllerStyleCopiesAndMergesSlotGroupsPlayerInventory() {
+        MachineGuiStyleManager.ControllerStyle base = new MachineGuiStyleManager.ControllerStyle();
+        base.slotGroups = new java.util.ArrayList<MachineGuiStyleManager.SlotGroupStyle>();
+        base.slotGroups.add(slotGroupStyle("a", 0, 0, 2, 3));
+
+        MachineGuiStyleManager.ControllerStyle overlay = new MachineGuiStyleManager.ControllerStyle();
+        overlay.slotGroups = new java.util.ArrayList<MachineGuiStyleManager.SlotGroupStyle>();
+        overlay.slotGroups.add(slotGroupStyle("b", 10, 10, 1, 1));
+        overlay.playerInventory = new MachineGuiStyleManager.PlayerInventoryStyle();
+        overlay.playerInventory.x = Integer.valueOf(7);
+        overlay.playerInventory.y = Integer.valueOf(140);
+        overlay.playerInventory.hotbarX = Integer.valueOf(7);
+        overlay.playerInventory.hotbarY = Integer.valueOf(198);
+        overlay.playerInventory.enabled = Boolean.FALSE;
+        overlay.threadQueueMode = "compact";
+        overlay.threadTooltip = Boolean.TRUE;
+
+        MachineGuiStyleManager.ControllerStyle copy = MachineGuiStyleManager.ControllerStyle.copyOf(base);
+        assertNotNull(copy.slotGroups);
+        assertEquals(1, copy.slotGroups.size());
+        assertEquals("a", copy.slotGroups.get(0).id);
+        assertNull(copy.playerInventory);
+        assertNull(copy.threadQueueMode);
+        assertNull(copy.threadTooltip);
+
+        MachineGuiStyleManager.ControllerStyle merged = MachineGuiStyleManager.ControllerStyle.copyOf(base).mergeFrom(overlay);
+        assertNotNull(merged.slotGroups);
+        assertEquals(2, merged.slotGroups.size());
+        assertEquals("a", merged.slotGroups.get(0).id);
+        assertEquals("b", merged.slotGroups.get(1).id);
+        assertNotNull(merged.playerInventory);
+        assertEquals(Integer.valueOf(7), merged.playerInventory.x);
+        assertEquals(Boolean.FALSE, merged.playerInventory.enabled);
+        assertEquals("compact", merged.threadQueueMode);
+        assertEquals(Boolean.TRUE, merged.threadTooltip);
+
+        assertNotNull(copy.slotGroups);
+        assertEquals("a", copy.slotGroups.get(0).id);
+        assertTrue(copy.slotGroups != merged.slotGroups);
+    }
+
+    @Test
+    public void controllerStyleSlotGroupDefensiveCopy() {
+        java.util.List<MachineGuiStyleManager.SlotGroupStyle> groups =
+            new java.util.ArrayList<MachineGuiStyleManager.SlotGroupStyle>();
+        MachineGuiStyleManager.SlotGroupStyle original = slotGroupStyle("orig", 0, 0, 1, 1);
+        original.slotIndices = new int[] {36, 39};
+        groups.add(original);
+        MachineGuiStyleManager.ControllerStyle style = new MachineGuiStyleManager.ControllerStyle();
+        style.slotGroups = groups;
+
+        MachineGuiStyleManager.ControllerStyle copy = MachineGuiStyleManager.ControllerStyle.copyOf(style);
+        assertEquals(1, copy.slotGroups.size());
+        assertEquals("orig", copy.slotGroups.get(0).id);
+
+        copy.slotGroups.get(0).id = "mutated";
+        copy.slotGroups.get(0).slotIndices[0] = 99;
+        assertEquals("orig", style.slotGroups.get(0).id);
+        assertArrayEquals(new int[] {36, 39}, style.slotGroups.get(0).slotIndices);
+    }
+
+    @Test
+    public void parseMachineJsonParsesExplicitAndSparseSlotMappings() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "slot-index-mappings.json",
+            "{\"registryname\":\"demo:indexed\",\"mmce_gui_ext\":{\"machineController\":{" +
+                "\"slotGroups\":[" +
+                "{\"id\":\"continuous\",\"x\":4,\"y\":5,\"rows\":2,\"columns\":3," +
+                "\"first_slot\":40,\"slot_count\":5,\"spacing_x\":19,\"spacing_y\":20}," +
+                "{\"id\":\"sparse\",\"x\":70,\"y\":5,\"rows\":1,\"columns\":3," +
+                "\"slot_indices\":[52,48,60]}]}}}"
+        );
+
+        assertTrue(result.warnings.isEmpty());
+        MachineGuiStyleManager.SlotGroupStyle continuous = result.machineStyle.slotGroups.get(0);
+        assertEquals(Integer.valueOf(40), continuous.firstSlot);
+        assertEquals(Integer.valueOf(5), continuous.slotCount);
+        assertEquals(Integer.valueOf(19), continuous.spacingX);
+        assertEquals(Integer.valueOf(20), continuous.spacingY);
+        MachineGuiStyleManager.SlotGroupStyle sparse = result.machineStyle.slotGroups.get(1);
+        assertArrayEquals(new int[] {52, 48, 60}, sparse.slotIndices);
+    }
+
+    private static MachineGuiStyleManager.SlotGroupStyle slotGroupStyle(
+        String id, int x, int y, int rows, int columns
+    ) {
+        MachineGuiStyleManager.SlotGroupStyle style = new MachineGuiStyleManager.SlotGroupStyle();
+        style.id = id;
+        style.x = Integer.valueOf(x);
+        style.y = Integer.valueOf(y);
+        style.rows = Integer.valueOf(rows);
+        style.columns = Integer.valueOf(columns);
+        return style;
     }
 
     private static boolean containsWarning(MachineGuiStyleParser.MachineFileParseResult result, String fragment) {

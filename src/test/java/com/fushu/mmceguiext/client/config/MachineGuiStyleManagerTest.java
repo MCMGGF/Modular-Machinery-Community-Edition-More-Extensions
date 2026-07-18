@@ -1,6 +1,5 @@
 package com.fushu.mmceguiext.client.config;
 
-import com.fushu.mmceguiext.api.gui.MachineGuiStyleApi;
 import net.minecraft.util.ResourceLocation;
 import org.junit.Test;
 
@@ -34,32 +33,32 @@ public class MachineGuiStyleManagerTest {
     }
 
     @Test
-    public void publicApiResolvesExternalMachineStyleByResourceLocation() {
+    public void managerResolvesExternalMachineStyleByResourceLocation() {
         MachineGuiStyleManager.clearExternalStyles();
         ResourceLocation styleKey = new ResourceLocation("mmceoneblock", "starter_controller");
 
         MachineGuiStyleManager.ControllerStyle registered = styleWithText("from-api");
-        MachineGuiStyleApi.registerMachineControllerStyle(styleKey, registered);
+        MachineGuiStyleManager.registerExternalMachineControllerStyle(styleKey, registered);
 
-        MachineGuiStyleManager.ControllerStyle resolved = MachineGuiStyleApi.resolveMachineControllerStyle(styleKey);
+        MachineGuiStyleManager.ControllerStyle resolved = MachineGuiStyleManager.resolveMachineController(styleKey);
 
         assertEquals(1, resolved.texts.size());
         assertEquals("from-api", resolved.texts.get(0).value);
     }
 
     @Test
-    public void publicApiResolveReturnsDefensiveCopy() {
+    public void managerResolveReturnsDefensiveCopy() {
         MachineGuiStyleManager.clearExternalStyles();
         ResourceLocation styleKey = new ResourceLocation("mmceoneblock", "starter_controller");
 
         MachineGuiStyleManager.ControllerStyle registered = styleWithText("cached");
-        MachineGuiStyleApi.registerMachineControllerStyle(styleKey, registered);
+        MachineGuiStyleManager.registerExternalMachineControllerStyle(styleKey, registered);
 
-        MachineGuiStyleManager.ControllerStyle first = MachineGuiStyleApi.resolveMachineControllerStyle(styleKey);
+        MachineGuiStyleManager.ControllerStyle first = MachineGuiStyleManager.resolveMachineController(styleKey);
         first.texts.get(0).value = "mutated";
         first.texts.add(text("external"));
 
-        MachineGuiStyleManager.ControllerStyle second = MachineGuiStyleApi.resolveMachineControllerStyle(styleKey);
+        MachineGuiStyleManager.ControllerStyle second = MachineGuiStyleManager.resolveMachineController(styleKey);
 
         assertNotSame(first, second);
         assertEquals(1, second.texts.size());

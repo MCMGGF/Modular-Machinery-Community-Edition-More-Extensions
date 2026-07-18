@@ -2,6 +2,7 @@ package com.fushu.mmceguiext.client.gui;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
 import com.fushu.mmceguiext.MMCEGuiExtConfig;
+import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.fushu.mmceguiext.client.config.MachineGuiStyleManager;
 import com.fushu.mmceguiext.client.config.ProgressBarStyleSupport;
 import com.fushu.mmceguiext.common.network.PktControllerButtonAction;
@@ -180,11 +181,12 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
     @Override
     public void initGui() {
-        this.styleOverride = MachineGuiStyleManager.resolveFactoryController(resolveMachine());
+        this.styleOverride = resolveBaseControllerStyle();
         this.customBackgroundTexture = resolveCustomTexture();
         this.specialThreadBgColor = resolveSpecialThreadBgColor();
         resolveGuiScaleConfig();
         super.initGui();
+        applySlotLayout();
         applyPlayerInventoryVisibility(MMCEGuiExtConfig.factoryController);
         initTextureLayers(MMCEGuiExtConfig.factoryController);
         this.activePageId = resolveInitialPageId(MMCEGuiExtConfig.factoryController, this.activePageId);
@@ -344,6 +346,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         if (!this.guiScaleMode) {
             super.drawScreen(mouseX, mouseY, partialTicks);
             renderModalSubGui(mouseX, mouseY, partialTicks);
+            drawThreadQueueTooltip(mouseX, mouseY);
             return;
         }
         int logicalMouseX = toLogicalMouseX(mouseX);
@@ -360,6 +363,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         GlStateManager.popMatrix();
         super.renderHoveredToolTip(mouseX, mouseY);
         renderModalSubGui(mouseX, mouseY, partialTicks);
+        drawThreadQueueTooltip(mouseX, mouseY);
     }
 
     @Override
@@ -818,6 +822,15 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private void drawRecipeQueue() {
+        if (this.styleOverride != null) {
+            String queueMode = this.styleOverride.threadQueueMode;
+            if (queueMode != null) {
+                String mode = queueMode.trim().toLowerCase(java.util.Locale.ROOT);
+                if ("hidden".equals(mode)) {
+                    return;
+                }
+            }
+        }
         int offsetX = getThreadQueueX();
         int offsetY = getThreadQueueY();
         int currentScroll = recipeScrollbar.getCurrentScroll();
@@ -826,11 +839,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
         Collection<FactoryRecipeThread> coreThreadList = factory.getCoreRecipeThreads().values();
         List<FactoryRecipeThread> threadList = factory.getFactoryRecipeThreadList();
-        List<FactoryRecipeThread> recipeThreadList = new ArrayList<FactoryRecipeThread>(
-            (int) ((coreThreadList.size() + threadList.size()) * 1.5D)
-        );
-        recipeThreadList.addAll(coreThreadList);
-        recipeThreadList.addAll(threadList);
+        List<FactoryRecipeThread> recipeThreadList = collectFactoryThreads(coreThreadList, threadList);
 
         int visibleRows = getVisibleQueueRows();
         int drawableSize = Math.min(visibleRows, Math.max(0, recipeThreadList.size() - currentScroll));
@@ -842,6 +851,19 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private void drawRecipeInfo(FactoryRecipeThread thread, int id, int offsetX, int offsetY, int rowWidth, int rowHeight) {
+        boolean isTooltipMode = isThreadTooltipMode();
+        if (isTooltipMode) {
+            // Tooltip mode: draw backgrounds only, skip text and progress overlay
+            this.mc.getTextureManager().bindTexture(TEXTURES_FACTORY_ELEMENTS);
+            if (thread.isCoreThread()) {
+                GuiRenderUtils.applyColorARGB(this.specialThreadBgColor);
+            } else {
+                GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            }
+            drawTexturedModalRect(offsetX, offsetY, 0, 0, rowWidth, rowHeight);
+            // Hover tooltip will be handled by drawScreen tooltip logic
+            return;
+        }
         CraftingStatus status = thread.getStatus();
         ActiveMachineRecipe activeRecipe = thread.getActiveRecipe();
 
@@ -1340,6 +1362,108 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     private int resolveLayerPriority(TextureLayerDef layer) {
         LayerRuntimeState runtime = this.layerRuntimeStates.get(layer.id);
         return runtime != null && runtime.priority != null ? runtime.priority.intValue() : layer.priority;
+    }
+
+    private void applySlotLayout() {
+        if (this.inventorySlots == null || this.inventorySlots.inventorySlots == null) {
+            return;
+        }
+        ControllerSlotLayoutEngine.apply(
+            this.inventorySlots.inventorySlots,
+            getSlotLayoutProvider(),
+            this.styleOverride == null ? null : this.styleOverride.slotGroups,
+            this.styleOverride == null ? null : this.styleOverride.playerInventory
+        );
+    }
+
+    private void drawThreadQueueTooltip(int mouseX, int mouseY) {
+        if (!isThreadTooltipMode()) {
+            return;
+        }
+        int logicalMouseX = this.guiScaleMode ? toLogicalMouseX(mouseX) : mouseX;
+        int logicalMouseY = this.guiScaleMode ? toLogicalMouseY(mouseY) : mouseY;
+        int localX = logicalMouseX - this.guiLeft;
+        int localY = logicalMouseY - this.guiTop;
+        int queueX = getThreadQueueX();
+        int queueY = getThreadQueueY();
+        int queueWidth = getThreadRowWidth();
+        int visibleRows = getVisibleQueueRows();
+        int rowHeight = getThreadRowHeight();
+        int queueHeight = visibleRows * rowHeight + Math.max(0, visibleRows - 1);
+        if (localX < queueX || localX >= queueX + queueWidth || localY < queueY || localY >= queueY + queueHeight) {
+            return;
+        }
+
+        List<FactoryRecipeThread> threads = collectFactoryThreads(
+            this.factory.getCoreRecipeThreads().values(),
+            this.factory.getFactoryRecipeThreadList()
+        );
+        if (threads.isEmpty()) {
+            return;
+        }
+        int currentScroll = recipeScrollbar == null ? 0 : recipeScrollbar.getCurrentScroll();
+        int max = Math.min(threads.size(), currentScroll + visibleRows);
+        List<String> tooltip = new ArrayList<String>();
+        tooltip.add(I18n.format("gui.factory.threads", this.factory.getFactoryRecipeThreadList().size(), this.factory.getMaxThreads()));
+        for (int i = currentScroll; i < max; i++) {
+            tooltip.add(formatThreadTooltipLine(threads.get(i), i));
+        }
+        drawHoveringText(tooltip, mouseX, mouseY, this.fontRenderer);
+    }
+
+    private boolean isThreadTooltipMode() {
+        if (this.styleOverride == null) {
+            return false;
+        }
+        if (Boolean.TRUE.equals(this.styleOverride.threadTooltip)) {
+            return true;
+        }
+        return this.styleOverride.threadQueueMode != null
+            && "tooltip".equals(this.styleOverride.threadQueueMode.trim().toLowerCase(Locale.ROOT));
+    }
+
+    private static List<FactoryRecipeThread> collectFactoryThreads(Collection<FactoryRecipeThread> coreThreadList,
+                                                                   List<FactoryRecipeThread> threadList) {
+        List<FactoryRecipeThread> recipeThreadList = new ArrayList<FactoryRecipeThread>(
+            (int) ((coreThreadList.size() + threadList.size()) * 1.5D)
+        );
+        recipeThreadList.addAll(coreThreadList);
+        recipeThreadList.addAll(threadList);
+        return recipeThreadList;
+    }
+
+    private String formatThreadTooltipLine(FactoryRecipeThread thread, int id) {
+        ActiveMachineRecipe activeRecipe = thread.getActiveRecipe();
+        CraftingStatus status = thread.getStatus();
+        int parallelism = activeRecipe == null ? 1 : activeRecipe.getParallelism();
+        String threadName;
+        if (thread.isCoreThread()) {
+            String name = thread.getThreadName();
+            threadName = I18n.hasKey(name) ? I18n.format(name) : name;
+        } else {
+            threadName = I18n.format("gui.factory.thread", id);
+        }
+        StringBuilder builder = new StringBuilder(threadName);
+        if (parallelism > 1) {
+            builder.append(" (").append(I18n.format("gui.controller.parallelism", parallelism)).append(')');
+        }
+        builder.append(": ").append(I18n.format(status.getUnlocMessage()));
+        if (activeRecipe != null && activeRecipe.getTotalTick() > 0) {
+            int progress = (activeRecipe.getTick() * 100) / activeRecipe.getTotalTick();
+            builder.append(" ").append(I18n.format("gui.controller.status.crafting.progress", progress + "%"));
+        }
+        return builder.toString();
+    }
+
+    @Nullable
+    private com.fushu.mmceguiext.api.gui.SlotLayoutProvider getSlotLayoutProvider() {
+        if (this.inventorySlots instanceof com.fushu.mmceguiext.api.gui.SlotLayoutProvider) {
+            return (com.fushu.mmceguiext.api.gui.SlotLayoutProvider) this.inventorySlots;
+        }
+        if (this.factory instanceof com.fushu.mmceguiext.api.gui.SlotLayoutProvider) {
+            return (com.fushu.mmceguiext.api.gui.SlotLayoutProvider) this.factory;
+        }
+        return null;
     }
 
     private void applyPlayerInventoryVisibility(MMCEGuiExtConfig.FactoryController cfg) {
@@ -2722,6 +2846,35 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             return found;
         }
         return factory.getBlueprintMachine();
+    }
+
+    private MachineGuiStyleManager.ControllerStyle resolveBaseControllerStyle() {
+        MachineGuiStyleManager.ControllerStyle baseStyle = MachineGuiStyleManager.resolveFactoryController(resolveMachine());
+        IMachineGuiStyleProvider styleProvider = factory instanceof IMachineGuiStyleProvider
+            ? (IMachineGuiStyleProvider) factory
+            : null;
+        return mergeProvidedFactoryStyle(baseStyle, styleProvider);
+    }
+
+    private static MachineGuiStyleManager.ControllerStyle mergeProvidedFactoryStyle(
+        final MachineGuiStyleManager.ControllerStyle baseStyle,
+        @Nullable final IMachineGuiStyleProvider styleProvider
+    ) {
+        ResourceLocation styleKey = styleProvider == null
+            ? null
+            : styleProvider.getMachineControllerGuiStyle();
+        if (styleKey == null) {
+            return baseStyle;
+        }
+
+        MachineGuiStyleManager.ControllerStyle keyedStyle = MachineGuiStyleManager.resolveFactoryController(styleKey);
+        if (keyedStyle == MachineGuiStyleManager.ControllerStyle.EMPTY || keyedStyle.isEmpty()) {
+            return baseStyle;
+        }
+        if (baseStyle == MachineGuiStyleManager.ControllerStyle.EMPTY || baseStyle.isEmpty()) {
+            return keyedStyle;
+        }
+        return MachineGuiStyleManager.ControllerStyle.copyOf(baseStyle).mergeFrom(keyedStyle);
     }
 
     @Nullable
