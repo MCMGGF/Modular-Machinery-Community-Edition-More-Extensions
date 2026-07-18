@@ -7,6 +7,7 @@
   "priority": 1001,
   "mixins": [
     "MixinRecipeCraftingContext",
+    "MixinRequirementInterfaceNumInput",
     "MixinTileMultiblockMachineController"
   ]
 }

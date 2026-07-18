@@ -2,6 +2,7 @@ package com.fushu.mmceguiext.common.network;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
 import com.fushu.mmceguiext.common.config.ControllerButtonPolicyManager;
+import com.fushu.mmceguiext.common.util.ControllerSmartInterfaceAccess;
 import com.fushu.mmceguiext.common.util.ControllerCustomDataAccess;
 import hellfirepvp.modularmachinery.common.container.ContainerController;
 import hellfirepvp.modularmachinery.common.container.ContainerFactoryController;
@@ -202,6 +203,10 @@ public class PktControllerSmartInterfaceUpdate implements IMessage, IMessageHand
     }
 
     private static boolean tryInvokeControllerSmartUpdate(TileMultiblockMachineController controller, String interfaceType, float value) {
+        if (controller instanceof ControllerSmartInterfaceAccess) {
+            return ((ControllerSmartInterfaceAccess) controller)
+                .mmceguiext$updateSmartInterfaceValue(interfaceType, value);
+        }
         try {
             Method method = controller.getClass().getMethod("updateSmartInterfaceValue", String.class, float.class);
             Object result = method.invoke(controller, interfaceType, value);
