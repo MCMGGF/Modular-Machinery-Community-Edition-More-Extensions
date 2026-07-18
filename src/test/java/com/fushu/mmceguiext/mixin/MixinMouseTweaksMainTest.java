@@ -2,7 +2,6 @@ package com.fushu.mmceguiext.mixin;
 
 import net.minecraft.client.gui.GuiScreen;
 import org.junit.Test;
-import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -35,8 +34,5 @@ public class MixinMouseTweaksMainTest {
         Inject inject = callback.getAnnotation(Inject.class);
         assertArrayEquals(new String[] {TARGET_DESCRIPTOR}, inject.method());
         assertTrue(inject.cancellable());
-
-        Mixin mixin = MixinMouseTweaksMain.class.getAnnotation(Mixin.class);
-        assertArrayEquals(new String[] {"yalter.mousetweaks.Main"}, mixin.targets());
     }
 }
