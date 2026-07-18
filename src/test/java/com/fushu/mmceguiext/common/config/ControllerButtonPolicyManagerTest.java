@@ -240,6 +240,10 @@ public class ControllerButtonPolicyManagerTest {
         }
 
         @Override
+        public void overrideStatusInfo(String newInfo) {
+        }
+
+        @Override
         public ResourceLocation getMachineControllerGuiStyle() {
             return new ResourceLocation("mmceoneblock:starter_controller");
         }
