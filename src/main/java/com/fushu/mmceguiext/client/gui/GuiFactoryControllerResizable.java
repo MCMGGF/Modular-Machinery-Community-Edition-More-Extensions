@@ -434,7 +434,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             }
             drawProgressBars(priority);
             drawDynamicVisuals(true, priority);
-            drawCustomSliders(priority);
+            drawNegativeForegroundSliders(priority);
             drawConfiguredTextureLayers(true, cfg, priority);
         }
     }
@@ -717,14 +717,12 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             mouseX = toLogicalMouseX(mouseX);
             mouseY = toLogicalMouseY(mouseY);
         }
+        if (handleActiveSliderMouseDrag(mouseX, mouseY, clickedMouseButton)) {
+            return;
+        }
         if (isUsingDefaultBackground(MMCEGuiExtConfig.factoryController)) {
             clickRecipeScrollbarIfVisible(mouseX, mouseY);
             super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
-            return;
-        }
-
-        if (clickedMouseButton == 0 && this.draggingSlider != null) {
-            updateSliderFromMouse(this.draggingSlider, mouseX, mouseY, false);
             return;
         }
 
@@ -2468,6 +2466,13 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         GuiRuntimeState restore = captureCurrentRuntimeState();
         applyRuntimeState(this.activeSubGui.runtimeState);
         try {
+            if (handleCustomButtonMouseClicked(mouseX, mouseY, mouseButton)
+                || handleCustomSliderMouseClicked(mouseX, mouseY, mouseButton)
+                || handleCustomSmartInterfaceMouseClicked(mouseX, mouseY, mouseButton)
+                || handleSmartInterfaceMouseClicked(mouseX, mouseY, mouseButton)) {
+                saveActiveSubGuiRuntimeState();
+                return true;
+            }
             if (mouseButton == 0) {
                 int localX = mouseX - this.guiLeft;
                 int localY = mouseY - this.guiTop;
@@ -2479,12 +2484,6 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                         return true;
                     }
                 }
-            }
-            if (handleCustomButtonMouseClicked(mouseX, mouseY, mouseButton)
-                || handleCustomSmartInterfaceMouseClicked(mouseX, mouseY, mouseButton)
-                || handleSmartInterfaceMouseClicked(mouseX, mouseY, mouseButton)) {
-                saveActiveSubGuiRuntimeState();
-                return true;
             }
             if (mouseButton == 0 && isModalSubGuiDragEnabled() && isMouseInModalSubGuiDragHandle(mouseX, mouseY)) {
                 this.draggingModalSubGui = true;
@@ -2510,11 +2509,16 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         applyRuntimeState(this.activeSubGui.runtimeState);
         try {
             Rectangle bounds = this.activeSubGui.runtimeState.getBounds();
-            if (!bounds.contains(mouseX, mouseY) && this.draggingPanelId == null && !this.draggingModalSubGui) {
+            if (!bounds.contains(mouseX, mouseY)
+                && this.draggingPanelId == null
+                && this.draggingSlider == null
+                && !this.draggingModalSubGui) {
                 return false;
             }
             if (clickedMouseButton == 0 && this.draggingModalSubGui) {
                 updateModalSubGuiDragPosition(mouseX, mouseY);
+            } else if (handleActiveSliderMouseDrag(mouseX, mouseY, clickedMouseButton)) {
+                // Slider drag owns this mouse move.
             } else if (clickedMouseButton == 0 && this.draggingPanelId != null) {
                 PanelDef panel = findPanelById(this.draggingPanelId, getActivePanels(MMCEGuiExtConfig.factoryController));
                 if (panel != null) {
@@ -2538,11 +2542,15 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         GuiRuntimeState restore = captureCurrentRuntimeState();
         applyRuntimeState(this.activeSubGui.runtimeState);
         try {
-            if (!this.activeSubGui.runtimeState.getBounds().contains(mouseX, mouseY) && this.draggingPanelId == null && !this.draggingModalSubGui) {
+            if (!this.activeSubGui.runtimeState.getBounds().contains(mouseX, mouseY)
+                && this.draggingPanelId == null
+                && this.draggingSlider == null
+                && !this.draggingModalSubGui) {
                 return false;
             }
             this.draggingModalSubGui = false;
             this.draggingPanelId = null;
+            this.draggingSlider = null;
             saveActiveSubGuiRuntimeState();
             return true;
         } finally {
@@ -4309,14 +4317,18 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private void drawBackgroundSliders() {
-        drawSliders(null, false);
+        drawSliders(null, false, true);
     }
 
     private void drawCustomSliders(@Nullable Integer priorityFilter) {
-        drawSliders(priorityFilter, true);
+        drawSliders(priorityFilter, true, false);
     }
 
-    private void drawSliders(@Nullable Integer priorityFilter, boolean foreground) {
+    private void drawNegativeForegroundSliders(@Nullable Integer priorityFilter) {
+        drawSliders(priorityFilter, true, true);
+    }
+
+    private void drawSliders(@Nullable Integer priorityFilter, boolean foreground, boolean screenCoordinates) {
         for (CustomSlider slider : this.customSliders) {
             if (!slider.visible || slider.foreground != foreground || !isPageVisible(slider.page)) {
                 continue;
@@ -4324,13 +4336,15 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             if (priorityFilter != null && slider.priority != priorityFilter.intValue()) {
                 continue;
             }
-            drawSlider(slider);
+            drawSlider(slider, screenCoordinates);
         }
     }
 
-    private void drawSlider(CustomSlider slider) {
-        int x = slider.x;
-        int y = slider.y;
+    private void drawSlider(CustomSlider slider, boolean screenCoordinates) {
+        int offsetX = screenCoordinates ? this.guiLeft : 0;
+        int offsetY = screenCoordinates ? this.guiTop : 0;
+        int x = offsetX + slider.x;
+        int y = offsetY + slider.y;
         drawRect(x, y, x + slider.width, y + slider.height, slider.trackColor);
         if (slider.borderColor != null) {
             drawProgressBorder(x, y, slider.width, slider.height, slider.borderColor.intValue());
@@ -4344,7 +4358,13 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             drawRect(x, y, x + fillWidth, y + slider.height, slider.fillColor);
         }
         Rectangle thumb = sliderThumbRect(slider);
-        drawRect(thumb.x, thumb.y, thumb.x + thumb.width, thumb.y + thumb.height, slider.thumbColor);
+        drawRect(
+            offsetX + thumb.x,
+            offsetY + thumb.y,
+            offsetX + thumb.x + thumb.width,
+            offsetY + thumb.y + thumb.height,
+            slider.thumbColor
+        );
         if (slider.showText) {
             String text = formatSliderValue(slider.value);
             int textX = x + Math.max(0, (slider.width - getTextWidth(text)) / 2);
@@ -4357,12 +4377,28 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         if (mouseButton != 0) {
             return false;
         }
-        CustomSlider slider = findTopmostSliderAt(mouseX, mouseY);
+        CustomSlider slider = startSliderDragAt(mouseX, mouseY);
         if (slider == null) {
             return false;
         }
-        this.draggingSlider = slider;
         updateSliderFromMouse(slider, mouseX, mouseY, true);
+        return true;
+    }
+
+    @Nullable
+    private CustomSlider startSliderDragAt(int mouseX, int mouseY) {
+        CustomSlider slider = findTopmostSliderAt(mouseX, mouseY);
+        if (slider != null) {
+            this.draggingSlider = slider;
+        }
+        return slider;
+    }
+
+    private boolean handleActiveSliderMouseDrag(int mouseX, int mouseY, int mouseButton) {
+        if (mouseButton != 0 || this.draggingSlider == null) {
+            return false;
+        }
+        updateSliderFromMouse(this.draggingSlider, mouseX, mouseY, false);
         return true;
     }
 
@@ -4417,9 +4453,14 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private boolean isPointInSlider(CustomSlider slider, int mouseX, int mouseY) {
-        int x = this.guiLeft + slider.x;
-        int y = this.guiTop + slider.y;
-        return mouseX >= x && mouseY >= y && mouseX < x + slider.width && mouseY < y + slider.height;
+        int localX = mouseX - this.guiLeft;
+        int localY = mouseY - this.guiTop;
+        if (localX >= slider.x && localY >= slider.y
+            && localX < slider.x + slider.width && localY < slider.y + slider.height) {
+            return true;
+        }
+        Rectangle thumb = sliderThumbRect(slider);
+        return thumb.contains(localX, localY);
     }
 
     private Rectangle sliderThumbRect(CustomSlider slider) {

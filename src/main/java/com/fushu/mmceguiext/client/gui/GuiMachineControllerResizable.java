@@ -498,7 +498,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             }
             drawProgressBars(priority);
             drawDynamicVisuals(true, priority);
-            drawCustomSliders(priority);
+            drawNegativeForegroundSliders(priority);
             drawConfiguredTextureLayers(true, cfg, priority);
         }
     }
@@ -645,13 +645,11 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             mouseX = toLogicalMouseX(mouseX);
             mouseY = toLogicalMouseY(mouseY);
         }
-        if (isUsingDefaultBackground(MMCEGuiExtConfig.machineController)) {
-            super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
+        if (handleActiveSliderMouseDrag(mouseX, mouseY, clickedMouseButton)) {
             return;
         }
-
-        if (clickedMouseButton == 0 && this.draggingSlider != null) {
-            updateSliderFromMouse(this.draggingSlider, mouseX, mouseY, false);
+        if (isUsingDefaultBackground(MMCEGuiExtConfig.machineController)) {
+            super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
             return;
         }
 
@@ -2210,7 +2208,10 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                     int localMouseX = mouseX - guiLeft;
                     int localMouseY = mouseY - guiTop;
                     drawGuiContainerBackgroundLayer(partialTicks, localMouseX, localMouseY);
+                    GlStateManager.pushMatrix();
+                    GlStateManager.translate((float) guiLeft, (float) guiTop, 0.0F);
                     drawGuiContainerForegroundLayer(localMouseX, localMouseY);
+                    GlStateManager.popMatrix();
                 }
             });
         } finally {
@@ -2252,6 +2253,9 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             @Override
             public void run() {
                 if (handleCustomButtonMouseClicked(mouseX, mouseY, mouseButton)) {
+                    return;
+                }
+                if (handleCustomSliderMouseClicked(mouseX, mouseY, mouseButton)) {
                     return;
                 }
                 if (handleCustomSmartInterfaceMouseClicked(mouseX, mouseY, mouseButton)) {
@@ -2320,8 +2324,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                     updateModalSubGuiPosition(mouseX - modalSubGuiDragOffsetX, mouseY - modalSubGuiDragOffsetY);
                     return;
                 }
-                if (clickedMouseButton == 0 && draggingSlider != null) {
-                    updateSliderFromMouse(draggingSlider, mouseX, mouseY, false);
+                if (handleActiveSliderMouseDrag(mouseX, mouseY, clickedMouseButton)) {
                     return;
                 }
                 if (isUsingDefaultBackground(MMCEGuiExtConfig.machineController)) {
@@ -3447,14 +3450,18 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
     }
 
     private void drawBackgroundSliders() {
-        drawSliders(null, false);
+        drawSliders(null, false, true);
     }
 
     private void drawCustomSliders(@Nullable Integer priorityFilter) {
-        drawSliders(priorityFilter, true);
+        drawSliders(priorityFilter, true, false);
     }
 
-    private void drawSliders(@Nullable Integer priorityFilter, boolean foreground) {
+    private void drawNegativeForegroundSliders(@Nullable Integer priorityFilter) {
+        drawSliders(priorityFilter, true, true);
+    }
+
+    private void drawSliders(@Nullable Integer priorityFilter, boolean foreground, boolean screenCoordinates) {
         for (CustomSlider slider : this.customSliders) {
             if (!slider.visible || slider.foreground != foreground || !isPageVisible(slider.page)) {
                 continue;
@@ -3462,13 +3469,15 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             if (priorityFilter != null && slider.priority != priorityFilter.intValue()) {
                 continue;
             }
-            drawSlider(slider);
+            drawSlider(slider, screenCoordinates);
         }
     }
 
-    private void drawSlider(CustomSlider slider) {
-        int x = slider.x;
-        int y = slider.y;
+    private void drawSlider(CustomSlider slider, boolean screenCoordinates) {
+        int offsetX = screenCoordinates ? this.guiLeft : 0;
+        int offsetY = screenCoordinates ? this.guiTop : 0;
+        int x = offsetX + slider.x;
+        int y = offsetY + slider.y;
         drawRect(x, y, x + slider.width, y + slider.height, slider.trackColor);
         if (slider.borderColor != null) {
             drawProgressBorder(x, y, slider.width, slider.height, slider.borderColor.intValue());
@@ -3484,7 +3493,13 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         }
 
         Rectangle thumb = sliderThumbRect(slider);
-        drawRect(thumb.x, thumb.y, thumb.x + thumb.width, thumb.y + thumb.height, slider.thumbColor);
+        drawRect(
+            offsetX + thumb.x,
+            offsetY + thumb.y,
+            offsetX + thumb.x + thumb.width,
+            offsetY + thumb.y + thumb.height,
+            slider.thumbColor
+        );
         if (slider.showText) {
             String text = formatSliderValue(slider.value);
             int textX = x + Math.max(0, (slider.width - getTextWidth(text)) / 2);
@@ -3497,12 +3512,28 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         if (mouseButton != 0) {
             return false;
         }
-        CustomSlider slider = findTopmostSliderAt(mouseX, mouseY);
+        CustomSlider slider = startSliderDragAt(mouseX, mouseY);
         if (slider == null) {
             return false;
         }
-        this.draggingSlider = slider;
         updateSliderFromMouse(slider, mouseX, mouseY, true);
+        return true;
+    }
+
+    @Nullable
+    private CustomSlider startSliderDragAt(int mouseX, int mouseY) {
+        CustomSlider slider = findTopmostSliderAt(mouseX, mouseY);
+        if (slider != null) {
+            this.draggingSlider = slider;
+        }
+        return slider;
+    }
+
+    private boolean handleActiveSliderMouseDrag(int mouseX, int mouseY, int mouseButton) {
+        if (mouseButton != 0 || this.draggingSlider == null) {
+            return false;
+        }
+        updateSliderFromMouse(this.draggingSlider, mouseX, mouseY, false);
         return true;
     }
 
@@ -3557,9 +3588,14 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
     }
 
     private boolean isPointInSlider(CustomSlider slider, int mouseX, int mouseY) {
-        int x = this.guiLeft + slider.x;
-        int y = this.guiTop + slider.y;
-        return mouseX >= x && mouseY >= y && mouseX < x + slider.width && mouseY < y + slider.height;
+        int localX = mouseX - this.guiLeft;
+        int localY = mouseY - this.guiTop;
+        if (localX >= slider.x && localY >= slider.y
+            && localX < slider.x + slider.width && localY < slider.y + slider.height) {
+            return true;
+        }
+        Rectangle thumb = sliderThumbRect(slider);
+        return thumb.contains(localX, localY);
     }
 
     private Rectangle sliderThumbRect(CustomSlider slider) {

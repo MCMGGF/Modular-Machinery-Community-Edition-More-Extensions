@@ -57,6 +57,54 @@ public class GuiMachineControllerResizableTest {
     }
 
     @Test
+    public void sliderThumbOutsideTrackCanStartDragging() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        Object slider = newSlider("thumb", true, 5, 10, 10, 80, 12);
+        set(slider, "thumbHeight", Integer.valueOf(14));
+        set(gui, "customSliders", new ArrayList<Object>(Collections.singletonList(slider)));
+        set(gui, "activePageId", "main");
+        set(gui, "guiLeft", Integer.valueOf(100));
+        set(gui, "guiTop", Integer.valueOf(50));
+
+        Object started = invoke(
+            gui,
+            "startSliderDragAt",
+            new Class<?>[] {int.class, int.class},
+            Integer.valueOf(147),
+            Integer.valueOf(73)
+        );
+
+        assertSame(slider, started);
+        assertSame(slider, get(gui, "draggingSlider"));
+    }
+
+    @Test
+    public void activeSliderDragIsHandledBeforeBackgroundRouting() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        Object slider = newSlider("dragged", true, 5, 10, 10, 80, 12);
+        set(gui, "draggingSlider", slider);
+        set(gui, "guiLeft", Integer.valueOf(0));
+        set(gui, "guiTop", Integer.valueOf(0));
+
+        assertEquals(Boolean.TRUE, invoke(
+            gui,
+            "handleActiveSliderMouseDrag",
+            new Class<?>[] {int.class, int.class, int.class},
+            Integer.valueOf(50),
+            Integer.valueOf(16),
+            Integer.valueOf(0)
+        ));
+        assertEquals(Boolean.FALSE, invoke(
+            gui,
+            "handleActiveSliderMouseDrag",
+            new Class<?>[] {int.class, int.class, int.class},
+            Integer.valueOf(50),
+            Integer.valueOf(16),
+            Integer.valueOf(1)
+        ));
+    }
+
+    @Test
     public void hotkeyMatcherAcceptsNamedKeysAndExactModifiers() throws Exception {
         assertEquals(Boolean.TRUE, invokeStatic(
             "matchesHotkey",
@@ -225,6 +273,8 @@ public class GuiMachineControllerResizableTest {
         set(slider, "max", Float.valueOf(10.0F));
         set(slider, "step", Float.valueOf(0.0F));
         set(slider, "value", Float.valueOf(5.0F));
+        set(slider, "thumbWidth", Integer.valueOf(8));
+        set(slider, "thumbHeight", Integer.valueOf(height));
         set(slider, "visible", Boolean.TRUE);
         set(slider, "page", "main");
         return slider;

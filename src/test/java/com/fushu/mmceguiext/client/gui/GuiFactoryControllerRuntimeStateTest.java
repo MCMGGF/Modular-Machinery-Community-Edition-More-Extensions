@@ -20,6 +20,9 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 public class GuiFactoryControllerRuntimeStateTest {
     @Test
@@ -181,6 +184,75 @@ public class GuiFactoryControllerRuntimeStateTest {
     }
 
     @Test
+    public void factorySliderThumbOutsideTrackCanStartDragging() throws Exception {
+        GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
+        Object slider = newSlider("thumb", 10, 10, 80, 12);
+        set(slider, "thumbHeight", Integer.valueOf(14));
+        set(gui, "customSliders", new ArrayList<Object>(Collections.singletonList(slider)));
+        set(gui, "guiLeft", Integer.valueOf(100));
+        set(gui, "guiTop", Integer.valueOf(50));
+
+        Object started = invoke(
+            gui,
+            "startSliderDragAt",
+            new Class<?>[] {int.class, int.class},
+            Integer.valueOf(147),
+            Integer.valueOf(73)
+        );
+
+        assertSame(slider, started);
+        assertSame(slider, get(gui, "draggingSlider"));
+    }
+
+    @Test
+    public void factoryActiveSliderDragIsHandledBeforeBackgroundRouting() throws Exception {
+        GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
+        Object slider = newSlider("dragged", 10, 10, 80, 12);
+        set(gui, "draggingSlider", slider);
+        set(gui, "guiLeft", Integer.valueOf(0));
+        set(gui, "guiTop", Integer.valueOf(0));
+
+        assertEquals(Boolean.TRUE, invoke(
+            gui,
+            "handleActiveSliderMouseDrag",
+            new Class<?>[] {int.class, int.class, int.class},
+            Integer.valueOf(50),
+            Integer.valueOf(16),
+            Integer.valueOf(0)
+        ));
+        assertEquals(Boolean.FALSE, invoke(
+            gui,
+            "handleActiveSliderMouseDrag",
+            new Class<?>[] {int.class, int.class, int.class},
+            Integer.valueOf(50),
+            Integer.valueOf(16),
+            Integer.valueOf(1)
+        ));
+    }
+
+    @Test
+    public void modalSliderReleaseOutsideBoundsClearsRuntimeDrag() throws Exception {
+        GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
+        Object activeSubGui = newActiveSubGui("modal");
+        Object runtimeState = get(activeSubGui, "runtimeState");
+        Object slider = newSlider("modal", 10, 10, 80, 12);
+        set(runtimeState, "draggingSlider", slider);
+        set(runtimeState, "renderWidth", Integer.valueOf(120));
+        set(runtimeState, "renderHeight", Integer.valueOf(80));
+        set(gui, "activeSubGui", activeSubGui);
+
+        assertTrue(((Boolean) invoke(
+            gui,
+            "handleModalSubGuiMouseReleased",
+            new Class<?>[] {int.class, int.class, int.class},
+            Integer.valueOf(999),
+            Integer.valueOf(999),
+            Integer.valueOf(0)
+        )).booleanValue());
+        assertNull(get(get(get(gui, "activeSubGui"), "runtimeState"), "draggingSlider"));
+    }
+
+    @Test
     public void legacyConfigSmartInterfaceFallbackDoesNotEnableDefaultEditor() throws Exception {
         GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
         MMCEGuiExtConfig.FactoryController cfg = new MMCEGuiExtConfig.FactoryController();
@@ -291,6 +363,29 @@ public class GuiFactoryControllerRuntimeStateTest {
         Object customButton = constructor.newInstance();
         set(customButton, "button", guiButton);
         return customButton;
+    }
+
+    private static Object newSlider(String id, int x, int y, int width, int height) throws Exception {
+        Class<?> sliderClass = Class.forName("com.fushu.mmceguiext.client.gui.GuiFactoryControllerResizable$CustomSlider");
+        Constructor<?> constructor = sliderClass.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        Object slider = constructor.newInstance();
+        set(slider, "id", id);
+        set(slider, "key", id + "_key");
+        set(slider, "x", Integer.valueOf(x));
+        set(slider, "y", Integer.valueOf(y));
+        set(slider, "width", Integer.valueOf(width));
+        set(slider, "height", Integer.valueOf(height));
+        set(slider, "min", Float.valueOf(0.0F));
+        set(slider, "max", Float.valueOf(10.0F));
+        set(slider, "step", Float.valueOf(0.0F));
+        set(slider, "value", Float.valueOf(5.0F));
+        set(slider, "thumbWidth", Integer.valueOf(8));
+        set(slider, "thumbHeight", Integer.valueOf(height));
+        set(slider, "foreground", Boolean.TRUE);
+        set(slider, "visible", Boolean.TRUE);
+        set(slider, "page", "main");
+        return slider;
     }
 
     private static Object newHotkeyPageButton(String hotkey, String targetPage) throws Exception {

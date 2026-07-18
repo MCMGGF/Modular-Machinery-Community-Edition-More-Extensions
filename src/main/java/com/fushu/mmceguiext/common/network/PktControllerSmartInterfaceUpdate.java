@@ -133,7 +133,7 @@ public class PktControllerSmartInterfaceUpdate implements IMessage, IMessageHand
         if (!configuredKey && !hasFoundSmartInterface(controller, interfaceType)) {
             return false;
         }
-        if (tryInvokeControllerSmartUpdate(controller, interfaceType, value)) {
+        if (tryInvokeAndMirrorControllerSmartUpdate(controller, interfaceType, value)) {
             return true;
         }
 
@@ -217,6 +217,18 @@ public class PktControllerSmartInterfaceUpdate implements IMessage, IMessageHand
         } catch (Exception ignored) {
             return false;
         }
+    }
+
+    static boolean tryInvokeAndMirrorControllerSmartUpdate(
+        TileMultiblockMachineController controller,
+        String interfaceType,
+        float value
+    ) {
+        if (!tryInvokeControllerSmartUpdate(controller, interfaceType, value)) {
+            return false;
+        }
+        ControllerCustomDataAccess.writeNumber(controller, interfaceType, value);
+        return true;
     }
 
     static boolean hasControllerCustomData(TileMultiblockMachineController controller, String key) {
