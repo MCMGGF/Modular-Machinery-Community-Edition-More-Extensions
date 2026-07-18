@@ -221,7 +221,22 @@ public class ControllerButtonPolicyManagerTest {
     private static final class StyleKeyController extends TileMultiblockMachineController
         implements IMachineGuiStyleProvider {
         @Override
+        public void doControllerTick() {
+        }
+
+        @Override
+        public hellfirepvp.modularmachinery.common.crafting.helper.CraftingStatus getControllerStatus() {
+            return null;
+        }
+
+        @Override
         public void flushContextModifier() {
+        }
+
+        @Override
+        public void setControllerStatus(
+            hellfirepvp.modularmachinery.common.crafting.helper.CraftingStatus status
+        ) {
         }
 
         @Override
