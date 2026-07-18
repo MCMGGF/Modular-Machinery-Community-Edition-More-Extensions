@@ -3895,7 +3895,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         if (!Float.isFinite(effectiveValue)) {
             return;
         }
-        LOGGER.info(
+        LOGGER.debug(
             "Sending controller smart button action at {} key={} action={} value={}",
             this.controller.getPos(),
             button.key,

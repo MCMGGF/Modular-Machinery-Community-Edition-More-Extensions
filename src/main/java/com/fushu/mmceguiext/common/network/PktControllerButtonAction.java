@@ -128,10 +128,10 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
     public IMessage onMessage(PktControllerButtonAction message, MessageContext ctx) {
         EntityPlayerMP player = ctx.getServerHandler().player;
         if (player == null) {
-            LOGGER.info("Rejected controller button action packet because the server player was null.");
+            LOGGER.debug("Rejected controller button action packet because the server player was null.");
             return null;
         }
-        LOGGER.info(
+        LOGGER.debug(
             "Received controller button action packet for {} key={} kind={} on thread={}.",
             message == null ? null : message.controllerPos,
             message == null ? null : message.key,
@@ -139,7 +139,7 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
             Thread.currentThread().getName()
         );
         player.getServerWorld().addScheduledTask(() -> {
-            LOGGER.info(
+            LOGGER.debug(
                 "Handling controller button action packet for {} on thread={}.",
                 message == null ? null : message.controllerPos,
                 Thread.currentThread().getName()
@@ -159,11 +159,11 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
 
     private static void handle(PktControllerButtonAction message, EntityPlayerMP player) {
         if (message == null) {
-            LOGGER.info("Rejected controller button action because the decoded message was null.");
+            LOGGER.debug("Rejected controller button action because the decoded message was null.");
             return;
         }
         if (player == null || player.world == null || !player.world.isBlockLoaded(message.controllerPos)) {
-            LOGGER.info(
+            LOGGER.debug(
                 "Rejected controller button action at {} because player/world/chunk state was invalid. player={} world={} loaded={}.",
                 message.controllerPos,
                 player == null ? "null" : player.getName(),
@@ -173,7 +173,7 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
             return;
         }
         if (!isPlayerEditingThisController(player, message.controllerPos)) {
-            LOGGER.info(
+            LOGGER.debug(
                 "Rejected controller button action at {} because the player is not editing that controller. openContainer={}",
                 message.controllerPos,
                 player.openContainer == null ? "null" : player.openContainer.getClass().getName()
@@ -183,7 +183,7 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
 
         TileEntity tile = player.world.getTileEntity(message.controllerPos);
         if (!(tile instanceof TileMultiblockMachineController)) {
-            LOGGER.info(
+            LOGGER.debug(
                 "Rejected controller button action at {} because the server tile was {}.",
                 message.controllerPos,
                 tile == null ? "null" : tile.getClass().getName()
@@ -195,7 +195,7 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
         if (message.kind == KIND_EVENT) {
             String buttonId = normalizeBounded(message.buttonId, MAX_BUTTON_ID_LENGTH);
             if (buttonId == null || ControllerButtonPolicyManager.matchEvent(controller, buttonId) == null) {
-                LOGGER.info("Rejected controller event at {} because no matching server policy exists for buttonId={}.",
+                LOGGER.debug("Rejected controller event at {} because no matching server policy exists for buttonId={}.",
                     message.controllerPos, buttonId);
                 return;
             }
@@ -206,7 +206,7 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
 
         String key = normalizeBounded(message.key, MAX_KEY_LENGTH);
         if (key == null) {
-            LOGGER.info("Rejected controller smart action at {} because the key was invalid.", message.controllerPos);
+            LOGGER.debug("Rejected controller smart action at {} because the key was invalid.", message.controllerPos);
             return;
         }
         if (message.stringValue) {
@@ -216,7 +216,7 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
             ControllerButtonPolicyManager.ButtonPolicy stringPolicy =
                 ControllerButtonPolicyManager.matchSmart(controller, message.kind, key, message.textValue);
             if (stringPolicy == null) {
-                LOGGER.info("Rejected string smart action at {} because no matching server policy exists for key={}.",
+                LOGGER.debug("Rejected string smart action at {} because no matching server policy exists for key={}.",
                     message.controllerPos, key);
                 return;
             }
@@ -231,7 +231,7 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
         ControllerButtonPolicyManager.ButtonPolicy policy =
             ControllerButtonPolicyManager.matchSmart(controller, message.kind, key, message.value);
         if (policy == null) {
-            LOGGER.info(
+            LOGGER.debug(
                 "Rejected numeric smart action at {} because no matching server policy exists for key={} value={} foundMachine={} styleProvider={}.",
                 message.controllerPos,
                 key,
@@ -253,7 +253,7 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
         } else if (controller.getSmartInterfaceData(key) == null
             && !ControllerButtonPolicyManager.isConfiguredSmartKey(controller, key)
             && !PktControllerSmartInterfaceUpdate.hasControllerCustomData(controller, key)) {
-            LOGGER.info(
+            LOGGER.debug(
                 "Rejected numeric smart action at {} because key={} had no Smart Interface data, configured editor, or custom data.",
                 message.controllerPos,
                 key
@@ -282,7 +282,7 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
         if (PktControllerSmartInterfaceUpdate.applySmartInterfaceUpdate(controller, message.controllerPos, key, resolved)) {
             PktControllerSmartInterfaceUpdate.syncCustomDataToPlayer(controller, player);
         } else {
-            LOGGER.info(
+            LOGGER.debug(
                 "Server policy matched numeric smart action at {} but applying it failed. key={} value={} foundMachine={} smartData={}.",
                 message.controllerPos,
                 key,
