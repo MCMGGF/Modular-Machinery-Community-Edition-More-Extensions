@@ -144,7 +144,15 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
                 message == null ? null : message.controllerPos,
                 Thread.currentThread().getName()
             );
-            handle(message, player);
+            try {
+                handle(message, player);
+            } catch (Throwable error) {
+                LOGGER.error(
+                    "Controller button action at {} failed on the server thread.",
+                    message == null ? null : message.controllerPos,
+                    error
+                );
+            }
         });
         return null;
     }
