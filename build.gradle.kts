@@ -24,6 +24,8 @@ minecraft {
     extraRunJvmArguments.addAll(args)
 }
 
+val curseMavenMirror = providers.environmentVariable("MMCEGE_CURSEMAVEN_MIRROR").orNull
+
 repositories {
     mavenCentral()
     maven {
@@ -41,11 +43,21 @@ repositories {
         name = "GTNH Maven"
         url = uri("https://nexus.gtnewhorizons.com/repository/public/")
     }
-    maven {
-        url = uri("https://cfa2.cursemaven.com")
+    if (!curseMavenMirror.isNullOrBlank()) {
+        maven {
+            name = "CurseMaven CI Mirror"
+            url = uri(curseMavenMirror)
+            content {
+                includeGroup("curse.maven")
+            }
+        }
     }
     maven {
+        name = "CurseMaven"
         url = uri("https://cursemaven.com")
+        content {
+            includeGroup("curse.maven")
+        }
     }
     maven {
         name = "GeckoLib"
