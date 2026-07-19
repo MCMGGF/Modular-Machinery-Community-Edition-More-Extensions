@@ -154,6 +154,7 @@ dependencies {
     testImplementation("software.bernie.geckolib:geckolib-forge-1.12.2:3.0.31")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.ow2.asm:asm:5.2")
 }
 
 tasks.processResources.configure {
