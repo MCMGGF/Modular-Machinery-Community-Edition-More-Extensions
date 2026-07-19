@@ -4,7 +4,12 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 build_file="${1:-${root_dir}/build.gradle.kts}"
 lock_file="${2:-${root_dir}/scripts/ci/cursemaven-lock.tsv}"
-repository_dir="${MMCEGE_CURSEMAVEN_MIRROR:-${root_dir}/.gradle/cursemaven-repo}"
+repository_dir="${MMCEGE_CURSEMAVEN_MIRROR_PATH:-${root_dir}/.gradle/cursemaven-repo}"
+
+if command -v cygpath >/dev/null 2>&1 &&
+    [[ "${repository_dir}" =~ ^[A-Za-z]:[\\/].* ]]; then
+    repository_dir="$(cygpath -u "${repository_dir}")"
+fi
 
 if [[ ! -f "${build_file}" ]]; then
     echo "Build file not found: ${build_file}" >&2

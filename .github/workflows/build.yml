@@ -15,7 +15,7 @@ jobs:
     name: Build mod jar
     runs-on: ubuntu-latest
     env:
-      MMCEGE_CURSEMAVEN_MIRROR: ${{ github.workspace }}/.gradle/cursemaven-repo
+      MMCEGE_CURSEMAVEN_MIRROR_PATH: ${{ github.workspace }}/.gradle/cursemaven-repo
 
     steps:
       - name: Checkout
