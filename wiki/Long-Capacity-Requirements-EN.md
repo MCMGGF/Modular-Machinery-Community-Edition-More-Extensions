@@ -1,4 +1,4 @@
-# Long-Capacity Requirements
+# Long-Capacity Requirements V2
 
 [Home](Home) · [中文版](Long-Capacity-Requirements-ZH)
 
@@ -8,7 +8,9 @@ MMCE stores the recipe `amount` of `RequirementFluid` / `RequirementGas` as a Ja
 
 ## What MMCEGE does
 
-MMCEGE can patch the requirement system (via Mixins) so fluid/gas recipe amounts are parsed and processed as **`long`** (up to 9.2 quintillion). This path is currently **experimental and disabled by default** because it may make some fluid/gas recipes fail to take effect in some packs. When enabled, it runs across the whole recipe lifecycle:
+MMCEGE 1.4.0 adds Long V2 for recipe fluids / gases. MMCEGE no longer rewrites normal `fluid` / `gas` requirements behind the scenes. Long-capacity recipes must use the explicit `mmceguiext:fluid_long` / `mmceguiext:gas_long` requirement types.
+
+The long-capacity path is currently **experimental and disabled by default** because it may make some fluid/gas recipes fail to take effect in some packs. When enabled, it runs across the whole recipe lifecycle:
 
 - parse (`createRequirement`)
 - "can start crafting" check
@@ -16,7 +18,7 @@ MMCEGE can patch the requirement system (via Mixins) so fluid/gas recipe amounts
 - output filling (`finishCrafting`)
 - max-parallelism calculation
 
-Vanilla, small-amount recipes are unaffected — they keep using the original `int` path.
+Vanilla, small-amount recipes are unaffected. If you keep using normal `fluid` / `gas`, they stay on the original MMCE path.
 
 ## How to use it
 
@@ -32,23 +34,30 @@ Then fully restart the game and write a large `amount` in your normal MMCE recip
 
 ```json
 {
-  "type": "fluid",
-  "io": "input",
+  "type": "mmceguiext:fluid_long",
+  "io-type": "input",
   "fluid": "water",
-  "amount": 5000000000
+  "amount": "5000000000"
 }
 ```
 
 ```json
 {
-  "type": "gas",
-  "io": "output",
+  "type": "mmceguiext:gas_long",
+  "io-type": "output",
   "gas": "hydrogen",
   "amount": 8000000000
 }
 ```
 
-Both parse and run as `long` only while `experimental.enableLongFluidGasRequirements` is enabled at game startup. While disabled, MMCEGE does not load the `RequirementFluid` / `RequirementGas` long-support Mixins. Keep the option off unless you are explicitly testing long-capacity fluid/gas requirements. Note: this fix covers normal `fluid` / `gas` requirements; per-tick fluid/gas requirements are not claimed as supported yet and will be handled separately.
+`amount` accepts either a non-negative JSON integer or a base-10 string. For very large values, a string is recommended. Long V2 requirements parse and run only while `experimental.enableLongFluidGasRequirements` is enabled. When disabled, the types stay registered to keep client/server registries identical, but loading a Long V2 recipe produces a clear configuration error.
+
+## Migration from the old scheme
+
+- Keep normal `fluid` / `gas` when the amount still fits in `int`.
+- Switch long-capacity entries to `mmceguiext:fluid_long` / `mmceguiext:gas_long`.
+- Replace `io` with `io-type`.
+- Prefer quoted `amount` values for big numbers.
 
 ## Why it matters here
 
@@ -56,13 +65,16 @@ This patch is what makes the **long-capacity custom hatches** and **AE2 mixed bu
 
 ## Notes & limits
 
-- The patch targets MMCE's `RequirementFluid`, `RequirementGas`, their requirement **types** (JSON parsing), and `RecipeCraftingContext` component lookup.
-- A requirement only takes the `long` path when the bound handler supports it (custom hatches / mixed buses do). Plain vanilla hatches still cap at `int` capacity, so a recipe demanding more than a vanilla hatch can hold simply won't be satisfiable by that hatch.
-- `FluidStack` / `GasStack` themselves remain `int`-based; MMCEGE keeps a parallel `long` value and only down-casts when handing data to vanilla `int` APIs. This is transparent for recipe authors but worth knowing when debugging.
+- Normal `fluid` / `gas` requirements are not rewritten. Values above `Integer.MAX_VALUE` fail with a migration hint instead of overflowing.
+- Custom long hatches and AE2 mixed buses perform real long IO. Plain Forge/Mekanism handlers still contribute only their real int-sized capacity.
+- `FluidStack` / `GasStack` represent identity, NBT, and the JEI icon; the full amount is stored directly as a `long` on the Long V2 requirement.
+- Without recipe modifiers, the full positive `long` range is supported. MMCE `RecipeModifier` uses `double`, so modifying values above `2^53 - 1` may round; MMCEGE logs this once.
+- 1.4.0 provides normal `fluid_long` / `gas_long` requirements only; long per-tick types are not included yet.
 
 ## Under the hood (for contributors)
 
-- `mixin/MixinRequirementTypeFluid` / `MixinRequirementTypeGas` — `@Overwrite createRequirement`, read `amount` with `getAsLong()`, store the full `long`.
-- `mixin/MixinRequirementFluid` / `MixinRequirementGas` — inject `long` paths into canStart/start/finish/getMaxParallelism, delegating to `common/requirement/LongRequirementIO` (with snapshot handlers for safe simulation).
-- `mixin/MixinRecipeCraftingContext` — restores mixed-input-bus internal handlers when MMCE's component lookup returns empty.
-- `common/requirement/LongAmountRequirement` — the interface that carries the `long` value on patched requirements.
+- `RequirementTypeLongFluid` / `RequirementTypeLongGas` parse explicit Long V2 JSON and enforce the experimental option.
+- `RequirementLongFluid` / `RequirementLongGas` own the full long amount and implement checks, transfer, parallelism, and JEI tooltips.
+- `LongRequirementIO` / `LongGasRequirementIO` create shared all-slot snapshots and adapt both long and ordinary int handlers.
+- `MixinRequirementFluid` / `MixinRequirementGas` only make normal and Long V2 requirements share the same long-aware snapshots; they do not replace MMCE execution.
+- `MixinRequirementTypeFluidAmountGuard` / `MixinRequirementTypeGasAmountGuard` stop silent vanilla overflow and provide the migration hint.

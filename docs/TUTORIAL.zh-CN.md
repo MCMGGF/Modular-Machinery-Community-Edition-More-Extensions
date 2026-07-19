@@ -617,28 +617,48 @@ MMCEGE 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常�
 
 ## 11. 突破 int 上限的流体 / 气体配方
 
-MMCE 的 `RequirementFluid` / `RequirementGas` 用 `int` 存配方 `amount`，超过约 **21 亿 mB** 会溢出。MMCEGE 可以通过 Mixin 改造需求系统，使流体 / 气体量以 **long** 解析与处理，但该路径当前仍是实验性功能。
+MMCEGE 1.4.0 的 Long V2 只针对显式的 `mmceguiext:fluid_long` / `mmceguiext:gas_long` 需求。普通 `fluid` / `gas` 不再被 MMCEGE 重新改写；如果配方只是在 `int` 范围内，继续用原来的写法即可。需要长容量时，再切到新需求类型。
 
 **需要手动开启 / 实验性** —— 先在 `config/mmceguiext/client.cfg` 中设置：
 
 ```properties
 experimental {
-    B:enableLongFluidGasRequirements=true
+    B:enableLongFluidGasRequirements=false
 }
 ```
 
-然后完整重启游戏，再在 MMCE 配方 JSON 里写大数值：
+默认值是 `false`。需要长容量时把它改成 `true`，然后完整重启游戏，再在 MMCE 配方 JSON 里写大数值：
 
 ```json
 {
-  "type": "fluid",
-  "io": "input",
+  "type": "mmceguiext:fluid_long",
+  "io-type": "input",
   "fluid": "water",
-  "amount": 5000000000
+  "amount": "5000000000"
 }
 ```
 
-开启并重启后，解析、判定能否开始合成、消耗输入、产出、计算最大并行度会走 long 路径。该选项默认关闭，因为当前实现可能导致部分流体 / 气体配方无法生效；关闭时不会加载 `RequirementFluid` / `RequirementGas` 的 long 支持 Mixin，除非明确测试 long 容量流体 / 气体需求，否则建议保持关闭。
+```json
+{
+  "type": "mmceguiext:gas_long",
+  "io-type": "output",
+  "gas": "hydrogen",
+  "amount": 8000000000
+}
+```
+
+`amount` 可以是 JSON 整数，也可以是十进制字符串；大数值推荐直接写字符串。开启并重启后，解析、判定能否开始合成、消耗输入、产出、计算最大并行度会走 long 路径。该选项默认关闭；关闭时 Long V2 类型仍保持注册，但加载对应配方会给出明确的配置错误。
+
+普通 `fluid` / `gas` 不会被改写。普通需求的 `amount` 一旦超过 `Integer.MAX_VALUE`，会直接报错并提示迁移到 `mmceguiext:fluid_long` / `mmceguiext:gas_long`，不会再静默溢出。
+
+1.4.0 暂时只支持普通开始/结束型 `fluid_long` / `gas_long`，不包含 long per-tick 类型。
+
+### 旧方案迁移
+
+- 只要 `fluid` / `gas` 还在 `int` 范围内，就继续沿用原写法。
+- 需要长容量的条目改成 `mmceguiext:fluid_long` / `mmceguiext:gas_long`。
+- 把旧字段 `io` 改成 `io-type`。
+- 大数值 `amount` 建议写成字符串，方便阅读和维护。
 
 正是这一改造，让第二 / 三部分中 long 容量的自定义仓口 / AE 总线能在配方中真正可用。
 

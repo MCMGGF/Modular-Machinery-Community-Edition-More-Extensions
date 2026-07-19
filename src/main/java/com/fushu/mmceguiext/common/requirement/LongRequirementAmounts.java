@@ -1,22 +1,37 @@
 package com.fushu.mmceguiext.common.requirement;
 
+import com.fushu.mmceguiext.MMCEGuiExt;
 import hellfirepvp.modularmachinery.common.crafting.helper.ComponentRequirement;
 import hellfirepvp.modularmachinery.common.crafting.helper.RecipeCraftingContext;
 import hellfirepvp.modularmachinery.common.modifier.RecipeModifier;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class LongRequirementAmounts {
+    public static final long MAX_EXACT_DOUBLE_INTEGER = 9_007_199_254_740_991L;
+    private static final AtomicBoolean PRECISION_WARNING_LOGGED = new AtomicBoolean(false);
+
     private LongRequirementAmounts() {
     }
 
     public static long applyModifiers(List<RecipeModifier> modifiers, ComponentRequirement<?, ?> requirement, long amount) {
+        if (modifiers == null || modifiers.isEmpty()) {
+            return sanitizeAmount(amount);
+        }
+        warnIfModifierPrecisionIsLimited(amount);
         return sanitizeAmount(Math.round(RecipeModifier.applyModifiers(modifiers, requirement, (double) Math.max(0L, amount), false)));
     }
 
     public static long applyModifiers(RecipeCraftingContext context,
                                       ComponentRequirement<?, ?> requirement,
                                       long amount) {
+        RecipeModifier.ModifierApplier applier =
+            context.getModifierApplier(requirement.getRequirementType(), false);
+        if (applier == null || applier.isDefault()) {
+            return sanitizeAmount(amount);
+        }
+        warnIfModifierPrecisionIsLimited(amount);
         return sanitizeAmount(Math.round(RecipeModifier.applyModifiers(context, requirement, (double) Math.max(0L, amount), false)));
     }
 
@@ -49,5 +64,15 @@ public final class LongRequirementAmounts {
             return Long.MAX_VALUE;
         }
         return left + right;
+    }
+
+    private static void warnIfModifierPrecisionIsLimited(long amount) {
+        if (amount > MAX_EXACT_DOUBLE_INTEGER && PRECISION_WARNING_LOGGED.compareAndSet(false, true)) {
+            MMCEGuiExt.logger().warn(
+                "A long fluid/gas requirement above {} is being changed by an MMCE RecipeModifier. "
+                    + "MMCE modifiers use double precision, so the modified amount may be rounded.",
+                MAX_EXACT_DOUBLE_INTEGER
+            );
+        }
     }
 }

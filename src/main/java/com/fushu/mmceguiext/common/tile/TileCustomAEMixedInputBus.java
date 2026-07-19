@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.common.tile;
 
 import appeng.api.AEApi;
+import appeng.api.config.Actionable;
 import appeng.api.networking.GridFlags;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.security.IActionHost;
@@ -28,6 +29,9 @@ import com.fushu.mmceguiext.common.registry.CustomAEMixedInputBusRegistry;
 import com.fushu.mmceguiext.common.registry.CustomCapacityCardRegistry;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedInputBus;
 import com.fushu.mmceguiext.common.item.ItemBlockCustomAEMixedInputBus;
+import com.fushu.mmceguiext.common.requirement.LongFluidIOHandler;
+import com.fushu.mmceguiext.common.requirement.LongGasIOHandler;
+import com.fushu.mmceguiext.common.requirement.LongRequirementAmounts;
 import com.fushu.mmceguiext.common.util.CustomIdValidator;
 import com.mekeng.github.common.me.data.IAEGasStack;
 import com.mekeng.github.common.me.data.impl.AEGasStack;
@@ -1601,7 +1605,7 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
         }
     }
 
-    private class LoggingFluidHandler implements IFluidHandler {
+    private class LoggingFluidHandler implements IFluidHandler, LongFluidIOHandler {
         @Override
         public IFluidTankProperties[] getTankProperties() {
             return limitedTankProperties(fluidTanks.getTankProperties(), getActiveFluidSlotBound());
@@ -1623,9 +1627,27 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
         public net.minecraftforge.fluids.FluidStack drain(int maxDrain, boolean doDrain) {
             return drainActiveFluid(maxDrain, doDrain);
         }
+
+        @Override
+        public synchronized long mmceguiext$simulateFluidIO(net.minecraftforge.fluids.FluidStack stack,
+                                                            long maxAmount,
+                                                            IOType actionType) {
+            return actionType == IOType.INPUT
+                ? doLongFluidInput(stack, maxAmount, false)
+                : 0L;
+        }
+
+        @Override
+        public synchronized long mmceguiext$doFluidIO(net.minecraftforge.fluids.FluidStack stack,
+                                                      long maxAmount,
+                                                      IOType actionType) {
+            return actionType == IOType.INPUT
+                ? doLongFluidInput(stack, maxAmount, true)
+                : 0L;
+        }
     }
 
-    private class LoggingGasHandler implements IExtendedGasHandler {
+    private class LoggingGasHandler implements IExtendedGasHandler, LongGasIOHandler {
         @Override
         public int receiveGas(@Nullable EnumFacing side, GasStack stack, boolean doTransfer) {
             return receiveActiveGas(stack, doTransfer);
@@ -1655,6 +1677,24 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
         @Override
         public mekanism.api.gas.GasTankInfo[] getTankInfo() {
             return limitedGasTankInfo(gasHandler.getTankInfo(), getActiveGasSlotBound());
+        }
+
+        @Override
+        public synchronized long mmceguiext$simulateGasIO(GasStack stack,
+                                                          long maxAmount,
+                                                          IOType actionType) {
+            return actionType == IOType.INPUT
+                ? doLongGasInput(stack, maxAmount, false)
+                : 0L;
+        }
+
+        @Override
+        public synchronized long mmceguiext$doGasIO(GasStack stack,
+                                                    long maxAmount,
+                                                    IOType actionType) {
+            return actionType == IOType.INPUT
+                ? doLongGasInput(stack, maxAmount, true)
+                : 0L;
         }
     }
 
@@ -1777,6 +1817,83 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
         return filled;
     }
 
+    private long doLongFluidInput(net.minecraftforge.fluids.FluidStack stack,
+                                  long maxAmount,
+                                  boolean doTransfer) {
+        if (stack == null || maxAmount <= 0L) {
+            return 0L;
+        }
+        long local = doTransfer
+            ? drainActiveFluidLong(stack, maxAmount)
+            : simulateActiveFluidDrainLong(stack, maxAmount);
+        long remaining = maxAmount - local;
+        if (remaining <= 0L || !this.proxy.isActive()) {
+            return local;
+        }
+        try {
+            IAEFluidStack request = this.fluidChannel.createStack(stack);
+            if (request == null) {
+                return local;
+            }
+            request.setStackSize(remaining);
+            IMEMonitor<IAEFluidStack> inventory =
+                this.proxy.getStorage().getInventory(this.fluidChannel);
+            IAEFluidStack extracted = Platform.poweredExtraction(
+                this.proxy.getEnergy(),
+                inventory,
+                request,
+                this.source,
+                doTransfer ? Actionable.MODULATE : Actionable.SIMULATE
+            );
+            long network = extracted == null ? 0L : Math.max(0L, extracted.getStackSize());
+            return LongRequirementAmounts.saturatedAdd(local, Math.min(remaining, network));
+        } catch (GridAccessException | RuntimeException e) {
+            return local;
+        }
+    }
+
+    private long simulateActiveFluidDrainLong(net.minecraftforge.fluids.FluidStack stack, long maxAmount) {
+        long available = 0L;
+        int slotBound = getActiveFluidSlotBound();
+        for (int slot = 0; slot < slotBound && available < maxAmount; slot++) {
+            if (!isFluidSlotDefined(slot)) {
+                continue;
+            }
+            IAEFluidStack stored = this.fluidTanks.getFluidInSlot(slot);
+            if (stored == null || stored.getStackSize() <= 0L) {
+                continue;
+            }
+            net.minecraftforge.fluids.FluidStack storedStack = stored.getFluidStack();
+            if (storedStack == null || !storedStack.isFluidEqual(stack)) {
+                continue;
+            }
+            available = LongRequirementAmounts.saturatedAdd(
+                available,
+                Math.min(maxAmount - available, stored.getStackSize())
+            );
+        }
+        return available;
+    }
+
+    private long drainActiveFluidLong(net.minecraftforge.fluids.FluidStack stack, long maxAmount) {
+        long drained = 0L;
+        while (drained < maxAmount) {
+            long remaining = maxAmount - drained;
+            net.minecraftforge.fluids.FluidStack request = stack.copy();
+            request.amount = LongRequirementAmounts.downcastAmount(remaining);
+            net.minecraftforge.fluids.FluidStack moved = drainActiveFluid(request, true);
+            long step = moved == null ? 0L : Math.max(0L, moved.amount);
+            if (step <= 0L) {
+                break;
+            }
+            drained += Math.min(step, remaining);
+            if (step < request.amount) {
+                break;
+            }
+        }
+        return drained;
+    }
+
     @Nullable
     private net.minecraftforge.fluids.FluidStack drainActiveFluid(net.minecraftforge.fluids.FluidStack resource, boolean doDrain) {
         if (resource == null || resource.amount <= 0) {
@@ -1847,6 +1964,77 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
             remaining.amount -= slotReceived;
         }
         return received;
+    }
+
+    private long doLongGasInput(GasStack stack, long maxAmount, boolean doTransfer) {
+        if (stack == null || maxAmount <= 0L) {
+            return 0L;
+        }
+        long local = doTransfer
+            ? drawActiveGasLong(stack, maxAmount)
+            : simulateActiveGasDrawLong(stack, maxAmount);
+        long remaining = maxAmount - local;
+        if (remaining <= 0L || !this.proxy.isActive()) {
+            return local;
+        }
+        try {
+            IAEGasStack request = AEGasStack.of(stack);
+            if (request == null) {
+                return local;
+            }
+            request.setStackSize(remaining);
+            IMEMonitor<IAEGasStack> inventory =
+                this.proxy.getStorage().getInventory(this.gasChannel);
+            IAEGasStack extracted = Platform.poweredExtraction(
+                this.proxy.getEnergy(),
+                inventory,
+                request,
+                this.source,
+                doTransfer ? Actionable.MODULATE : Actionable.SIMULATE
+            );
+            long network = extracted == null ? 0L : Math.max(0L, extracted.getStackSize());
+            return LongRequirementAmounts.saturatedAdd(local, Math.min(remaining, network));
+        } catch (GridAccessException | RuntimeException e) {
+            return local;
+        }
+    }
+
+    private long simulateActiveGasDrawLong(GasStack stack, long maxAmount) {
+        long available = 0L;
+        int slotBound = getActiveGasSlotBound();
+        for (int slot = 0; slot < slotBound && available < maxAmount; slot++) {
+            if (!isGasSlotDefined(slot)) {
+                continue;
+            }
+            GasStack stored = this.gasTanks.getGasStack(slot);
+            if (stored == null || stored.amount <= 0 || !stored.isGasEqual(stack)) {
+                continue;
+            }
+            available = LongRequirementAmounts.saturatedAdd(
+                available,
+                Math.min(maxAmount - available, (long) stored.amount)
+            );
+        }
+        return available;
+    }
+
+    private long drawActiveGasLong(GasStack stack, long maxAmount) {
+        long drawn = 0L;
+        while (drawn < maxAmount) {
+            long remaining = maxAmount - drawn;
+            GasStack request = stack.copy();
+            request.amount = LongRequirementAmounts.downcastAmount(remaining);
+            GasStack moved = drawActiveGas(request, true);
+            long step = moved == null ? 0L : Math.max(0L, moved.amount);
+            if (step <= 0L) {
+                break;
+            }
+            drawn += Math.min(step, remaining);
+            if (step < request.amount) {
+                break;
+            }
+        }
+        return drawn;
     }
 
     @Nullable

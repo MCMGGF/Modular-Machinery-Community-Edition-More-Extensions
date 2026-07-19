@@ -11,6 +11,7 @@ Use them as a starting point:
 - `dynamic-visuals.json`: demonstrates `dynamicVisuals[]`, including weighted multi-source combining, transform-by-value, visibility-by-value, renderer switching, and color interpolation
 - `animated-texture.json`: demonstrates `dynamicVisuals[].renderer.type = "animatedTexture"` with both sprite sheet and ordered PNG frame animations
 - `horizontal-slot-grid-hatch.json`: demonstrates a custom hatch `slot_grid` that scrolls horizontally with `visibleColumns` + `scrollAxis: "horizontal"`
+- `long-requirements-v2.json`: valid MMCE recipe skeleton using experimental `mmceguiext:fluid_long` / `mmceguiext:gas_long`
 - `error-cases.json`: intentionally broken or edge-case examples for log validation
 - `subgui-page-reference.json`: main machine JSON, intended for `config/modularmachinery/machinery`
 - `subgui-page-reference-settings.json`: sub GUI overlay JSON, intended for `config/mmceguiext/subgui`

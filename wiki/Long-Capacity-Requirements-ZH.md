@@ -1,4 +1,4 @@
-# Long 容量配方需求
+# Long 容量配方需求 V2
 
 [首页](Home) · [English](Long-Capacity-Requirements-EN)
 
@@ -8,7 +8,9 @@ MMCE 的 `RequirementFluid` / `RequirementGas` 用 Java `int` 存储配方 `amou
 
 ## MMCEGE 的做法
 
-MMCEGE 可以通过 Mixin 改造需求系统，使流体/气体配方量以 **`long`** 解析与处理（上限约 920 京）。该路径当前是**实验性功能，默认关闭**，因为在部分整合包中可能导致流体/气体配方无法生效。开启后覆盖整个配方生命周期：
+MMCEGE 1.4.0 为流体 / 气体配方引入了 Long V2。MMCEGE 不再在后台改写普通 `fluid` / `gas` 需求；需要长容量时，请改用显式的 `mmceguiext:fluid_long` / `mmceguiext:gas_long` 需求类型。
+
+长容量路径当前是**实验性功能，默认关闭**，因为在部分整合包中可能导致流体 / 气体配方无法生效。开启后覆盖整个配方生命周期：
 
 - 解析（`createRequirement`）
 - “能否开始合成”判定
@@ -16,7 +18,7 @@ MMCEGE 可以通过 Mixin 改造需求系统，使流体/气体配方量以 **`l
 - 产出填充（`finishCrafting`）
 - 最大并行度计算
 
-原版小数值配方不受影响——它们继续走原本的 `int` 路径。
+原版小数值配方不受影响。只要继续使用普通 `fluid` / `gas`，它们就仍然走原本的 MMCE 路径。
 
 ## 如何使用
 
@@ -32,23 +34,30 @@ experimental {
 
 ```json
 {
-  "type": "fluid",
-  "io": "input",
+  "type": "mmceguiext:fluid_long",
+  "io-type": "input",
   "fluid": "water",
-  "amount": 5000000000
+  "amount": "5000000000"
 }
 ```
 
 ```json
 {
-  "type": "gas",
-  "io": "output",
+  "type": "mmceguiext:gas_long",
+  "io-type": "output",
   "gas": "hydrogen",
   "amount": 8000000000
 }
 ```
 
-只有 `experimental.enableLongFluidGasRequirements` 在游戏启动时开启，两者才会以 `long` 解析并运行。关闭时 MMCEGE 不会加载 `RequirementFluid` / `RequirementGas` 的 long 支持 Mixin。除非你正在明确测试 long 容量流体/气体需求，否则建议保持默认关闭。注意：当前修复范围是普通 `fluid` / `gas` 需求，per-tick 流体/气体需求暂不宣称支持，后续会单独处理。
+`amount` 可以写成非负整数，也可以写成十进制字符串；大数值推荐用字符串。只有 `experimental.enableLongFluidGasRequirements` 开启时，两种 Long V2 需求才允许解析和运行。关闭时类型仍会注册，以保持客户端与服务端注册表一致，但加载对应配方会给出明确的配置错误。
+
+## 旧方案迁移
+
+- 普通 `fluid` / `gas` 只要还在 `int` 范围内，就继续保留，不用改。
+- 需要长容量的配方条目改成 `mmceguiext:fluid_long` / `mmceguiext:gas_long`。
+- 把旧的 `io` 改成 `io-type`。
+- 大数值 `amount` 尽量写成字符串。
 
 ## 它为何重要
 
@@ -56,13 +65,16 @@ experimental {
 
 ## 注意与限制
 
-- 改造目标是 MMCE 的 `RequirementFluid`、`RequirementGas`、它们的需求**类型**（JSON 解析）以及 `RecipeCraftingContext` 的组件查找。
-- 只有当绑定的 handler 支持时，需求才走 `long` 路径（自定义仓口/混合总线支持）。原版仓口的容量仍受 `int` 限制——配方索取的量超过原版仓口能容纳的上限时，该仓口就无法满足它。
-- `FluidStack` / `GasStack` 本身仍是 `int` 基础；MMCEGE 额外维护一个并行的 `long` 值，仅在把数据交给原版 `int` API 时才向下截断。对配方作者透明，但调试时值得知道。
+- 普通 `fluid` / `gas` 不会被改写；当数值超过 `Integer.MAX_VALUE` 时，解析器会明确提示改用 Long V2。
+- 自定义 long 仓口与 AE2 混合总线可完成真实 long IO；普通 Forge/Mekanism handler 仍只能按其真实 `int` 容量参与。
+- `FluidStack` / `GasStack` 只用于表示种类、NBT 和 JEI 图标；完整数量保存在 Long V2 requirement 的 `long` 字段中。
+- 无配方修改器时支持完整正 `long` 范围。MMCE 的 `RecipeModifier` 使用 `double`，修改超过 `2^53 - 1` 的数量时可能发生舍入，MMCEGE 会记录一次警告。
+- 1.4.0 仅提供普通 `fluid_long` / `gas_long`；long per-tick 类型尚未包含。
 
 ## 实现细节（贡献者向）
 
-- `mixin/MixinRequirementTypeFluid` / `MixinRequirementTypeGas` —— `@Overwrite createRequirement`，用 `getAsLong()` 读 `amount`，保存完整 `long`。
-- `mixin/MixinRequirementFluid` / `MixinRequirementGas` —— 向 canStart/start/finish/getMaxParallelism 注入 `long` 路径，委托 `common/requirement/LongRequirementIO`（含用于安全模拟的快照 handler）。
-- `mixin/MixinRecipeCraftingContext` —— 当 MMCE 的组件查找返回空时，补回混合输入总线的内部 handler。
-- `common/requirement/LongAmountRequirement` —— 在被改造的需求上携带 `long` 值的接口。
+- `RequirementTypeLongFluid` / `RequirementTypeLongGas` —— 解析显式 Long V2 JSON，并在实验选项关闭时给出错误。
+- `RequirementLongFluid` / `RequirementLongGas` —— 保存完整 `long amount`，实现检查、输入、输出、并行和 JEI tooltip。
+- `LongRequirementIO` / `LongGasRequirementIO` —— 对所有槽位建立共享快照，并统一适配 long handler 与普通 int handler。
+- `MixinRequirementFluid` / `MixinRequirementGas` —— 只负责让普通需求与 Long V2 需求共享同一套 long 快照，不覆盖 MMCE 的配方执行。
+- `MixinRequirementTypeFluidAmountGuard` / `MixinRequirementTypeGasAmountGuard` —— 阻止普通需求静默溢出，并提供迁移提示。
