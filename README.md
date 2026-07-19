@@ -15,7 +15,7 @@ It started as a controller-GUI editor, but now bundles four subsystems:
 4. **Long-capacity recipe requirements (experimental opt-in)** — fluid/gas recipe amounts beyond the vanilla `int` limit.
    **Long 容量配方需求（实验性，需要手动开启）** — 流体/气体配方量可突破原版 `int`（约 21 亿 mB）上限。
 
-Current version / 当前版本: **`1.3.4`** · API level **`1`** · MC `1.12.2` · author / 作者: WuXiaoYa
+Current version / 当前版本: **`1.3.5`** · API level **`1`** · MC `1.12.2` · author / 作者: WuXiaoYa
 
 ---
 
@@ -50,7 +50,7 @@ From the repo root / 在仓库根目录执行：
 
 Output / 产物：
 
-- `mmce-gui-ext/build/libs/MMCEGE-1.3.4.jar`
+- `mmce-gui-ext/build/libs/MMCEGE-1.3.5.jar`
 
 GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `MMCEGE-<commit-sha>` artifact to let testers build without using the local machine.
 GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `MMCEGE-<commit-sha>` artifact 即可，不需要本机编译。
@@ -300,6 +300,9 @@ See `examples/quick-start/progress-bars.json`.
 
 Sliders are defined per-machine with `sliders[]` (aliases: `guiSliders`, `gui_sliders`, `rangeControls`, `range_controls`). They work in both Machine and Factory controller GUIs, can be placed on pages/sub GUIs, and write numeric values to the Smart Interface / virtual DataPort key directly.
 滑块在机器级 JSON 中通过 `sliders[]` 定义（别名：`guiSliders`、`gui_sliders`、`rangeControls`、`range_controls`）。普通控制器和集成控制器都支持，可放在分页/子 GUI 内，并直接把数值写入 Smart Interface / 虚拟 DataPort key。
+
+MMCEGE 1.3.5 moves virtual Smart Interface machine-component helpers out of the controller Mixin, preventing server-side `NoSuchMethodError` failures caused by relocated synthetic inner-class constructors.
+MMCEGE 1.3.5 将虚拟 Smart Interface 的机器组件辅助类移出控制器 Mixin，避免内部类重定位后的合成构造器签名不一致导致服务端 `NoSuchMethodError`。
 
 MMCEGE 1.3.4 removes the Mouse Tweaks `Main` mixin that could poison Cleanroom's permanent invalid-class cache. Mouse Tweaks compatibility now uses lifecycle-time class recovery and preloading without modifying Mouse Tweaks bytecode.
 MMCEGE 1.3.4 移除了可能污染 Cleanroom 永久无效类缓存的 Mouse Tweaks `Main` Mixin，改为在模组生命周期内恢复并预加载相关类，不再修改 Mouse Tweaks 字节码。
