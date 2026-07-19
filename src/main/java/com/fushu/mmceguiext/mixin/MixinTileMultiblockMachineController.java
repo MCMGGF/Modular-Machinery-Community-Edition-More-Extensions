@@ -2,16 +2,15 @@ package com.fushu.mmceguiext.mixin;
 
 import com.fushu.mmceguiext.common.util.ControllerSmartInterfaceAccess;
 import com.fushu.mmceguiext.common.util.MultiMachineComponentProviderSupport;
+import com.fushu.mmceguiext.common.util.VirtualMachineComponentTile;
+import com.fushu.mmceguiext.common.util.VirtualSmartInterfaceComponent;
 import com.fushu.mmceguiext.common.util.VirtualSmartInterfaceStore;
 import github.kasuminova.mmce.common.event.machine.SmartInterfaceUpdateEvent;
 import github.kasuminova.mmce.common.util.InfItemFluidHandler;
 import github.kasuminova.mmce.common.world.MachineComponentManager;
-import hellfirepvp.modularmachinery.common.crafting.ComponentType;
 import hellfirepvp.modularmachinery.common.crafting.helper.ComponentSelectorTag;
 import hellfirepvp.modularmachinery.common.crafting.helper.ProcessingComponent;
-import hellfirepvp.modularmachinery.common.lib.ComponentTypesMM;
 import hellfirepvp.modularmachinery.common.machine.DynamicMachine;
-import hellfirepvp.modularmachinery.common.machine.IOType;
 import hellfirepvp.modularmachinery.common.machine.MachineComponent;
 import hellfirepvp.modularmachinery.common.machine.TaggedPositionBlockArray;
 import hellfirepvp.modularmachinery.common.tiles.TileParallelController;
@@ -47,7 +46,7 @@ public abstract class MixinTileMultiblockMachineController implements Controller
         new VirtualSmartInterfaceStore();
 
     @Unique
-    private VirtualSmartInterfaceProvider mmceguiext$virtualSmartInterfaceProvider;
+    private VirtualSmartInterfaceComponent mmceguiext$virtualSmartInterfaceProvider;
 
     @Shadow(remap = false)
     protected abstract void checkAndAddSmartInterface(MachineComponent<?> component, BlockPos realPos);
@@ -118,7 +117,7 @@ public abstract class MixinTileMultiblockMachineController implements Controller
             if (!component.isAsyncSupported()) {
                 workMode = TileMultiblockMachineController.WorkMode.SEMI_SYNC;
             }
-            TileEntity key = new VirtualComponentTile(te, index++);
+            TileEntity key = new VirtualMachineComponentTile(te, index++);
             mmceguiext$addProvidedComponent(component, tag, te, key, found, mergedGroupId);
             if (component instanceof TileParallelController.ParallelControllerProvider) {
                 foundParallelControllers.add((TileParallelController.ParallelControllerProvider) component);
@@ -247,11 +246,11 @@ public abstract class MixinTileMultiblockMachineController implements Controller
 
         if (mmceguiext$virtualSmartInterfaceProvider == null) {
             mmceguiext$virtualSmartInterfaceProvider =
-                new VirtualSmartInterfaceProvider();
+                new VirtualSmartInterfaceComponent();
         }
-        TileEntity key = new VirtualComponentTile(self, Integer.MIN_VALUE);
-        ProcessingComponent<VirtualSmartInterfaceProvider> processing =
-            new ProcessingComponent<VirtualSmartInterfaceProvider>(
+        TileEntity key = new VirtualMachineComponentTile(self, Integer.MIN_VALUE);
+        ProcessingComponent<VirtualSmartInterfaceComponent> processing =
+            new ProcessingComponent<VirtualSmartInterfaceComponent>(
                 mmceguiext$virtualSmartInterfaceProvider,
                 mmceguiext$virtualSmartInterfaceProvider,
                 null
@@ -308,52 +307,4 @@ public abstract class MixinTileMultiblockMachineController implements Controller
         return foundPattern == null ? null : foundPattern.getTag(pos);
     }
 
-    @Unique
-    private static final class VirtualSmartInterfaceProvider
-        extends MachineComponent<VirtualSmartInterfaceProvider> {
-
-        private VirtualSmartInterfaceProvider() {
-            super(IOType.INPUT);
-        }
-
-        @Override
-        public ComponentType getComponentType() {
-            return ComponentTypesMM.COMPONENT_SMART_INTERFACE;
-        }
-
-        @Override
-        public VirtualSmartInterfaceProvider getContainerProvider() {
-            return this;
-        }
-    }
-
-    @Unique
-    private static final class VirtualComponentTile extends TileEntity {
-        private final TileEntity delegate;
-        private final int index;
-
-        private VirtualComponentTile(final TileEntity delegate, final int index) {
-            this.delegate = delegate;
-            this.index = index;
-            this.setWorld(delegate.getWorld());
-            this.setPos(delegate.getPos());
-        }
-
-        @Override
-        public boolean equals(final Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (!(obj instanceof VirtualComponentTile)) {
-                return false;
-            }
-            VirtualComponentTile other = (VirtualComponentTile) obj;
-            return this.index == other.index && this.delegate == other.delegate;
-        }
-
-        @Override
-        public int hashCode() {
-            return System.identityHashCode(this.delegate) * 31 + this.index;
-        }
-    }
 }
