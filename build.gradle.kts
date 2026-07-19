@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.fushu.mmce"
-version = "1.3.3"
+version = "1.3.4"
 
 java {
     withSourcesJar()
@@ -170,17 +170,26 @@ tasks.jar.configure {
 
 val verifyJarDoesNotBundleMouseTweaks by tasks.registering {
     group = "verification"
-    description = "Fails when the release jar contains Mouse Tweaks implementation or API classes."
+    description = "Fails when the release jar bundles or patches Mouse Tweaks classes."
     dependsOn(tasks.jar)
 
     doLast {
         val outputJar = tasks.jar.get().archiveFile.get().asFile
-        val forbiddenEntries = zipTree(outputJar).matching {
+        val bundledEntries = zipTree(outputJar).matching {
             include("yalter/mousetweaks/**")
         }.files
-        check(forbiddenEntries.isEmpty()) {
+        check(bundledEntries.isEmpty()) {
             "MMCEGE must not bundle Mouse Tweaks classes: " +
-                forbiddenEntries.joinToString { it.name }
+                bundledEntries.joinToString { it.name }
+        }
+
+        val obsoleteMixinEntries = zipTree(outputJar).matching {
+            include("mixins.mmceguiext.mousetweaks.json")
+            include("com/fushu/mmceguiext/mixin/MixinMouseTweaksMain.class")
+        }.files
+        check(obsoleteMixinEntries.isEmpty()) {
+            "MMCEGE must not transform Mouse Tweaks classes: " +
+                obsoleteMixinEntries.joinToString { it.name }
         }
     }
 }

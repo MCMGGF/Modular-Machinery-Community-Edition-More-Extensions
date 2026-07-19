@@ -10,12 +10,9 @@ import static org.junit.Assert.assertTrue;
 
 public class MMCEGuiExtEarlyMixinLoaderTest {
     @Test
-    public void mouseTweaksMixinIsRegisteredWithoutEarlyClassLoaderDiscovery() {
+    public void optionalThirdPartyMixinsAreNotRegisteredFromTheEarlyLoader() {
         assertEquals(
-            Arrays.asList(
-                "mixins.mmceguiext.json",
-                "mixins.mmceguiext.mousetweaks.json"
-            ),
+            Arrays.asList("mixins.mmceguiext.json"),
             MMCEGuiExtEarlyMixinLoader.ALWAYS_REGISTERED_MIXIN_CONFIGS
         );
     }

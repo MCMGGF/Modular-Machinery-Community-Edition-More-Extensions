@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -18,10 +17,7 @@ import java.util.Map;
 public class MMCEGuiExtEarlyMixinLoader implements IFMLLoadingPlugin {
     static final String LONG_FLUID_GAS_REQUIREMENTS_KEY = "enableLongFluidGasRequirements";
     static final List<String> ALWAYS_REGISTERED_MIXIN_CONFIGS = Collections.unmodifiableList(
-        Arrays.asList(
-            "mixins.mmceguiext.json",
-            "mixins.mmceguiext.mousetweaks.json"
-        )
+        Collections.singletonList("mixins.mmceguiext.json")
     );
 
     @Override

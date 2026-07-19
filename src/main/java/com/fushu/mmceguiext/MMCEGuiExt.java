@@ -41,7 +41,7 @@ public class MMCEGuiExt {
     public static final String MODID = "mmceguiext";
     private static final Logger LOGGER = LogManager.getLogger(MODID);
     public static final String NAME = "Modular Machinery: Community Edition Gui Edit";
-    public static final String VERSION = "1.3.3";
+    public static final String VERSION = "1.3.4";
     public static final int GUI_CUSTOM_HATCH = 1;
     public static final int GUI_CUSTOM_AE_MIXED_INPUT = 2;
     public static final int GUI_CUSTOM_AE_MIXED_OUTPUT = 3;
@@ -83,6 +83,7 @@ public class MMCEGuiExt {
         }
         initClassicAEIntegration();
         if (event.getSide().isClient()) {
+            initializeMouseTweaksClassLoaderGuard();
             preloadClientStyleCache();
             registerClientGuiEventHandler();
         }
@@ -106,6 +107,16 @@ public class MMCEGuiExt {
 
     public static Logger logger() {
         return LOGGER;
+    }
+
+    private static void initializeMouseTweaksClassLoaderGuard() {
+        try {
+            Class.forName("com.fushu.mmceguiext.client.compat.MouseTweaksClassLoaderGuard")
+                .getMethod("initialize")
+                .invoke(null);
+        } catch (ReflectiveOperationException | LinkageError e) {
+            LOGGER.warn("Failed to initialize optional Mouse Tweaks class-loader guard: {}", e.toString());
+        }
     }
 
     private static void initClassicAEIntegration() {
