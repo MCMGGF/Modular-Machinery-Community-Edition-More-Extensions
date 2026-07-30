@@ -1,7 +1,9 @@
-import mods.modularmachinery.ControllerButtonClickEvent;
 import mods.modularmachinery.ControllerGUIRenderEvent;
+import mods.modularmachinery.MMEvents;
+import mods.mmceguiext.ControllerButtonClickEvent;
+import mods.mmceguiext.MMCEGEEvents;
 
-val TEST_MACHINE = <modularmachinery:demo:event_button_test>;
+val TEST_MACHINE = "demo:event_button_test";
 
 function readFloatTag(ctrl as any, key as string) as float {
     val tag = ctrl.getCustomDataTag();
@@ -11,7 +13,7 @@ function readFloatTag(ctrl as any, key as string) as float {
     return tag.getFloat(key);
 }
 
-MMEvents.onControllerButtonClick(TEST_MACHINE, function(event as ControllerButtonClickEvent) {
+MMCEGEEvents.onControllerButtonClick(TEST_MACHINE, function(event as ControllerButtonClickEvent) {
     val ctrl = event.controller;
     if (event.buttonId == "event_test_button") {
         val current = readFloatTag(ctrl, "click_count");
