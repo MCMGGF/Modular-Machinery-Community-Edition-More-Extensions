@@ -113,8 +113,10 @@ Virtual DataPort: write values even without a physical port. Recommended read (c
 
 `buttons[]` are defined per-machine and validated server-side by a policy manager to prevent forged actions. Action types:
 - `page` — client-side page switch.
-- `event` — fire MMCE `ControllerButtonClickEvent` server-side.
+- `event` — fire one MMCEGE `ControllerButtonClickEvent` on the server.
 - `smart_set` / `smart_add` — set / add a Smart Interface value (optional min/max clamp).
+
+Register `event` handlers with `mods.mmceguiext.MMCEGEEvents.onControllerButtonClick`. Machine keys may use either `machine_path` or `namespace:machine_path`; registrations of the same handler through both aliases are deduplicated. The event is already server-side, so no `world.isRemote()` guard is required.
 
 Examples: `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `controller-button-test.json`.
 

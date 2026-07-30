@@ -14,10 +14,13 @@ import stanhebben.zenscript.annotations.ZenMethod;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @ZenRegister
 @ZenClass("mods.mmceguiext.MMCEGEEvents")
@@ -48,9 +51,6 @@ public final class MMCEGEEvents {
 
         synchronized (LOCK) {
             addHandler(key, handler);
-            if (!key.contains(":")) {
-                addHandler("modularmachinery:" + key, handler);
-            }
         }
     }
 
@@ -80,10 +80,14 @@ public final class MMCEGEEvents {
     }
 
     public static void clear() {
+        clearButtonClickHandlers();
+        CustomCapacityCardRegistry.clearScriptEntries();
+    }
+
+    static void clearButtonClickHandlers() {
         synchronized (LOCK) {
             BUTTON_CLICK_HANDLERS.clear();
         }
-        CustomCapacityCardRegistry.clearScriptEntries();
     }
 
     @ZenMethod
@@ -129,13 +133,17 @@ public final class MMCEGEEvents {
             handlers = new ArrayList<IEventHandler<ControllerButtonClickEvent>>();
             BUTTON_CLICK_HANDLERS.put(key, handlers);
         }
+        for (IEventHandler<ControllerButtonClickEvent> existing : handlers) {
+            if (existing == handler) {
+                return;
+            }
+        }
         handlers.add(handler);
     }
 
     private static List<IEventHandler<ControllerButtonClickEvent>> collectHandlers(TileMultiblockMachineController controller) {
-        List<IEventHandler<ControllerButtonClickEvent>> out = new ArrayList<IEventHandler<ControllerButtonClickEvent>>();
         if (controller == null) {
-            return out;
+            return Collections.emptyList();
         }
 
         DynamicMachine machine = controller.getFoundMachine();
@@ -143,24 +151,44 @@ public final class MMCEGEEvents {
             machine = controller.getBlueprintMachine();
         }
         if (machine == null || machine.getRegistryName() == null) {
-            return out;
+            return Collections.emptyList();
         }
 
         String fullKey = machine.getRegistryName().toString().toLowerCase(Locale.ROOT);
         String pathKey = machine.getRegistryName().getPath().toLowerCase(Locale.ROOT);
+        return collectHandlersForMachineKeys(fullKey, pathKey);
+    }
+
+    static List<IEventHandler<ControllerButtonClickEvent>> collectHandlersForMachineKeys(String fullKey, String pathKey) {
+        List<IEventHandler<ControllerButtonClickEvent>> out =
+            new ArrayList<IEventHandler<ControllerButtonClickEvent>>();
+        Set<IEventHandler<ControllerButtonClickEvent>> seen = Collections.newSetFromMap(
+            new IdentityHashMap<IEventHandler<ControllerButtonClickEvent>, Boolean>()
+        );
+        String normalizedFullKey = normalizeMachineKey(fullKey);
+        String normalizedPathKey = normalizeMachineKey(pathKey);
         synchronized (LOCK) {
-            appendHandlers(out, fullKey);
-            if (!pathKey.equals(fullKey)) {
-                appendHandlers(out, pathKey);
+            appendHandlers(out, seen, normalizedFullKey);
+            if (normalizedPathKey != null && !normalizedPathKey.equals(normalizedFullKey)) {
+                appendHandlers(out, seen, normalizedPathKey);
             }
         }
         return out;
     }
 
-    private static void appendHandlers(List<IEventHandler<ControllerButtonClickEvent>> out, String key) {
+    private static void appendHandlers(List<IEventHandler<ControllerButtonClickEvent>> out,
+                                       Set<IEventHandler<ControllerButtonClickEvent>> seen,
+                                       @Nullable String key) {
+        if (key == null) {
+            return;
+        }
         List<IEventHandler<ControllerButtonClickEvent>> handlers = BUTTON_CLICK_HANDLERS.get(key);
         if (handlers != null && !handlers.isEmpty()) {
-            out.addAll(handlers);
+            for (IEventHandler<ControllerButtonClickEvent> handler : handlers) {
+                if (seen.add(handler)) {
+                    out.add(handler);
+                }
+            }
         }
     }
 

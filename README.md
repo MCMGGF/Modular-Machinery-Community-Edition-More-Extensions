@@ -224,8 +224,11 @@ Buttons are defined per-machine (`buttons[]`) and validated server-side by a pol
 - `page` — client-side page switch / 纯客户端页面切换
 - `subgui` — open a configured sub GUI / 打开已配置的子 GUI
 - `close_subgui` — close the current sub GUI / 关闭当前子 GUI
-- `event` — fire MMCE `ControllerButtonClickEvent` server-side / 在服务端触发 MMCE 按钮点击事件
+- `event` — fire MMCEGE `ControllerButtonClickEvent` once on the server / 在服务端触发一次 MMCEGE 按钮点击事件
 - `smart_set` / `smart_add` — set / add a Smart Interface value (with optional min/max clamp) / 设置 / 累加 Smart Interface 值（可选 min/max 限幅）
+
+Register `event` handlers with `mods.mmceguiext.MMCEGEEvents.onControllerButtonClick`. Both `machine_path` and `namespace:machine_path` are accepted, and alias registrations are deduplicated. The event is already server-side, so scripts do not need a `world.isRemote()` guard.
+使用 `mods.mmceguiext.MMCEGEEvents.onControllerButtonClick` 注册 `event` 处理器。机器名可写 `machine_path` 或 `namespace:machine_path`，别名注册会自动去重。事件本身只在服务端触发，脚本无需再判断 `world.isRemote()`。
 
 See `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `controller-button-test.json`, `subgui-page-reference.json`.
 示例见 `examples/quick-start/` 下相应文件。

@@ -113,8 +113,10 @@ MMCEGE 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineContro
 
 `buttons[]` 在机器级定义，服务端策略管理器校验以防伪造。动作类型：
 - `page` — 纯客户端页面切换。
-- `event` — 服务端触发 MMCE `ControllerButtonClickEvent`。
+- `event` — 在服务端触发一次 MMCEGE `ControllerButtonClickEvent`。
 - `smart_set` / `smart_add` — 设置/累加 Smart Interface 值（可选 min/max 限幅）。
+
+使用 `mods.mmceguiext.MMCEGEEvents.onControllerButtonClick` 注册 `event` 处理器。机器名支持短名 `machine_path` 和完整名 `namespace:machine_path`，同一处理器的别名注册会自动去重。事件已经只在服务端触发，不需要再判断 `world.isRemote()`。
 
 示例：`examples/quick-start/buttons-and-pages.json`、`event-button-test.json`、`controller-button-test.json`。
 
