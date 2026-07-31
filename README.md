@@ -15,7 +15,7 @@ It started as a controller-GUI editor, but now bundles four subsystems:
 4. **Long-capacity recipe requirements (experimental opt-in)** — fluid/gas recipe amounts beyond the vanilla `int` limit.
    **Long 容量配方需求（实验性，需要手动开启）** — 流体/气体配方量可突破原版 `int`（约 21 亿 mB）上限。
 
-Current version / 当前版本: **`1.4.0`** · API level **`1`** · MC `1.12.2` · author / 作者: WuXiaoYa
+Current version / 当前版本: **`1.4.1`** · API level **`1`** · MC `1.12.2` · author / 作者: WuXiaoYa
 
 ---
 
@@ -50,7 +50,7 @@ From the repo root / 在仓库根目录执行：
 
 Output / 产物：
 
-- `build/libs/MMCEGE-1.4.0.jar`
+- `build/libs/MMCEGE-1.4.1.jar`
 
 GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `MMCEGE-<commit-sha>` artifact to let testers build without using the local machine.
 GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `MMCEGE-<commit-sha>` artifact 即可，不需要本机编译。
@@ -244,11 +244,14 @@ Buttons are defined per-machine (`buttons[]`) and validated server-side by a pol
 - `page` — client-side page switch / 纯客户端页面切换
 - `subgui` — open a configured sub GUI / 打开已配置的子 GUI
 - `close_subgui` — close the current sub GUI / 关闭当前子 GUI
-- `event` — fire MMCE `ControllerButtonClickEvent` server-side / 在服务端触发 MMCE 按钮点击事件
+- `event` — fire MMCEGE `ControllerButtonClickEvent` once on the server / 在服务端触发一次 MMCEGE 按钮点击事件
 - `smart_set` / `smart_add` — set / add a Smart Interface value (with optional min/max clamp) / 设置 / 累加 Smart Interface 值（可选 min/max 限幅）
 
 Buttons may also define `hotkey` / `hotkeys` (for example `C`, `ctrl+C`, `shift+G`). Controller-level `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` create invisible GUI-only buttons, useful for opening `subgui` modal windows or triggering the same actions without a visible button. Hotkeys are active only while the controller GUI is open, and text fields keep priority while focused.
 按钮也可以写 `hotkey` / `hotkeys`（例如 `C`、`ctrl+C`、`shift+G`）。控制器级 `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` 会创建不可见的 GUI 内热键按钮，适合用键盘打开 `subgui` 浮窗或触发同一套按钮动作。热键只在当前控制器 GUI 打开时生效，文本框聚焦时优先输入文本。
+
+Register `event` handlers with `mods.mmceguiext.MMCEGEEvents.onControllerButtonClick`. Both `machine_path` and `namespace:machine_path` are accepted, and alias registrations are deduplicated. The event is already server-side, so scripts do not need a `world.isRemote()` guard.
+使用 `mods.mmceguiext.MMCEGEEvents.onControllerButtonClick` 注册 `event` 处理器。机器名可写 `machine_path` 或 `namespace:machine_path`，别名注册会自动去重。事件本身只在服务端触发，脚本无需再判断 `world.isRemote()`。
 
 See `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `controller-button-test.json`, `subgui-page-reference.json`.
 示例见 `examples/quick-start/` 下相应文件。

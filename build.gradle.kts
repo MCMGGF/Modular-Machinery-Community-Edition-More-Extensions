@@ -1,11 +1,11 @@
 plugins {
     id("java-library")
     id("maven-publish")
-    id("com.gtnewhorizons.retrofuturagradle") version "1.4.1"
+    id("com.gtnewhorizons.retrofuturagradle") version "1.4.9"
 }
 
 group = "com.fushu.mmce"
-version = "1.4.0"
+version = "1.4.1"
 
 java {
     withSourcesJar()
@@ -101,6 +101,8 @@ dependencies {
 
     compileOnly("CraftTweaker2:CraftTweaker2-API:4.1.20.715")
     compileOnly("CraftTweaker2:CraftTweaker2-MC1120-Main:1.12-4.1.20.715")
+    testCompileOnly("CraftTweaker2:CraftTweaker2-API:4.1.20.715")
+    testCompileOnly("CraftTweaker2:CraftTweaker2-MC1120-Main:1.12-4.1.20.715")
     testRuntimeOnly("CraftTweaker2:CraftTweaker2-API:4.1.20.715")
     testRuntimeOnly("CraftTweaker2:CraftTweaker2-MC1120-Main:1.12-4.1.20.715")
     val craftTweakerModsDir = System.getenv("MMCEGE_CRAFTTWEAKER_MODS_DIR")

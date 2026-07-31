@@ -123,10 +123,12 @@ Virtual DataPort: write values even without a physical port. Recommended read (c
 - `page` — client-side page switch.
 - `subgui` — open a configured sub GUI.
 - `close_subgui` — close the current sub GUI.
-- `event` — fire MMCE `ControllerButtonClickEvent` server-side.
+- `event` — fire one MMCEGE `ControllerButtonClickEvent` on the server.
 - `smart_set` / `smart_add` — set / add a Smart Interface value (optional min/max clamp).
 
 Use `hotkey` / `hotkeys` on a button for GUI-local shortcuts. Top-level `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` create invisible hotkey-only actions; for example, `C` can open a modal sub GUI and `ESCAPE` can run `close_subgui`. Hotkeys are only active while the controller GUI is open, and focused text fields keep normal typing priority.
+
+Register `event` handlers with `mods.mmceguiext.MMCEGEEvents.onControllerButtonClick`. Machine keys may use either `machine_path` or `namespace:machine_path`; registrations of the same handler through both aliases are deduplicated. The event is already server-side, so no `world.isRemote()` guard is required.
 
 Examples: `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `controller-button-test.json`, `subgui-page-reference.json`.
 

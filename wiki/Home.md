@@ -1,6 +1,6 @@
 # MMCEGE Wiki
 
-**Modular Machinery: Community Edition — GUI Edit (MMCEGE)** · MC `1.12.2` · version `1.1.0-beta`
+**Modular Machinery: Community Edition — GUI Edit (MMCEGE)** · MC `1.12.2` · version `1.4.1`
 
 > Language / 语言: **English** below · [跳转到中文](#中文)
 
@@ -35,7 +35,7 @@ MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova 
 
 ```powershell
 .\mmce-src\gradlew.bat -p .\mmce-gui-ext build
-# -> mmce-gui-ext/build/libs/MMCEGE-1.1.0-beta.jar
+# -> mmce-gui-ext/build/libs/MMCEGE-1.4.1.jar
 ```
 
 ---
@@ -43,7 +43,7 @@ MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova 
 <a name="中文"></a>
 # 中文
 
-**Modular Machinery: Community Edition — GUI Edit (MMCEGE)** · MC `1.12.2` · 版本 `1.1.0-beta`
+**Modular Machinery: Community Edition — GUI Edit (MMCEGE)** · MC `1.12.2` · 版本 `1.4.1`
 
 MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组，包含四个子系统：
 
@@ -76,5 +76,5 @@ MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附
 
 ```powershell
 .\mmce-src\gradlew.bat -p .\mmce-gui-ext build
-# -> mmce-gui-ext/build/libs/MMCEGE-1.1.0-beta.jar
+# -> mmce-gui-ext/build/libs/MMCEGE-1.4.1.jar
 ```
