@@ -229,6 +229,52 @@ public class MachineGuiStyleParserTest {
     }
 
     @Test
+    public void parseMachineJsonAcceptsAutomaticThreadScrollbarHeight() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "thread-scrollbar-auto-height.json",
+            "{\n" +
+                "  \"registryname\": \"demo:thread_scrollbar_auto\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"factoryController\": {\n" +
+                "      \"threadScrollbar\": {\n" +
+                "        \"height\": -1\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.factoryStyle);
+        assertNotNull(result.factoryStyle.threadScrollbar);
+        assertEquals(Integer.valueOf(-1), result.factoryStyle.threadScrollbar.height);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonRejectsInvalidAutomaticThreadScrollbarHeights() {
+        for (int invalidHeight : new int[] {0, -2}) {
+            MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+                "thread-scrollbar-invalid-auto-height-" + invalidHeight + ".json",
+                "{\n" +
+                    "  \"registryname\": \"demo:thread_scrollbar_invalid_auto\",\n" +
+                    "  \"mmce_gui_ext\": {\n" +
+                    "    \"factoryController\": {\n" +
+                    "      \"threadScrollbar\": {\n" +
+                    "        \"height\": " + invalidHeight + "\n" +
+                    "      }\n" +
+                    "    }\n" +
+                    "  }\n" +
+                    "}"
+            );
+
+            assertNotNull(result.factoryStyle);
+            assertNotNull(result.factoryStyle.threadScrollbar);
+            assertNull(result.factoryStyle.threadScrollbar.height);
+            assertTrue(containsWarning(result, "factoryController.threadScrollbar.height must be >= 1 or -1 for automatic height"));
+        }
+    }
+
+    @Test
     public void parseMachineJsonRejectsOutOfRangeThreadQueueSizes() {
         MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
             "thread-layout-invalid.json",

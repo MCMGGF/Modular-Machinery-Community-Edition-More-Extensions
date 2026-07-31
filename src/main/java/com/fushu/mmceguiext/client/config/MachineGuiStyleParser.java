@@ -518,7 +518,11 @@ final class MachineGuiStyleParser {
         style.x = validateRangeInt(getInt(obj, result, itemScope, "x"), -MAX_COMPONENT_SIZE, MAX_COMPONENT_SIZE, result, itemScope, "x");
         style.y = validateRangeInt(getInt(obj, result, itemScope, "y"), -MAX_COMPONENT_SIZE, MAX_COMPONENT_SIZE, result, itemScope, "y");
         style.width = validateRangeInt(getInt(obj, result, itemScope, "width", "w"), 1, MAX_COMPONENT_SIZE, result, itemScope, "width");
-        style.height = validateRangeInt(getInt(obj, result, itemScope, "height", "h"), 1, MAX_COMPONENT_SIZE, result, itemScope, "height");
+        style.height = validateThreadScrollbarHeight(
+            getInt(obj, result, itemScope, "height", "h"),
+            result,
+            itemScope
+        );
         style.trackTexture = getTrimmedString(obj, result, itemScope, "trackTexture", "track_texture", "texture");
         style.thumbTexture = getTrimmedString(obj, result, itemScope, "thumbTexture", "thumb_texture", "handleTexture", "handle_texture");
         style.trackColor = getColor(obj, result, itemScope, "trackColor", "track_color", "backgroundColor", "background_color", "bgColor", "bg_color");
@@ -530,6 +534,29 @@ final class MachineGuiStyleParser {
         style.thumbMinHeight = validateRangeInt(getInt(obj, result, itemScope, "thumbMinHeight", "thumb_min_height", "minThumbHeight", "min_thumb_height"), 1, MAX_COMPONENT_SIZE, result, itemScope, "thumbMinHeight");
         style.visible = getBoolean(obj, result, itemScope, "visible", "show", "enabled");
         return style;
+    }
+
+    @Nullable
+    private static Integer validateThreadScrollbarHeight(
+        @Nullable Integer value,
+        MachineFileParseResult result,
+        String scope
+    ) {
+        if (value == null) {
+            return null;
+        }
+        if (value.intValue() == -1) {
+            return value;
+        }
+        if (value.intValue() < 1) {
+            result.warn(field(scope, "height") + " must be >= 1 or -1 for automatic height.");
+            return null;
+        }
+        if (value.intValue() > MAX_COMPONENT_SIZE) {
+            result.warn(field(scope, "height") + " must be <= " + MAX_COMPONENT_SIZE + ".");
+            return null;
+        }
+        return value;
     }
 
     @Nullable

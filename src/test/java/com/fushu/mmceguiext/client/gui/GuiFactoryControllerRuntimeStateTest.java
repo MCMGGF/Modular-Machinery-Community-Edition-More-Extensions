@@ -206,6 +206,36 @@ public class GuiFactoryControllerRuntimeStateTest {
     }
 
     @Test
+    public void factoryThreadScrollbarAutomaticHeightUsesVisibleQueueHeight() throws Exception {
+        GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
+        MachineGuiStyleManager.ControllerStyle style = new MachineGuiStyleManager.ControllerStyle();
+        style.threadScrollbar = new MachineGuiStyleManager.ThreadScrollbarStyle();
+        style.threadScrollbar.height = Integer.valueOf(-1);
+        set(gui, "styleOverride", style);
+
+        assertEquals(
+            Integer.valueOf(197),
+            invoke(
+                gui,
+                "getThreadScrollbarHeight",
+                new Class<?>[] {int.class},
+                Integer.valueOf(197)
+            )
+        );
+
+        style.threadScrollbar.height = Integer.valueOf(123);
+        assertEquals(
+            Integer.valueOf(123),
+            invoke(
+                gui,
+                "getThreadScrollbarHeight",
+                new Class<?>[] {int.class},
+                Integer.valueOf(197)
+            )
+        );
+    }
+
+    @Test
     public void factoryActiveSliderDragIsHandledBeforeBackgroundRouting() throws Exception {
         GuiFactoryControllerResizable gui = allocateGuiWithRuntimeDefaults();
         Object slider = newSlider("dragged", 10, 10, 80, 12);

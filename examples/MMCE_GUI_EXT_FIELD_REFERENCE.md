@@ -424,8 +424,8 @@ This file is a quick reference for pack authors.
   - CN: 集成控制器线程队列滚动条结构化配置。只写这个对象也会触发集成控制器自代理 GUI。
   - EN: Structured scrollbar config for the factory thread queue. This object alone can trigger the integrated-controller self proxy.
   - Fields: `x`, `y`, `width`, `height`, `trackTexture`, `thumbTexture`, `trackColor`, `thumbColor`, `textureWidth`, `textureHeight`, `thumbTextureWidth`, `thumbTextureHeight`, `thumbMinHeight`, `visible`.
-  - CN: `trackTexture` / `thumbTexture` 为空时分别回退到 `trackColor` / `thumbColor`；`height` 不写或全局 cfg 设 `-1` 时按可见行数自动计算。
-  - EN: Empty `trackTexture` / `thumbTexture` fall back to `trackColor` / `thumbColor`; missing `height` or global cfg `-1` uses automatic height from visible rows.
+  - CN: `trackTexture` / `thumbTexture` 为空时分别回退到 `trackColor` / `thumbColor`；`height` 不写、写 `-1`，或全局 cfg 设 `-1` 时按可见行数自动计算；正数表示固定高度。
+  - EN: Empty `trackTexture` / `thumbTexture` fall back to `trackColor` / `thumbColor`; missing `height`, `height: -1`, or global cfg `-1` uses automatic height from visible rows; positive values remain explicit heights.
 - `threadVisibleRows`
   - CN: 工厂线程队列可见行数，优先级高于全局 `queueVisibleRows`。
   - EN: Visible rows in the factory thread queue. Overrides global `queueVisibleRows`.

@@ -1976,10 +1976,11 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     private int getThreadScrollbarHeight(int autoHeight) {
         MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
         if (scrollbar != null && scrollbar.height != null) {
-            return Math.max(1, scrollbar.height.intValue());
+            int configured = scrollbar.height.intValue();
+            return configured > 0 ? configured : Math.max(1, autoHeight);
         }
         int configured = MMCEGuiExtConfig.factoryController.threadScrollbar.height;
-        return configured >= 0 ? Math.max(1, configured) : Math.max(1, autoHeight);
+        return configured > 0 ? configured : Math.max(1, autoHeight);
     }
 
     private boolean isThreadScrollbarVisible() {
