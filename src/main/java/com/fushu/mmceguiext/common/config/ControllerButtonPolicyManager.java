@@ -29,7 +29,6 @@ import java.util.stream.Stream;
 
 public final class ControllerButtonPolicyManager {
     private static final long RELOAD_INTERVAL_MS = 5000L;
-    private static final long MAX_MACHINE_CONFIG_BYTES = 1024L * 1024L;
     private static final String MACHINERY_DIR = "modularmachinery/machinery";
     private static final String SUBGUI_DIR = "mmceguiext/subgui";
     private static final String STYLE_DIR = "mmceguiext/styles";
@@ -255,8 +254,10 @@ public final class ControllerButtonPolicyManager {
 
     private static void loadMachineJson(Path path) {
         try {
-            if (Files.size(path) > MAX_MACHINE_CONFIG_BYTES) {
-                LOGGER.warn("Skipping MMCE GUI ext button policy {} because it is larger than {} bytes.", path, MAX_MACHINE_CONFIG_BYTES);
+            long fileSize = Files.size(path);
+            long maxFileSize = MMCEGuiExtConfig.getMaxGuiConfigFileBytes();
+            if (!MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(fileSize)) {
+                LOGGER.warn("Skipping MMCE GUI ext button policy {} because it is larger than {} bytes.", path, maxFileSize);
                 return;
             }
             JsonElement rootElement = new JsonParser().parse(new String(Files.readAllBytes(path), StandardCharsets.UTF_8));

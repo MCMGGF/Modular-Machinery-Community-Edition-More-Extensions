@@ -26,7 +26,7 @@ MMCEGE 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineContro
 - Smart Interface 编辑器：`enableSmartInterfaceEditor`、`smartInterfaceEditorX`/`Y`（`-1`=自动右下）、`smartInterfaceEditorInputWidth`、`smartInterfaceEditorVirtualKey`（无绑定 DataPort 时写入控制器 `customData[key]`，多个 key 用 `,` 或 `;` 分隔）
 - 仅工厂：`factoryController.specialThreadBackgroundColor`（十六进制 `RRGGBB` 或 `AARRGGBB`，核心/特殊线程行着色）
 
-全局开关 `enabled`、滚轮步长 `wheelStep` 等也在此文件。可参考 `examples/game-ready-1.0.1/client.cfg.sample`。
+全局开关 `enabled`、滚轮步长 `wheelStep` 等也在此文件。`maxGuiConfigFileSizeMiB` 默认是 `8`，用于设置机器 GUI、独立样式、subGUI 和外链 GUI 样式的文件大小上限，范围为 `1-64`；它不改变自定义仓口和 AE 总线 JSON 的限制。可参考 `examples/game-ready-1.0.1/client.cfg.sample`。
 
 **背景规则**：有自定义贴图 → 用自定义贴图；没有 → 用 MMCE 默认贴图；没有且 `hideDefaultBackground=true` → 不画背景。使用 MMCE 默认贴图时信息文本仍在原信息区渲染；多信息区仅在自定义贴图模式下启用。
 

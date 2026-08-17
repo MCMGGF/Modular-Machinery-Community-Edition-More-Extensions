@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.client.config;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.client.gui.GlobalTextureLayerConfig;
 import com.fushu.mmceguiext.client.gui.GuiRenderUtils;
 import com.google.gson.JsonArray;
@@ -25,7 +26,6 @@ import java.util.List;
 public final class GlobalGuiStyleManager {
     private static final Logger LOGGER = LogManager.getLogger(MMCEGuiExt.MODID);
     private static final Path STYLE_DIR = resolveStyleDir();
-    private static final long MAX_STYLE_FILE_BYTES = 1024L * 1024L;
     private static final int MAX_TEXTS = 512;
     private static final int MAX_LAYERS = 256;
     private static final int MAX_OFFSET = 1024;
@@ -52,8 +52,10 @@ public final class GlobalGuiStyleManager {
             return StyleFile.EMPTY;
         }
         try {
-            if (Files.size(path) > MAX_STYLE_FILE_BYTES) {
-                LOGGER.warn("MMCE GUI ext style file {} is larger than {} bytes.", path, MAX_STYLE_FILE_BYTES);
+            long fileSize = Files.size(path);
+            long maxFileSize = MMCEGuiExtConfig.getMaxGuiConfigFileBytes();
+            if (!MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(fileSize)) {
+                LOGGER.warn("MMCE GUI ext style file {} is larger than {} bytes.", path, maxFileSize);
                 return StyleFile.EMPTY;
             }
             String text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);

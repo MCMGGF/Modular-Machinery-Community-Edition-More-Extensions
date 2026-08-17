@@ -1,13 +1,19 @@
 package com.fushu.mmceguiext.client.config;
 
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import net.minecraft.util.ResourceLocation;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
@@ -65,11 +71,59 @@ public class MachineGuiStyleManagerTest {
         assertEquals("cached", second.texts.get(0).value);
     }
 
+    @Test
+    public void oversizedMachineGuiJsonUsesConfiguredLimit() throws Exception {
+        int previousLimit = MMCEGuiExtConfig.maxGuiConfigFileSizeMiB;
+        Map<String, MachineGuiStyleManager.ControllerStyle> styles = machineControllerStyles();
+        styles.clear();
+        Path allowed = Files.createTempFile("mmcege-large-machine-allowed", ".json");
+        Path rejected = Files.createTempFile("mmcege-large-machine-rejected", ".json");
+        try {
+            Files.write(allowed, largeMachineJson("demo:large_allowed", 1_048_600).getBytes(StandardCharsets.UTF_8));
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 8;
+            invokeLoadMachineJson(allowed);
+            assertTrue(styles.containsKey("demo:large_allowed"));
+
+            Files.write(rejected, largeMachineJson("demo:large_rejected", 1_048_600).getBytes(StandardCharsets.UTF_8));
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 1;
+            invokeLoadMachineJson(rejected);
+            assertFalse(styles.containsKey("demo:large_rejected"));
+        } finally {
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = previousLimit;
+            styles.clear();
+            Files.deleteIfExists(allowed);
+            Files.deleteIfExists(rejected);
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private static Map<String, MachineGuiStyleManager.ControllerStyle> externalMachineStyles() throws Exception {
         Field field = MachineGuiStyleManager.class.getDeclaredField("EXTERNAL_MACHINE_CONTROLLER_STYLES");
         field.setAccessible(true);
         return (Map<String, MachineGuiStyleManager.ControllerStyle>) field.get(null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, MachineGuiStyleManager.ControllerStyle> machineControllerStyles() throws Exception {
+        Field field = MachineGuiStyleManager.class.getDeclaredField("MACHINE_CONTROLLER_STYLES");
+        field.setAccessible(true);
+        return (Map<String, MachineGuiStyleManager.ControllerStyle>) field.get(null);
+    }
+
+    private static void invokeLoadMachineJson(Path path) throws Exception {
+        Method method = MachineGuiStyleManager.class.getDeclaredMethod("loadMachineJson", Path.class);
+        method.setAccessible(true);
+        method.invoke(null, path);
+    }
+
+    private static String largeMachineJson(String registryName, int paddingLength) {
+        StringBuilder padding = new StringBuilder(paddingLength);
+        while (padding.length() < paddingLength) {
+            padding.append('x');
+        }
+        return "{\"registryname\":\"" + registryName + "\","
+            + "\"mmce_gui_ext\":{\"machineController\":{\"texts\":[]}},"
+            + "\"padding\":\"" + padding + "\"}";
     }
 
     private static MachineGuiStyleManager.ControllerStyle styleWithText(String value) {

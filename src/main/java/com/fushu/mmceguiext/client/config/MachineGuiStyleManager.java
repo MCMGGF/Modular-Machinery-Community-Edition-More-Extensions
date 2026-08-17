@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.client.config;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import hellfirepvp.modularmachinery.common.machine.DynamicMachine;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.Loader;
@@ -20,7 +21,6 @@ import java.util.stream.Stream;
 
 public final class MachineGuiStyleManager {
     private static final long RELOAD_INTERVAL_MS = 5000L;
-    private static final long MAX_MACHINE_STYLE_FILE_BYTES = 1024L * 1024L;
     private static final String MACHINERY_DIR = "modularmachinery/machinery";
     private static final String STYLE_DIR = "mmceguiext/styles";
     private static final Logger LOGGER = LogManager.getLogger(MMCEGuiExt.MODID);
@@ -241,9 +241,11 @@ public final class MachineGuiStyleManager {
 
     private static void loadControllerStyleJson(Path path, String sourceKind) {
         try {
-            if (Files.size(path) > MAX_MACHINE_STYLE_FILE_BYTES) {
+            long fileSize = Files.size(path);
+            long maxFileSize = MMCEGuiExtConfig.getMaxGuiConfigFileBytes();
+            if (!MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(fileSize)) {
                 LOGGER.warn("Skipping MMCE GUI ext {} config {} because it is larger than {} bytes.",
-                    sourceKind, path, MAX_MACHINE_STYLE_FILE_BYTES);
+                    sourceKind, path, maxFileSize);
                 return;
             }
             String content = new String(Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8);
@@ -278,8 +280,10 @@ public final class MachineGuiStyleManager {
 
     private static void loadSubGuiJson(Path path) {
         try {
-            if (Files.size(path) > MAX_MACHINE_STYLE_FILE_BYTES) {
-                LOGGER.warn("Skipping MMCE GUI ext subGUI config {} because it is larger than {} bytes.", path, MAX_MACHINE_STYLE_FILE_BYTES);
+            long fileSize = Files.size(path);
+            long maxFileSize = MMCEGuiExtConfig.getMaxGuiConfigFileBytes();
+            if (!MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(fileSize)) {
+                LOGGER.warn("Skipping MMCE GUI ext subGUI config {} because it is larger than {} bytes.", path, maxFileSize);
                 return;
             }
             MachineGuiStyleParser.MachineFileParseResult parsed = SubGuiConfigLoader.loadSubGuiJson(path);

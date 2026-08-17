@@ -43,4 +43,29 @@ public class MMCEGuiExtConfigTest {
 
         assertFalse(experimental.enableLongFluidGasRequirements);
     }
+
+    @Test
+    public void guiConfigFileSizeLimitUsesMiBAndClampsInvalidValues() {
+        int previous = MMCEGuiExtConfig.maxGuiConfigFileSizeMiB;
+        assertEquals(8, previous);
+        try {
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 8;
+            assertEquals(8L * 1024L * 1024L, MMCEGuiExtConfig.getMaxGuiConfigFileBytes());
+            assertFalse(MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(-1L));
+            assertTrue(MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(8L * 1024L * 1024L));
+            assertFalse(MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(8L * 1024L * 1024L + 1L));
+
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 1;
+            assertEquals(1L * 1024L * 1024L, MMCEGuiExtConfig.getMaxGuiConfigFileBytes());
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 64;
+            assertEquals(64L * 1024L * 1024L, MMCEGuiExtConfig.getMaxGuiConfigFileBytes());
+
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 0;
+            assertEquals(1L * 1024L * 1024L, MMCEGuiExtConfig.getMaxGuiConfigFileBytes());
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 65;
+            assertEquals(64L * 1024L * 1024L, MMCEGuiExtConfig.getMaxGuiConfigFileBytes());
+        } finally {
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = previous;
+        }
+    }
 }

@@ -1,5 +1,6 @@
 package com.fushu.mmceguiext.common.config;
 
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -186,6 +187,36 @@ public class ControllerButtonPolicyManagerTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    public void reloadUsesConfiguredGuiFileLimitForServerPolicies() throws Exception {
+        int previousLimit = MMCEGuiExtConfig.maxGuiConfigFileSizeMiB;
+        Path configDir = Files.createTempDirectory("mmceguiext-large-policy-test");
+        Path stylesDir = configDir.resolve("mmceguiext").resolve("styles");
+        Files.createDirectories(stylesDir);
+        Path styleFile = stylesDir.resolve("large_controller.json");
+        Files.write(
+            styleFile,
+            largePolicyJson("demo:large_policy", 1_048_600).getBytes(StandardCharsets.UTF_8)
+        );
+
+        try {
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 8;
+            ControllerButtonPolicyManager.reload(configDir);
+            Field machineButtons = ControllerButtonPolicyManager.class.getDeclaredField("MACHINE_BUTTONS");
+            machineButtons.setAccessible(true);
+            Map<String, List<ControllerButtonPolicyManager.ButtonPolicy>> buttonMap =
+                (Map<String, List<ControllerButtonPolicyManager.ButtonPolicy>>) machineButtons.get(null);
+            assertNotNull(buttonMap.get("demo:large_policy"));
+
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 1;
+            ControllerButtonPolicyManager.reload(configDir);
+            assertNull(buttonMap.get("demo:large_policy"));
+        } finally {
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = previousLimit;
+        }
+    }
+
+    @Test
     public void providedStyleKeyIsNormalizedForPolicyLookup() throws Exception {
         Path configDir = Files.createTempDirectory("mmceguiext-style-key-test");
         Path stylesDir = configDir.resolve("mmceguiext").resolve("styles");
@@ -216,6 +247,17 @@ public class ControllerButtonPolicyManagerTest {
         public ResourceLocation getMachineControllerGuiStyle() {
             return new ResourceLocation("mmceoneblock:starter_controller");
         }
+    }
+
+    private static String largePolicyJson(String registryName, int paddingLength) {
+        StringBuilder padding = new StringBuilder(paddingLength);
+        while (padding.length() < paddingLength) {
+            padding.append('x');
+        }
+        return "{\"registryname\":\"" + registryName + "\","
+            + "\"mmce_gui_ext\":{\"machineController\":{"
+            + "\"buttons\":[{\"id\":\"run\",\"action\":\"event\"}]"
+            + "}},\"padding\":\"" + padding + "\"}";
     }
 
     private static ControllerButtonPolicyManager.ButtonPolicy parseButton(String json) throws Exception {

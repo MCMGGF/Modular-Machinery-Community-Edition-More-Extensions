@@ -109,6 +109,8 @@ Important keys / 重要键：
 - `machineController.smartInterfaceEditorY` (`-1` = auto right-bottom)
 - `machineController.smartInterfaceEditorInputWidth`
 - `machineController.smartInterfaceEditorVirtualKey` (used when no bound DataPort, writes to controller `customData[key]`; supports multiple keys split by `,` or `;`)
+- `maxGuiConfigFileSizeMiB` (default `8`, range `1-64`) sets the maximum size of MMCEGE GUI JSON files in `config/modularmachinery/machinery`, `config/mmceguiext/styles`, `config/mmceguiext/subgui`, and external GUI style files. It does not change custom hatch or custom AE bus JSON limits.
+  / `maxGuiConfigFileSizeMiB`（默认 `8`，范围 `1-64`）设置 MMCEGE GUI JSON 文件上限，包括机器 GUI、独立样式、subGUI 和外链 GUI 样式；不会改变自定义仓口或 AE 总线 JSON 的限制。
 - `factoryController.*` — same keys as `machineController.*` / 与 `machineController.*` 同名键
 - `factoryController.specialThreadBackgroundColor` (hex `RRGGBB` or `AARRGGBB`, for core/special thread row tint / 十六进制颜色，用于核心/特殊线程行着色)
 - `factoryController.threadQueueX/Y`, `threadVisibleRows`, `threadRowWidth/Height` customize the integrated-controller thread queue and can trigger self-proxy replacement by themselves.

@@ -7,6 +7,9 @@ public class MMCEGuiExtConfig {
     private static final String LEGACY_DEFAULT_SMART_INTERFACE_KEY = "mmcege_virtual_port";
     private static final String LEGACY_SAMPLE_SMART_INTERFACE_KEY_A = "demo_default_port_a";
     private static final String LEGACY_SAMPLE_SMART_INTERFACE_KEY_B = "demo_default_port_b";
+    private static final int MIN_GUI_CONFIG_FILE_SIZE_MIB = 1;
+    private static final int MAX_GUI_CONFIG_FILE_SIZE_MIB = 64;
+    private static final int DEFAULT_GUI_CONFIG_FILE_SIZE_MIB = 8;
 
     @Config.Comment("总开关：是否启用所有控制器 GUI 替换 / Master switch for all controller GUI replacements.")
     public static boolean enabled = true;
@@ -14,6 +17,10 @@ public class MMCEGuiExtConfig {
     @Config.Comment("信息区鼠标滚轮步长（像素） / Mouse wheel scroll step in pixels for info panels.")
     @Config.RangeInt(min = 2, max = 64)
     public static int wheelStep = 10;
+
+    @Config.Comment("MMCEGE GUI JSON 文件大小上限（MiB），用于机器 GUI、独立样式、subGUI 和外链 GUI 样式 / Maximum size of MMCEGE GUI JSON files in MiB. Applies to machine GUI, standalone style, subGUI, and external GUI style files.")
+    @Config.RangeInt(min = MIN_GUI_CONFIG_FILE_SIZE_MIB, max = MAX_GUI_CONFIG_FILE_SIZE_MIB)
+    public static int maxGuiConfigFileSizeMiB = DEFAULT_GUI_CONFIG_FILE_SIZE_MIB;
 
     @Config.Comment("Nova Engineering Core 兼容模式：手动开启后预热并固定 MMCE GUI 样式缓存，避免首次打开 GUI 时扫描机器 JSON / NovaEngineering-Core compatibility mode: manually enable to preload and pin MMCE GUI style cache, avoiding machine JSON scans on first GUI open.")
     public static boolean novaEngCoreCompatibilityMode = false;
@@ -182,6 +189,20 @@ public class MMCEGuiExtConfig {
             return "";
         }
         return raw;
+    }
+
+    public static long getMaxGuiConfigFileBytes() {
+        int sizeMiB = maxGuiConfigFileSizeMiB;
+        if (sizeMiB < MIN_GUI_CONFIG_FILE_SIZE_MIB) {
+            sizeMiB = MIN_GUI_CONFIG_FILE_SIZE_MIB;
+        } else if (sizeMiB > MAX_GUI_CONFIG_FILE_SIZE_MIB) {
+            sizeMiB = MAX_GUI_CONFIG_FILE_SIZE_MIB;
+        }
+        return sizeMiB * 1024L * 1024L;
+    }
+
+    public static boolean isGuiConfigFileSizeAllowed(long sizeBytes) {
+        return sizeBytes >= 0L && sizeBytes <= getMaxGuiConfigFileBytes();
     }
 
     private static String normalizeSmartInterfaceKey(String raw) {

@@ -2,6 +2,7 @@
 
 general {
     B:enabled=true
+    I:maxGuiConfigFileSizeMiB=8
     I:wheelStep=10
 
     machinecontroller {

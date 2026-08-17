@@ -26,7 +26,7 @@ Styles come from two layers; per-machine wins, falling back to global:
 - Smart Interface editor: `enableSmartInterfaceEditor`, `smartInterfaceEditorX`/`Y` (`-1` = auto bottom-right), `smartInterfaceEditorInputWidth`, `smartInterfaceEditorVirtualKey` (writes to controller `customData[key]` when no DataPort is bound; multiple keys split by `,` or `;`)
 - Factory only: `factoryController.specialThreadBackgroundColor` (hex `RRGGBB` or `AARRGGBB`, tint for core/special thread rows)
 
-The global switch `enabled`, scroll step `wheelStep`, etc. live here too. See `examples/game-ready-1.0.1/client.cfg.sample`.
+The global switch `enabled`, scroll step `wheelStep`, etc. live here too. `maxGuiConfigFileSizeMiB` defaults to `8` and controls the file size limit for machine GUI, standalone style, subGUI, and external GUI style JSON files; its range is `1-64`. It does not change custom hatch or custom AE bus JSON limits. See `examples/game-ready-1.0.1/client.cfg.sample`.
 
 **Background rules**: custom texture present → use it; absent → use MMCE default; absent and `hideDefaultBackground=true` → draw no background. When the MMCE default texture is used, info text stays in the original info area; multi-panel mode is enabled only in custom-texture mode.
 
