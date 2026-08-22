@@ -1,10 +1,12 @@
-# MMCEGE Wiki
+# MMCE More Extensions Wiki (MMCEME)
 
-**Modular Machinery: Community Edition — GUI Edit (MMCEGE)** · MC `1.12.2` · version `1.1.0-beta`
+**MMCE More Extensions (MMCEME)** · MC `1.12.2` · version `1.1.0-beta`
 
 > Language / 语言: **English** below · [跳转到中文](#中文)
 
-MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork). It bundles four subsystems:
+MMCE More Extensions is the renamed continuation of **MMCE GUI Edit (MMCEGE)**. It is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork) and bundles four subsystems:
+
+> The public brand changed because the project now covers more than GUI editing. The mod id, configuration path, Java packages, public API, and CraftTweaker namespace remain unchanged.
 
 | Subsystem | What it gives you | Page |
 |---|---|---|
@@ -18,7 +20,7 @@ MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova 
 - **Required**: `modularmachinery` (CE), `appliedenergistics2` (AE2 Extended Life), `mekanism`, `mekeng` (Mekanism Energistics)
 - **Optional**: The One Probe, AE2 Fluid Crafting Rework, GregTech CE, HEI/JEI, GeckoLib
 
-### Config directories MMCEGE reads at startup
+### Config directories MMCEME reads at startup
 
 | Path | Purpose |
 |---|---|
@@ -43,9 +45,11 @@ MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova 
 <a name="中文"></a>
 # 中文
 
-**Modular Machinery: Community Edition — GUI Edit (MMCEGE)** · MC `1.12.2` · 版本 `1.1.0-beta`
+**MMCE 更多扩展（MMCEME）** · MC `1.12.2` · 版本 `1.1.0-beta`
 
-MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组，包含四个子系统：
+MMCE 更多扩展是 **MMCE GUI Edit（MMCEGE）** 的改名延续项目，属于 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组，包含四个子系统：
+
+> 本项目从 GUI 编辑器扩展为更多 MMCE 扩展，因此更新了面向玩家的品牌名称。为保持兼容，mod id、配置路径、Java 包名、公开 API 和 CraftTweaker 命名空间保持不变。
 
 | 子系统 | 作用 | 页面 |
 |---|---|---|
@@ -59,7 +63,7 @@ MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附
 - **必需**：`modularmachinery`（CE）、`appliedenergistics2`（AE2 Extended Life）、`mekanism`、`mekeng`（Mekanism Energistics）
 - **可选**：The One Probe、AE2 Fluid Crafting Rework、GregTech CE、HEI/JEI、GeckoLib
 
-### MMCEGE 启动时读取的配置目录
+### MMCEME 启动时读取的配置目录
 
 | 路径 | 用途 |
 |---|---|
