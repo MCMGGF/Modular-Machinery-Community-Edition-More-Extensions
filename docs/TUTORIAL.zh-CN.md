@@ -1,8 +1,8 @@
-# MMCEGE 1.1.0-beta 完整教程（可直接进游戏）
+# MMCE 更多扩展（MMCEME）1.1.0-beta 完整教程（可直接进游戏）
 
 本目录提供的是“可直接加载”的示例，不是伪代码。
 
-MMCEGE 目前包含四大功能，本教程按部分组织：
+MMCE 更多扩展（MMCEME）是 MMCE GUI Edit（MMCEGE）的改名延续项目，目前包含四大功能。本教程按部分组织：
 
 - **第一部分 · 控制器 GUI**（第 1–8 章）：替换 / 自定义普通与集成控制器的 GUI。
 - **第二部分 · 自定义仓口（Hatch）**（第 9 章）：用 JSON 定义新的流体 / 气体 / 物品 / 能量仓口方块。
@@ -446,7 +446,7 @@ MMCEGE 目前包含四大功能，本教程按部分组织：
 
 ## 11. 突破 int 上限的流体 / 气体配方
 
-MMCE 的 `RequirementFluid` / `RequirementGas` 用 `int` 存配方 `amount`，超过约 **21 亿 mB** 会溢出。MMCEGE 通过 Mixin 改造需求系统，使流体 / 气体量以 **long** 解析与处理。
+MMCE 的 `RequirementFluid` / `RequirementGas` 用 `int` 存配方 `amount`，超过约 **21 亿 mB** 会溢出。MMCEME 通过 Mixin 改造需求系统，使流体 / 气体量以 **long** 解析与处理。
 
 **无需任何配置** —— 直接在 MMCE 配方 JSON 里写大数值即可：
 

@@ -1,7 +1,9 @@
-# Modular Machinery: Community Edition Gui Edit (MMCEGE, 1.12.2)
+# MMCE More Extensions (MMCEME, 1.12.2)
 
-MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork).
-MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组。
+MMCE More Extensions (MMCEME) is the renamed continuation of **MMCE GUI Edit (MMCEGE)**, an addon for **Modular Machinery: Community Edition** (the KasumiNova fork).
+MMCE 更多扩展（MMCEME）是 **MMCE GUI Edit（MMCEGE）** 的改名延续项目，属于 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组。
+The project grew beyond GUI editing, so its public brand now reflects the broader extension set. The mod id, configuration path, Java packages, public API, and CraftTweaker namespace remain unchanged.
+本项目已经从单纯的 GUI 编辑扩展为更多 MMCE 功能，因此更新了面向玩家的品牌名称。为保持兼容，mod id、配置路径、Java 包名、公开 API 和 CraftTweaker 命名空间保持不变。
 
 It started as a controller-GUI editor, but now bundles four subsystems:
 它最初只是控制器 GUI 编辑器，目前已包含四个子系统：
@@ -48,13 +50,13 @@ From the repo root / 在仓库根目录执行：
 
 Output / 产物：
 
-- `mmce-gui-ext/build/libs/MMCEGE-1.1.0-beta.jar`
+- `mmce-gui-ext/build/libs/MMCEGE-1.1.0-beta.jar` (the technical filename remains unchanged for compatibility / 技术文件名为保持兼容暂不变)
 
-GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `MMCEGE-<commit-sha>` artifact to let testers build without using the local machine.
-GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `MMCEGE-<commit-sha>` artifact 即可，不需要本机编译。
+GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `MMCEME-<commit-sha>` artifact to let testers build without using the local machine.
+GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `MMCEME-<commit-sha>` artifact 即可，不需要本机编译。
 
-MMCEGE is a coremod (`FMLCorePlugin = com.fushu.mmceguiext.core.MMCEGuiExtEarlyMixinLoader`); its Mixins load before MMCE.
-MMCEGE 是一个 coremod（`FMLCorePlugin`），其 Mixin 会在 MMCE 之前加载。
+MMCEME is a coremod (`FMLCorePlugin = com.fushu.mmceguiext.core.MMCEGuiExtEarlyMixinLoader`); its Mixins load before MMCE.
+MMCEME 是一个 coremod（`FMLCorePlugin`），其 Mixin 会在 MMCE 之前加载。
 
 ---
 
@@ -69,7 +71,7 @@ MMCEGE 是一个 coremod（`FMLCorePlugin`），其 Mixin 会在 MMCE 之前加�
 - Smart Interface editor demo / Smart Interface 编辑器示例: `examples/smart-interface-editor-demo.json` + `.zs`
 - Controller slider demo / 控制器滑块示例: `examples/quick-start/sliders.json`
 
-Config directories MMCEGE reads at startup / MMCEGE 启动时读取的配置目录：
+Config directories MMCEME reads at startup / MMCEME 启动时读取的配置目录：
 
 | Path / 路径 | Purpose / 用途 |
 |---|---|
@@ -84,8 +86,8 @@ Config directories MMCEGE reads at startup / MMCEGE 启动时读取的配置目�
 
 # Part 1 — Controller GUI | 第一部分 · 控制器 GUI
 
-MMCEGE replaces the vanilla Machine / Factory controller GUI **only when** a custom texture, hidden default background, or per-machine style override is present. It hooks Forge's `GuiOpenEvent` and does **not** patch any MMCE GUI class.
-MMCEGE 仅在存在自定义贴图、隐藏默认背景或机器级样式覆盖时才替换原版普通/集成控制器 GUI。它挂接 Forge 的 `GuiOpenEvent`，**不修改** 任何 MMCE 的 GUI 类。
+MMCEME replaces the vanilla Machine / Factory controller GUI **only when** a custom texture, hidden default background, or per-machine style override is present. It hooks Forge's `GuiOpenEvent` and does **not** patch any MMCE GUI class.
+MMCEME 仅在存在自定义贴图、隐藏默认背景或机器级样式覆盖时才替换原版普通/集成控制器 GUI。它挂接 Forge 的 `GuiOpenEvent`，**不修改** 任何 MMCE 的 GUI 类。
 
 ## Global Config | 全局配置
 
@@ -266,8 +268,8 @@ See `examples/quick-start/sliders.json`.
 
 # Part 2 — Custom Hatches | 第二部分 · 自定义仓口
 
-Drop a `.json` into `config/mmceguiext/custom_hatches/` and MMCEGE registers a new block + item + tile at startup. Each hatch acts as an MMCE multiblock component (input/output for fluid / gas / item / energy, or a combined component) and uses **long** capacities (beyond the `int` limit).
-在 `config/mmceguiext/custom_hatches/` 放入一个 `.json`，MMCEGE 会在启动时注册新的方块 + 物品 + tile。每个仓口作为 MMCE 多方块组件（流体/气体/物品/能量的输入或输出，或组合组件），容量使用 **long**（突破 `int` 上限）。
+Drop a `.json` into `config/mmceguiext/custom_hatches/` and MMCEME registers a new block + item + tile at startup. Each hatch acts as an MMCE multiblock component (input/output for fluid / gas / item / energy, or a combined component) and uses **long** capacities (beyond the `int` limit).
+在 `config/mmceguiext/custom_hatches/` 放入一个 `.json`，MMCEME 会在启动时注册新的方块 + 物品 + tile。每个仓口作为 MMCE 多方块组件（流体/气体/物品/能量的输入或输出，或组合组件），容量使用 **long**（突破 `int` 上限）。
 
 Key top-level fields / 关键顶层字段：
 
@@ -340,8 +342,8 @@ Common JSON fields / 通用 JSON 字段：`id`, `displayName`, the GUI layout (`
 
 # Part 4 — Long-Capacity Recipe Requirements | 第四部分 · Long 容量配方需求
 
-MMCE's `RequirementFluid` / `RequirementGas` store the recipe `amount` as `int`, which overflows above ~2.1 billion mB. MMCEGE patches the requirement system (via Mixins) so fluid/gas amounts are parsed and processed as `long`.
-MMCE 的 `RequirementFluid` / `RequirementGas` 以 `int` 存储配方 `amount`，超过约 21 亿 mB 会溢出。MMCEGE 通过 Mixin 改造需求系统，使流体/气体量以 `long` 解析与处理。
+MMCE's `RequirementFluid` / `RequirementGas` store the recipe `amount` as `int`, which overflows above ~2.1 billion mB. MMCEME patches the requirement system (via Mixins) so fluid/gas amounts are parsed and processed as `long`.
+MMCE 的 `RequirementFluid` / `RequirementGas` 以 `int` 存储配方 `amount`，超过约 21 亿 mB 会溢出。MMCEME 通过 Mixin 改造需求系统，使流体/气体量以 `long` 解析与处理。
 
 **No configuration needed** — just write large `amount` values in your MMCE recipe JSON and they will be respected at parse, craft-start, finish, and parallelism checks (vanilla recipes are unaffected; int paths still work).
 **无需任何配置** — 直接在 MMCE 配方 JSON 中写大数值即可，解析、开始合成、完成、并行度计算均会正确处理（原版配方不受影响，int 路径照常工作）。

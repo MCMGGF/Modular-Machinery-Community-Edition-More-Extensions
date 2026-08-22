@@ -2,7 +2,7 @@
   // 这个模板只演示工厂控制器的队列区和右侧扩展。
   // This template only demonstrates the factory queue and right expansion.
   "registryname": "mmcege_factory_queue_demo",
-  "localizedname": "MMCEGE Factory Queue Demo / MMCEGE 工厂队列示例",
+  "localizedname": "MMCEME Factory Queue Demo / MMCEME 工厂队列示例",
   "requires-blueprint": false,
   "has-factory": true,
   "mmce_gui_ext": {

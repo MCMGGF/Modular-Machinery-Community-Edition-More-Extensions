@@ -1,4 +1,4 @@
-### MMCEGE Wiki
+### MMCE More Extensions Wiki (MMCEME)
 
 **English**
 - [Home](Home)

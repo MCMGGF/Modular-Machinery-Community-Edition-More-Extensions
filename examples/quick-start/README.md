@@ -1,6 +1,8 @@
 # Quick Start Examples
 
 This folder contains small, copy-friendly MMCE GUI extension examples.
+The project is now branded **MMCE More Extensions (MMCEME)**, formerly **MMCE GUI Edit / MMCEGE**. Technical identifiers remain unchanged for compatibility.
+本项目现名为 **MMCE 更多扩展（MMCEME）**，前身为 **MMCE GUI Edit / MMCEGE**；技术标识为保持兼容不变。
 
 Use them as a starting point:
 

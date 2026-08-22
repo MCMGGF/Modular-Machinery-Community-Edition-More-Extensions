@@ -1,7 +1,10 @@
-# MMCE GUI Ext Field Reference
+# MMCE More Extensions GUI Field Reference
 
 This file is a quick reference for pack authors.
 这份文件给整合包作者做速查表。
+
+The project was formerly known as MMCE GUI Edit / MMCEGE. Technical identifiers such as `mmceguiext` remain unchanged.
+本项目原名为 MMCE GUI Edit / MMCEGE；`mmceguiext` 等技术标识保持不变。
 
 ## 1. Controller size / 控制器尺寸
 
