@@ -1,7 +1,9 @@
-# Modular Machinery: Community Edition Gui Edit (MMCEGE, 1.12.2)
+# MMCE More Extensions (MMCEME, 1.12.2)
 
-MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork).
-MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组。
+MMCE More Extensions (MMCEME) is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork).
+MMCE 更多扩展（MMCEME）是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组。
+It was formerly known as **MMCE GUI Edit / MMCEGE**. The mod id, configuration path, Java packages, public API, and CraftTweaker namespace remain unchanged.
+本模组原名为 **MMCE GUI Edit / MMCEGE**。本次仅更新品牌名称，mod id、配置路径、Java 包名、公开 API 和 CraftTweaker 命名空间保持不变。
 
 It started as a controller-GUI editor, but now bundles four subsystems:
 它最初只是控制器 GUI 编辑器，目前已包含四个子系统：
@@ -32,8 +34,8 @@ Optional (soft, compile-only) / 可选依赖：
 - `mekeng` (Mekanism Energistics; required only for classic custom AE mixed buses / 仅传统自定义 AE 混合总线需要)
 - The One Probe (hatch probe info / 仓口探针信息)
 - AE2 Fluid Crafting Rework, GregTech CE, HEI/JEI, GeckoLib
-- Mouse Tweaks Unofficial is optional. MMCEGE 1.3.4 does not transform Mouse Tweaks classes. During client pre-initialization it clears recoverable Cleanroom class-loader failures and preloads the official Mouse Tweaks entry points and handlers.
-- Mouse Tweaks Unofficial 为可选依赖。MMCEGE 1.3.4 不再转换 Mouse Tweaks 类；客户端预初始化时会清理 Cleanroom 可恢复的类加载失败缓存，并预加载官方入口及 handler。
+- Mouse Tweaks Unofficial is optional. MMCEME 1.3.4 does not transform Mouse Tweaks classes. During client pre-initialization it clears recoverable Cleanroom class-loader failures and preloads the official Mouse Tweaks entry points and handlers.
+- Mouse Tweaks Unofficial 为可选依赖。MMCEME 1.3.4 不再转换 Mouse Tweaks 类；客户端预初始化时会清理 Cleanroom 可恢复的类加载失败缓存，并预加载官方入口及 handler。
 
 ---
 
@@ -50,13 +52,13 @@ From the repo root / 在仓库根目录执行：
 
 Output / 产物：
 
-- `build/libs/MMCEGE-1.4.1.jar`
+- `build/libs/MMCEGE-1.4.1.jar` (the technical artifact filename remains unchanged for compatibility / 技术构建文件名为保持兼容暂不变)
 
-GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `MMCEGE-<commit-sha>` artifact to let testers build without using the local machine.
-GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `MMCEGE-<commit-sha>` artifact 即可，不需要本机编译。
+GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `MMCEME-<commit-sha>` artifact to let testers build without using the local machine.
+GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `MMCEME-<commit-sha>` artifact 即可，不需要本机编译。
 
-MMCEGE is a coremod (`FMLCorePlugin = com.fushu.mmceguiext.core.MMCEGuiExtEarlyMixinLoader`); its Mixins load before MMCE.
-MMCEGE 是一个 coremod（`FMLCorePlugin`），其 Mixin 会在 MMCE 之前加载。
+MMCEME is a coremod (`FMLCorePlugin = com.fushu.mmceguiext.core.MMCEGuiExtEarlyMixinLoader`); its Mixins load before MMCE.
+MMCEME 是一个 coremod（`FMLCorePlugin`），其 Mixin 会在 MMCE 之前加载。
 
 ---
 
@@ -71,7 +73,7 @@ MMCEGE 是一个 coremod（`FMLCorePlugin`），其 Mixin 会在 MMCE 之前加�
 - Smart Interface editor demo / Smart Interface 编辑器示例: `examples/smart-interface-editor-demo.json` + `.zs`
 - Controller slider demo / 控制器滑块示例: `examples/quick-start/sliders.json`
 
-Config directories MMCEGE reads at startup / MMCEGE 启动时读取的配置目录：
+Config directories MMCEME reads at startup / MMCEME 启动时读取的配置目录：
 
 | Path / 路径 | Purpose / 用途 |
 |---|---|
@@ -86,8 +88,8 @@ Config directories MMCEGE reads at startup / MMCEGE 启动时读取的配置目�
 
 # Part 1 — Controller GUI | 第一部分 · 控制器 GUI
 
-MMCEGE replaces the vanilla Machine / Factory controller GUI **only when** a custom texture, hidden default background, or per-machine style override is present. It hooks Forge's `GuiOpenEvent` and does **not** patch any MMCE GUI class.
-MMCEGE 仅在存在自定义贴图、隐藏默认背景或机器级样式覆盖时才替换原版普通/集成控制器 GUI。它挂接 Forge 的 `GuiOpenEvent`，**不修改** 任何 MMCE 的 GUI 类。
+MMCEME replaces the vanilla Machine / Factory controller GUI **only when** a custom texture, hidden default background, or per-machine style override is present. It hooks Forge's `GuiOpenEvent` and does **not** patch any MMCE GUI class.
+MMCEME 仅在存在自定义贴图、隐藏默认背景或机器级样式覆盖时才替换原版普通/集成控制器 GUI。它挂接 Forge 的 `GuiOpenEvent`，**不修改** 任何 MMCE 的 GUI 类。
 
 ## Global Config | 全局配置
 
@@ -109,8 +111,8 @@ Important keys / 重要键：
 - `machineController.smartInterfaceEditorY` (`-1` = auto right-bottom)
 - `machineController.smartInterfaceEditorInputWidth`
 - `machineController.smartInterfaceEditorVirtualKey` (used when no bound DataPort, writes to controller `customData[key]`; supports multiple keys split by `,` or `;`)
-- `maxGuiConfigFileSizeMiB` (default `8`, range `1-64`) sets the maximum size of MMCEGE GUI JSON files in `config/modularmachinery/machinery`, `config/mmceguiext/styles`, `config/mmceguiext/subgui`, and external GUI style files. It does not change custom hatch or custom AE bus JSON limits.
-  / `maxGuiConfigFileSizeMiB`（默认 `8`，范围 `1-64`）设置 MMCEGE GUI JSON 文件上限，包括机器 GUI、独立样式、subGUI 和外链 GUI 样式；不会改变自定义仓口或 AE 总线 JSON 的限制。
+- `maxGuiConfigFileSizeMiB` (default `8`, range `1-64`) sets the maximum size of MMCEME GUI JSON files in `config/modularmachinery/machinery`, `config/mmceguiext/styles`, `config/mmceguiext/subgui`, and external GUI style files. It does not change custom hatch or custom AE bus JSON limits.
+  / `maxGuiConfigFileSizeMiB`（默认 `8`，范围 `1-64`）设置 MMCEME GUI JSON 文件上限，包括机器 GUI、独立样式、subGUI 和外链 GUI 样式；不会改变自定义仓口或 AE 总线 JSON 的限制。
 - `factoryController.*` — same keys as `machineController.*` / 与 `machineController.*` 同名键
 - `factoryController.specialThreadBackgroundColor` (hex `RRGGBB` or `AARRGGBB`, for core/special thread row tint / 十六进制颜色，用于核心/特殊线程行着色)
 - `factoryController.threadQueueX/Y`, `threadVisibleRows`, `threadRowWidth/Height` customize the integrated-controller thread queue and can trigger self-proxy replacement by themselves.
@@ -246,7 +248,7 @@ Buttons are defined per-machine (`buttons[]`) and validated server-side by a pol
 - `page` — client-side page switch / 纯客户端页面切换
 - `subgui` — open a configured sub GUI / 打开已配置的子 GUI
 - `close_subgui` — close the current sub GUI / 关闭当前子 GUI
-- `event` — fire MMCEGE `ControllerButtonClickEvent` once on the server / 在服务端触发一次 MMCEGE 按钮点击事件
+- `event` — fire MMCEME `ControllerButtonClickEvent` once on the server / 在服务端触发一次 MMCEME 按钮点击事件
 - `smart_set` / `smart_add` — set / add a Smart Interface value (with optional min/max clamp) / 设置 / 累加 Smart Interface 值（可选 min/max 限幅）
 
 Buttons may also define `hotkey` / `hotkeys` (for example `C`, `ctrl+C`, `shift+G`). Controller-level `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` create invisible GUI-only buttons, useful for opening `subgui` modal windows or triggering the same actions without a visible button. Hotkeys are active only while the controller GUI is open, and text fields keep priority while focused.
@@ -260,8 +262,8 @@ See `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `co
 
 ## Controller Progress Bars | 控制器进度条
 
-Progress bars are defined per-machine with `progressBars[]` (aliases: `progress_bars`, `guiProgressBars`, `gui_progress_bars`). The main mode uses two textures: an empty/background texture and a full/fill texture. MMCEGE draws the empty texture first, then clips the full texture by the current progress. This works in both Machine and Factory controller GUIs.
-进度条在机器级 JSON 中通过 `progressBars[]` 定义（别名：`progress_bars`、`guiProgressBars`、`gui_progress_bars`）。主模式使用两张贴图：空槽/背景贴图和满槽/填充贴图。MMCEGE 会先绘制空槽，再按当前进度裁剪满槽。普通控制器和集成控制器都支持。
+Progress bars are defined per-machine with `progressBars[]` (aliases: `progress_bars`, `guiProgressBars`, `gui_progress_bars`). The main mode uses two textures: an empty/background texture and a full/fill texture. MMCEME draws the empty texture first, then clips the full texture by the current progress. This works in both Machine and Factory controller GUIs.
+进度条在机器级 JSON 中通过 `progressBars[]` 定义（别名：`progress_bars`、`guiProgressBars`、`gui_progress_bars`）。主模式使用两张贴图：空槽/背景贴图和满槽/填充贴图。MMCEME 会先绘制空槽，再按当前进度裁剪满槽。普通控制器和集成控制器都支持。
 
 Minimal two-texture example / 双贴图最小示例：
 
@@ -295,8 +297,8 @@ Supported sources / 支持数据源：
 
 Supported fields / 支持字段：`id`, `x`, `y`, `width`, `height`, `source`, `direction`, `backgroundTexture`, `fillTexture`, `texture`, `textureWidth`, `textureHeight`, `backgroundColor`, `fillColor`, `borderColor`, `threadIndex`, `coreThreadId`, `min`, `max`, `priority`, `foreground`, `visible`, `page`, `showText`, `textColor`.
 
-If no textures are configured, MMCEGE falls back to colored rectangles (`backgroundColor`, `fillColor`, `borderColor`).
-若未配置贴图，MMCEGE 会退回使用纯色矩形（`backgroundColor`、`fillColor`、`borderColor`）。
+If no textures are configured, MMCEME falls back to colored rectangles (`backgroundColor`, `fillColor`, `borderColor`).
+若未配置贴图，MMCEME 会退回使用纯色矩形（`backgroundColor`、`fillColor`、`borderColor`）。
 
 See `examples/quick-start/progress-bars.json`.
 示例见 `examples/quick-start/progress-bars.json`。
@@ -306,11 +308,11 @@ See `examples/quick-start/progress-bars.json`.
 Sliders are defined per-machine with `sliders[]` (aliases: `guiSliders`, `gui_sliders`, `rangeControls`, `range_controls`). They work in both Machine and Factory controller GUIs, can be placed on pages/sub GUIs, and write numeric values to the Smart Interface / virtual DataPort key directly.
 滑块在机器级 JSON 中通过 `sliders[]` 定义（别名：`guiSliders`、`gui_sliders`、`rangeControls`、`range_controls`）。普通控制器和集成控制器都支持，可放在分页/子 GUI 内，并直接把数值写入 Smart Interface / 虚拟 DataPort key。
 
-MMCEGE 1.3.4 removes the Mouse Tweaks `Main` mixin that could poison Cleanroom's permanent invalid-class cache. Mouse Tweaks compatibility now uses lifecycle-time class recovery and preloading without modifying Mouse Tweaks bytecode.
-MMCEGE 1.3.4 移除了可能污染 Cleanroom 永久无效类缓存的 Mouse Tweaks `Main` Mixin，改为在模组生命周期内恢复并预加载相关类，不再修改 Mouse Tweaks 字节码。
+MMCEME 1.3.4 removes the Mouse Tweaks `Main` mixin that could poison Cleanroom's permanent invalid-class cache. Mouse Tweaks compatibility now uses lifecycle-time class recovery and preloading without modifying Mouse Tweaks bytecode.
+MMCEME 1.3.4 移除了可能污染 Cleanroom 永久无效类缓存的 Mouse Tweaks `Main` Mixin，改为在模组生命周期内恢复并预加载相关类，不再修改 Mouse Tweaks 字节码。
 
-MMCEGE 1.3.3 keeps slider dragging active with default or custom backgrounds, routes modal sub-GUI slider input consistently, and mirrors successful Smart Interface writes into controller `customData`.
-MMCEGE 1.3.3 修复默认/自定义背景下的持续拖拽、modal 子 GUI 滑块输入，并把成功的 Smart Interface 写值同步镜像到控制器 `customData`。
+MMCEME 1.3.3 keeps slider dragging active with default or custom backgrounds, routes modal sub-GUI slider input consistently, and mirrors successful Smart Interface writes into controller `customData`.
+MMCEME 1.3.3 修复默认/自定义背景下的持续拖拽、modal 子 GUI 滑块输入，并把成功的 Smart Interface 写值同步镜像到控制器 `customData`。
 
 Minimal example / 最小示例：
 
@@ -343,8 +345,8 @@ See `examples/quick-start/sliders.json`.
 
 # Part 2 — Custom Hatches | 第二部分 · 自定义仓口
 
-Custom hatches are opt-in. Set `customContent.enableCustomHatches=true` in `config/mmceguiext/client.cfg`, then drop a `.json` into `config/mmceguiext/custom_hatches/` and MMCEGE registers a new block + item + tile at startup. Each hatch acts as an MMCE multiblock component (input/output for fluid / gas / item / energy, or a combined component) and uses **long** capacities (beyond the `int` limit).
-自定义仓口默认不注册，避免整合包玩家在 JEI 里看到示例/开发用仓室。需要时先在 `config/mmceguiext/client.cfg` 设置 `customContent.enableCustomHatches=true`，再把 `.json` 放入 `config/mmceguiext/custom_hatches/`，MMCEGE 会在启动时注册新的方块 + 物品 + tile。每个仓口作为 MMCE 多方块组件（流体/气体/物品/能量的输入或输出，或组合组件），容量使用 **long**（突破 `int` 上限）。
+Custom hatches are opt-in. Set `customContent.enableCustomHatches=true` in `config/mmceguiext/client.cfg`, then drop a `.json` into `config/mmceguiext/custom_hatches/` and MMCEME registers a new block + item + tile at startup. Each hatch acts as an MMCE multiblock component (input/output for fluid / gas / item / energy, or a combined component) and uses **long** capacities (beyond the `int` limit).
+自定义仓口默认不注册，避免整合包玩家在 JEI 里看到示例/开发用仓室。需要时先在 `config/mmceguiext/client.cfg` 设置 `customContent.enableCustomHatches=true`，再把 `.json` 放入 `config/mmceguiext/custom_hatches/`，MMCEME 会在启动时注册新的方块 + 物品 + tile。每个仓口作为 MMCE 多方块组件（流体/气体/物品/能量的输入或输出，或组合组件），容量使用 **long**（突破 `int` 上限）。
 
 Key top-level fields / 关键顶层字段：
 
@@ -417,8 +419,8 @@ Common JSON fields / 通用 JSON 字段：`id`, `displayName`, the GUI layout (`
 
 # Part 4 — Long-Capacity Recipe Requirements | 第四部分 · Long 容量配方需求
 
-MMCEGE 1.4.0 introduces the Long V2 requirement path for recipe fluids / gases. MMCEGE no longer rewrites normal `fluid` / `gas` requirements behind the scenes; if you want long-capacity behavior, use the explicit `mmceguiext:fluid_long` / `mmceguiext:gas_long` requirement types.
-MMCEGE 1.4.0 引入了配方流体 / 气体的 Long V2 路径。MMCEGE 不再在后台改写普通 `fluid` / `gas` 需求；如果你要使用长容量行为，请改用显式的 `mmceguiext:fluid_long` / `mmceguiext:gas_long` 需求类型。
+MMCEME 1.4.0 introduces the Long V2 requirement path for recipe fluids / gases. MMCEME no longer rewrites normal `fluid` / `gas` requirements behind the scenes; if you want long-capacity behavior, use the explicit `mmceguiext:fluid_long` / `mmceguiext:gas_long` requirement types.
+MMCEME 1.4.0 引入了配方流体 / 气体的 Long V2 路径。MMCEME 不再在后台改写普通 `fluid` / `gas` 需求；如果你要使用长容量行为，请改用显式的 `mmceguiext:fluid_long` / `mmceguiext:gas_long` 需求类型。
 
 **Configuration required / experimental** — `experimental.enableLongFluidGasRequirements` is `false` by default. Set it to `true` in `config/mmceguiext/client.cfg`, then fully restart the game/server before loading long-capacity recipes.
 **需要配置 / 实验性** — `experimental.enableLongFluidGasRequirements` 默认是 `false`；需要在 `config/mmceguiext/client.cfg` 里改成 `true`，然后完整重启游戏，Long V2 配方才会生效。该选项默认关闭，因为长容量需求仍属于实验性功能。

@@ -6,9 +6,9 @@
 
 MMCE stores the recipe `amount` of `RequirementFluid` / `RequirementGas` as a Java `int`. An `int` overflows above **2,147,483,647** (~2.1 billion mB). Once your machines and custom hatches operate in the billions/trillions of mB, vanilla MMCE recipes silently break.
 
-## What MMCEGE does
+## What MMCE More Extensions does
 
-MMCEGE 1.4.0 adds Long V2 for recipe fluids / gases. MMCEGE no longer rewrites normal `fluid` / `gas` requirements behind the scenes. Long-capacity recipes must use the explicit `mmceguiext:fluid_long` / `mmceguiext:gas_long` requirement types.
+MMCE More Extensions 1.4.0 adds Long V2 for recipe fluids / gases. MMCE More Extensions no longer rewrites normal `fluid` / `gas` requirements behind the scenes. Long-capacity recipes must use the explicit `mmceguiext:fluid_long` / `mmceguiext:gas_long` requirement types.
 
 The long-capacity path is currently **experimental and disabled by default** because it may make some fluid/gas recipes fail to take effect in some packs. When enabled, it runs across the whole recipe lifecycle:
 
@@ -68,7 +68,7 @@ This patch is what makes the **long-capacity custom hatches** and **AE2 mixed bu
 - Normal `fluid` / `gas` requirements are not rewritten. Values above `Integer.MAX_VALUE` fail with a migration hint instead of overflowing.
 - Custom long hatches and AE2 mixed buses perform real long IO. Plain Forge/Mekanism handlers still contribute only their real int-sized capacity.
 - `FluidStack` / `GasStack` represent identity, NBT, and the JEI icon; the full amount is stored directly as a `long` on the Long V2 requirement.
-- Without recipe modifiers, the full positive `long` range is supported. MMCE `RecipeModifier` uses `double`, so modifying values above `2^53 - 1` may round; MMCEGE logs this once.
+- Without recipe modifiers, the full positive `long` range is supported. MMCE `RecipeModifier` uses `double`, so modifying values above `2^53 - 1` may round; MMCE More Extensions logs this once.
 - 1.4.0 provides normal `fluid_long` / `gas_long` requirements only; long per-tick types are not included yet.
 
 ## Under the hood (for contributors)

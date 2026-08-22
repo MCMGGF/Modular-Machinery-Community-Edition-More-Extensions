@@ -6,9 +6,9 @@
 
 MMCE 的 `RequirementFluid` / `RequirementGas` 用 Java `int` 存储配方 `amount`。`int` 超过 **2,147,483,647**（约 21 亿 mB）就会溢出。一旦你的机器和自定义仓口进入十亿/万亿 mB 级别，原版 MMCE 配方会悄然出错。
 
-## MMCEGE 的做法
+## MMCE 更多扩展的做法
 
-MMCEGE 1.4.0 为流体 / 气体配方引入了 Long V2。MMCEGE 不再在后台改写普通 `fluid` / `gas` 需求；需要长容量时，请改用显式的 `mmceguiext:fluid_long` / `mmceguiext:gas_long` 需求类型。
+MMCE 更多扩展 1.4.0 为流体 / 气体配方引入了 Long V2。MMCE 更多扩展不再在后台改写普通 `fluid` / `gas` 需求；需要长容量时，请改用显式的 `mmceguiext:fluid_long` / `mmceguiext:gas_long` 需求类型。
 
 长容量路径当前是**实验性功能，默认关闭**，因为在部分整合包中可能导致流体 / 气体配方无法生效。开启后覆盖整个配方生命周期：
 
@@ -68,7 +68,7 @@ experimental {
 - 普通 `fluid` / `gas` 不会被改写；当数值超过 `Integer.MAX_VALUE` 时，解析器会明确提示改用 Long V2。
 - 自定义 long 仓口与 AE2 混合总线可完成真实 long IO；普通 Forge/Mekanism handler 仍只能按其真实 `int` 容量参与。
 - `FluidStack` / `GasStack` 只用于表示种类、NBT 和 JEI 图标；完整数量保存在 Long V2 requirement 的 `long` 字段中。
-- 无配方修改器时支持完整正 `long` 范围。MMCE 的 `RecipeModifier` 使用 `double`，修改超过 `2^53 - 1` 的数量时可能发生舍入，MMCEGE 会记录一次警告。
+- 无配方修改器时支持完整正 `long` 范围。MMCE 的 `RecipeModifier` 使用 `double`，修改超过 `2^53 - 1` 的数量时可能发生舍入，MMCE 更多扩展会记录一次警告。
 - 1.4.0 仅提供普通 `fluid_long` / `gas_long`；long per-tick 类型尚未包含。
 
 ## 实现细节（贡献者向）

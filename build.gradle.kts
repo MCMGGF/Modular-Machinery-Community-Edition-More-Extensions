@@ -206,7 +206,7 @@ val verifyJarDoesNotBundleMouseTweaks by tasks.registering {
             include("yalter/mousetweaks/**")
         }.files
         check(bundledEntries.isEmpty()) {
-            "MMCEGE must not bundle Mouse Tweaks classes: " +
+            "MMCEME must not bundle Mouse Tweaks classes: " +
                 bundledEntries.joinToString { it.name }
         }
 
@@ -215,7 +215,7 @@ val verifyJarDoesNotBundleMouseTweaks by tasks.registering {
             include("com/fushu/mmceguiext/mixin/MixinMouseTweaksMain.class")
         }.files
         check(obsoleteMixinEntries.isEmpty()) {
-            "MMCEGE must not transform Mouse Tweaks classes: " +
+            "MMCEME must not transform Mouse Tweaks classes: " +
                 obsoleteMixinEntries.joinToString { it.name }
         }
     }

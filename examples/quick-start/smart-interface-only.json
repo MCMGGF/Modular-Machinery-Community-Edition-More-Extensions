@@ -2,7 +2,7 @@
   // 这个模板只演示 Smart Interface 编辑器。
   // This template only demonstrates Smart Interface editors.
   "registryname": "mmcege_smart_interface_only_demo",
-  "localizedname": "MMCEGE Smart Interface Only Demo / MMCEGE 仅 Smart Interface 示例",
+  "localizedname": "MMCEME Smart Interface Only Demo / MMCEME 仅 Smart Interface 示例",
   "requires-blueprint": false,
   "has-factory": true,
   "mmce_gui_ext": {

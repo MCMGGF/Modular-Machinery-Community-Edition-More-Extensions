@@ -1,6 +1,6 @@
 {
   "registryname": "mmcege_controller_button_test",
-  "localizedname": "MMCEGE Controller Button Test",
+  "localizedname": "MMCEME Controller Button Test",
   "requires-blueprint": false,
   "parts": [
     {

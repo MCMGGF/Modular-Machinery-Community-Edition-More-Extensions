@@ -39,7 +39,7 @@ Working examples:
 | `inputSlot` / `outputSlot` | — | `{x,y}` | `{0,0}` | Legacy slot coords (used without `gui.components`) |
 | `tank` | — | object | see §3.3 | Legacy tank render params (used without a gui tank component) |
 | `texts` | — | array | `[]` | Legacy static text list (overridden by gui text components) |
-| `defaultCharSpacing` | `defaultCharacterSpacing`,`defaultLetterSpacing`,`default_char_spacing`,`default_letter_spacing`,`textCharSpacing`,`text_char_spacing` | float | null | Default character spacing for this hatch's MMCEGE-rendered text; `0` keeps vanilla text rendering |
+| `defaultCharSpacing` | `defaultCharacterSpacing`,`defaultLetterSpacing`,`default_char_spacing`,`default_letter_spacing`,`textCharSpacing`,`text_char_spacing` | float | null | Default character spacing for this hatch's MMCEME-rendered text; `0` keeps vanilla text rendering |
 
 ### 1.1 `componentType` values
 
@@ -151,7 +151,7 @@ Shared fields: `type` (required), `role`, `x`, `y`, `width`, `height`, `priority
 - `spacingX` (`xSpacing`/`gapX`, default 2), `spacingY` (`ySpacing`/`gapY`, default 2)
 - `slotSize` (`size`, default 16)
 - `visibleRows`/`visibleColumns` (default 0=all visible, for scrolling), `scrollAxis` (`horizontal`/`vertical`), `scrollMode` (`row`/`page`), `scrollbar`
-- When `scrollAxis` is omitted: MMCEGE auto-selects horizontal only when columns overflow and rows do not; all other old configs keep the vertical default.
+- When `scrollAxis` is omitted: MMCEME auto-selects horizontal only when columns overflow and rows do not; all other old configs keep the vertical default.
 - With `scrollMode = "page"`, horizontal grids scroll by `visibleColumns` columns and vertical grids scroll by `visibleRows` rows. The default step is 1 row/column.
 - Scrollbar set: `scrollbarX/Y/Width/Height`, `scrollbarLength`, `scrollbarThumbHeight`, `scrollbarThumbWidth`, `scrollbarTexture` (+ hover/pressed/disabled), `scrollbarTextureWidth/Height`, `scrollbarU/V` (+ hover/pressed/disabled variants) — all support snake_case
 - Item overlay: `itemOverlay`, `itemOverlayTexture`, `itemOverlayTextureWidth/Height`, `itemOverlayU/V`

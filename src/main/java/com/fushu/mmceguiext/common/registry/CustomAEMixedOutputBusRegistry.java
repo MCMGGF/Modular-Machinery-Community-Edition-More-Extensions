@@ -119,7 +119,7 @@ public final class CustomAEMixedOutputBusRegistry {
             applyGuiComponents(def);
             return def.id == null || def.id.trim().isEmpty() ? null : def;
         } catch (Exception ex) {
-            LOGGER.warn("[MMCEGE-NEW] Failed to parse custom AE mixed output bus {}", path, ex);
+            LOGGER.warn("[MMCEME-NEW] Failed to parse custom AE mixed output bus {}", path, ex);
             return null;
         }
     }

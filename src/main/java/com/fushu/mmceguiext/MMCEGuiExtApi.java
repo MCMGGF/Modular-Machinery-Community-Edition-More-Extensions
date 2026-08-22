@@ -1,7 +1,7 @@
 package com.fushu.mmceguiext;
 
 /**
- * Stable version marker for downstream MMCEGE integrations.
+ * Stable version marker for downstream MMCE More Extensions integrations.
  */
 public final class MMCEGuiExtApi {
     public static final int API_LEVEL = 1;

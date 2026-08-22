@@ -29,7 +29,7 @@ MMCEGEEvents.onControllerButtonClick(BUTTON_TEST_MACHINE, function(event as Cont
 MMEvents.onControllerGUIRender(BUTTON_TEST_MACHINE, function(event as ControllerGUIRenderEvent) {
     val data = event.controller.customData;
     var info as string[] = [
-        "[panel:main]MMCEGE button test",
+        "[panel:main]MMCEME button test",
         "[panel:main]event_ping_count = " + readFloat(data, "event_ping_count"),
         "[panel:main]status = " + data.getString("status", "unset"),
         "[panel:settings]speed = " + readFloat(data, "speed"),

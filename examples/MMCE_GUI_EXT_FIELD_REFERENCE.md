@@ -1,7 +1,10 @@
-# MMCE GUI Ext Field Reference
+# MMCE More Extensions GUI Field Reference
 
 This file is a quick reference for pack authors.
 这份文件给整合包作者做速查表。
+
+The project was formerly branded MMCE GUI Edit / MMCEGE. Technical identifiers such as `mmceguiext` remain unchanged.
+本项目原名为 MMCE GUI Edit / MMCEGE；`mmceguiext` 等技术标识保持不变。
 
 ## 1. Controller size / 控制器尺寸
 
@@ -140,8 +143,8 @@ This file is a quick reference for pack authors.
   - CN: GUI 打开时默认显示的页。未填写时通常使用 `main`。
   - EN: Page shown when the GUI opens. Usually `main` when omitted.
 - `defaultCharSpacing`
-  - CN: 本 controller/style 下 MMCEGE 自绘文本的默认字符间距。别名：`defaultCharacterSpacing`、`defaultLetterSpacing`、`default_char_spacing`、`default_letter_spacing`、`textCharSpacing`、`text_char_spacing`。未写或为 `0` 时保持原版字体绘制路径。
-  - EN: Default character spacing for MMCEGE-rendered text in this controller/style. Aliases: `defaultCharacterSpacing`, `defaultLetterSpacing`, `default_char_spacing`, `default_letter_spacing`, `textCharSpacing`, `text_char_spacing`. Omitted or `0` keeps the vanilla font path.
+  - CN: 本 controller/style 下 MMCEME 自绘文本的默认字符间距。别名：`defaultCharacterSpacing`、`defaultLetterSpacing`、`default_char_spacing`、`default_letter_spacing`、`textCharSpacing`、`text_char_spacing`。未写或为 `0` 时保持原版字体绘制路径。
+  - EN: Default character spacing for MMCEME-rendered text in this controller/style. Aliases: `defaultCharacterSpacing`, `defaultLetterSpacing`, `default_char_spacing`, `default_letter_spacing`, `textCharSpacing`, `text_char_spacing`. Omitted or `0` keeps the vanilla font path.
 - `page`
   - CN: 可写在 `customPanels` 第 6 段、`texts`、`smartInterfaceEditors`、图层和按钮上，用来限制它们只在某一页显示。`state` / `guiState` 可作为别名。
   - EN: Can be used on the 6th segment of `customPanels`, `texts`, `smartInterfaceEditors`, layers, and buttons to show them only on one page. `state` / `guiState` are accepted aliases.

@@ -1,8 +1,8 @@
-# MMCEGE 1.4.1 完整教程（可直接进游戏）
+# MMCE 更多扩展（MMCEME）1.4.1 完整教程（可直接进游戏）
 
 本目录提供的是“可直接加载”的示例，不是伪代码。
 
-MMCEGE 目前包含四大功能，本教程按部分组织：
+MMCE 更多扩展（MMCEME）目前包含四大功能，本教程按部分组织：
 
 - **第一部分 · 控制器 GUI**（第 1–8 章）：替换 / 自定义普通与集成控制器的 GUI。
 - **第二部分 · 自定义仓口（Hatch）**（第 9 章）：用 JSON 定义新的流体 / 气体 / 物品 / 能量仓口方块。
@@ -243,7 +243,7 @@ MMCEGE 目前包含四大功能，本教程按部分组织：
 - `backgroundTexture`：空槽 / 背景贴图。
 - `fillTexture`：满槽 / 填充贴图。
 
-MMCEGE 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常见 GUI 美术资源。
+MMCEME 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常见 GUI 美术资源。
 
 每个进度条至少写：
 
@@ -617,7 +617,7 @@ MMCEGE 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常�
 
 ## 11. 突破 int 上限的流体 / 气体配方
 
-MMCEGE 1.4.0 的 Long V2 只针对显式的 `mmceguiext:fluid_long` / `mmceguiext:gas_long` 需求。普通 `fluid` / `gas` 不再被 MMCEGE 重新改写；如果配方只是在 `int` 范围内，继续用原来的写法即可。需要长容量时，再切到新需求类型。
+MMCEME 1.4.0 的 Long V2 只针对显式的 `mmceguiext:fluid_long` / `mmceguiext:gas_long` 需求。普通 `fluid` / `gas` 不再被 MMCEME 重新改写；如果配方只是在 `int` 范围内，继续用原来的写法即可。需要长容量时，再切到新需求类型。
 
 **需要手动开启 / 实验性** —— 先在 `config/mmceguiext/client.cfg` 中设置：
 

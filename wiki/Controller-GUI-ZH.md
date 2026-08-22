@@ -6,7 +6,7 @@
 
 ## 工作机制
 
-MMCEGE 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineController` / `GuiFactoryController` 的瞬间，**仅当**存在自定义贴图、隐藏默认背景或机器级样式覆盖时，才替换为可调整大小的版本。它**不修改** MMCE 的任何 GUI 类。
+MMCE 更多扩展（MMCEME）挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineController` / `GuiFactoryController` 的瞬间，**仅当**存在自定义贴图、隐藏默认背景或机器级样式覆盖时，才替换为可调整大小的版本。它**不修改** MMCE 的任何 GUI 类。
 
 样式来自两层，机器级优先、回退到全局：
 - **全局**：`config/mmceguiext/client.cfg`
@@ -123,7 +123,7 @@ MMCEGE 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineContro
 - `page` — 纯客户端页面切换。
 - `subgui` — 打开已配置的子 GUI。
 - `close_subgui` — 关闭当前子 GUI。
-- `event` — 在服务端触发一次 MMCEGE `ControllerButtonClickEvent`。
+- `event` — 在服务端触发一次 MMCEME `ControllerButtonClickEvent`。
 - `smart_set` / `smart_add` — 设置/累加 Smart Interface 值（可选 min/max 限幅）。
 
 按钮上可写 `hotkey` / `hotkeys` 做 GUI 内快捷键。控制器级 `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` 会创建不可见的纯热键动作，例如用 `C` 打开 modal 子 GUI，用 `ESCAPE` 执行 `close_subgui`。热键只在控制器 GUI 打开时生效，文本框聚焦时仍优先输入文本。

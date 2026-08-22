@@ -6,7 +6,7 @@ Replace / customize the MMCE Machine and Factory controller GUIs: resizable, cus
 
 ## How it works
 
-MMCEGE hooks Forge's `GuiOpenEvent` and, the moment MMCE opens the vanilla `GuiMachineController` / `GuiFactoryController`, swaps in the resizable version — **only when** a custom texture, hidden default background, or per-machine style override is present. It does **not** patch any MMCE GUI class.
+MMCE More Extensions (MMCEME) hooks Forge's `GuiOpenEvent` and, the moment MMCE opens the vanilla `GuiMachineController` / `GuiFactoryController`, swaps in the resizable version — **only when** a custom texture, hidden default background, or per-machine style override is present. It does **not** patch any MMCE GUI class.
 
 Styles come from two layers; per-machine wins, falling back to global:
 - **Global**: `config/mmceguiext/client.cfg`
@@ -123,7 +123,7 @@ Virtual DataPort: write values even without a physical port. Recommended read (c
 - `page` — client-side page switch.
 - `subgui` — open a configured sub GUI.
 - `close_subgui` — close the current sub GUI.
-- `event` — fire one MMCEGE `ControllerButtonClickEvent` on the server.
+- `event` — fire one MMCEME `ControllerButtonClickEvent` on the server.
 - `smart_set` / `smart_add` — set / add a Smart Interface value (optional min/max clamp).
 
 Use `hotkey` / `hotkeys` on a button for GUI-local shortcuts. Top-level `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` create invisible hotkey-only actions; for example, `C` can open a modal sub GUI and `ESCAPE` can run `close_subgui`. Hotkeys are only active while the controller GUI is open, and focused text fields keep normal typing priority.

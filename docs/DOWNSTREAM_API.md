@@ -1,13 +1,14 @@
-# Downstream API Notes
+# MMCE More Extensions Downstream API Notes
 
-This note is for repos that consume the MMCEGE API branch instead of editing MMCEGE sources directly.
+This note is for repos that consume the MMCE More Extensions API instead of editing the extension sources directly.
+The project was formerly branded MMCE GUI Edit / MMCEGE; `mmceguiext` and the existing public API remain the stable technical identifiers.
 
 ## Recommended upstream order
 
-1. Check out the MMCEGE repository from the remote source.
+1. Check out the MMCE More Extensions repository from the remote source.
 2. Prefer the active API branch. At the moment this work is based on `feature/horizontal-slot-scroll`; switch this note and downstream CI to `api` only after that branch exists remotely.
 3. Build and publish `mmce-gui-ext` to the local Maven cache.
-4. Then build or validate the downstream repo that depends on MMCEGE.
+4. Then build or validate the downstream repo that depends on MMCE More Extensions.
 
 The current monorepo wrapper already supports this from the repository root:
 
@@ -29,4 +30,4 @@ When the downstream pack changes example JSON or config samples, keep the follow
 
 - the sample JSON stays strict and parseable
 - the sample `client.cfg` still mentions the keys the pack needs
-- the API bridge still prefers MMCEGE smart-interface data before the fallback path
+- the API bridge still prefers MMCEME smart-interface data before the fallback path
