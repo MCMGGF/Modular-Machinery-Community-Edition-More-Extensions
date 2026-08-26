@@ -53,8 +53,8 @@ public final class GlobalGuiStyleManager {
         }
         try {
             long fileSize = Files.size(path);
-            long maxFileSize = MMCEGuiExtConfig.getMaxGuiConfigFileBytes();
-            if (!MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(fileSize)) {
+            long maxFileSize = MMCEGuiExtConfig.getMaxExtensionConfigFileBytes();
+            if (!MMCEGuiExtConfig.isExtensionConfigFileSizeAllowed(fileSize)) {
                 LOGGER.warn("MMCE GUI ext style file {} is larger than {} bytes.", path, maxFileSize);
                 return StyleFile.EMPTY;
             }

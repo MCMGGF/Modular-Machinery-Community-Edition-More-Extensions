@@ -1,7 +1,6 @@
 package com.fushu.mmceguiext.common.requirement;
 
 import github.kasuminova.mmce.common.util.IExtendedGasHandler;
-import github.kasuminova.mmce.common.util.MultiGasTank;
 import hellfirepvp.modularmachinery.common.crafting.helper.ProcessingComponent;
 import hellfirepvp.modularmachinery.common.machine.IOType;
 import hellfirepvp.modularmachinery.common.machine.MachineComponent;
@@ -149,61 +148,203 @@ public final class LongGasRequirementIO {
     }
 
     private static final class IntSnapshotGasHandler implements IExtendedGasHandler, LongGasIOHandler {
-        private final MultiGasTank delegate;
+        private final List<GasState> states = new ArrayList<GasState>();
 
         private IntSnapshotGasHandler(IGasHandler source) {
-            this.delegate = new MultiGasTank(source);
+            GasTankInfo[] infos = source == null ? null : source.getTankInfo();
+            if (infos == null) {
+                return;
+            }
+            for (GasTankInfo info : infos) {
+                if (info == null) {
+                    continue;
+                }
+                GasStack contents = info.getGas();
+                GasStack prototype = contents == null ? null : contents.copy();
+                if (prototype != null) {
+                    prototype.amount = 1;
+                }
+                this.states.add(new GasState(
+                    prototype,
+                    contents == null ? 0L : Math.max(0L, contents.amount),
+                    Math.max(0L, info.getMaxGas())
+                ));
+            }
         }
 
         @Nullable
         @Override
         @Optional.Method(modid = "mekanism")
         public GasStack drawGas(GasStack toDraw, boolean doTransfer) {
-            return this.delegate.drawGas(toDraw, doTransfer);
+            if (toDraw == null) {
+                return null;
+            }
+            long moved = doGas(toDraw, toDraw.amount, IOType.INPUT, doTransfer);
+            if (moved <= 0L) {
+                return null;
+            }
+            GasStack result = toDraw.copy();
+            result.amount = downcastAmount(moved);
+            return result;
         }
 
         @Nullable
         @Override
         @Optional.Method(modid = "mekanism")
         public GasStack drawGas(@Nullable net.minecraft.util.EnumFacing side, int amount, boolean doTransfer) {
-            return this.delegate.drawGas(side, amount, doTransfer);
+            if (amount <= 0) {
+                return null;
+            }
+            for (GasState state : this.states) {
+                if (state.prototype == null || state.amount <= 0L) {
+                    continue;
+                }
+                long moved = doGas(state.prototype, amount, IOType.INPUT, doTransfer);
+                if (moved > 0L) {
+                    GasStack result = state.prototype.copy();
+                    result.amount = downcastAmount(moved);
+                    return result;
+                }
+            }
+            return null;
         }
 
         @Override
         @Optional.Method(modid = "mekanism")
         public int receiveGas(@Nullable net.minecraft.util.EnumFacing side, GasStack stack, boolean doTransfer) {
-            return this.delegate.receiveGas(side, stack, doTransfer);
+            return downcastAmount(doGas(stack, stack == null ? 0L : stack.amount, IOType.OUTPUT, doTransfer));
         }
 
         @Override
         @Optional.Method(modid = "mekanism")
         public boolean canReceiveGas(@Nullable net.minecraft.util.EnumFacing side, Gas gas) {
-            return this.delegate.canReceiveGas(side, gas);
+            return gas != null && doGas(new GasStack(gas, 1), 1L, IOType.OUTPUT, false) > 0L;
         }
 
         @Override
         @Optional.Method(modid = "mekanism")
         public boolean canDrawGas(@Nullable net.minecraft.util.EnumFacing side, Gas gas) {
-            return this.delegate.canDrawGas(side, gas);
+            if (gas == null) {
+                return false;
+            }
+            for (GasState state : this.states) {
+                if (state.prototype != null && state.amount > 0L && state.prototype.getGas() == gas) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Nonnull
         @Override
         @Optional.Method(modid = "mekanism")
         public GasTankInfo[] getTankInfo() {
-            return this.delegate.getTankInfo();
+            GasTankInfo[] info = new GasTankInfo[this.states.size()];
+            for (int i = 0; i < this.states.size(); i++) {
+                info[i] = new SnapshotGasTankInfo(this.states.get(i));
+            }
+            return info;
         }
 
         @Override
         @Optional.Method(modid = "mekanism")
         public long mmceguiext$simulateGasIO(GasStack stack, long maxAmount, IOType actionType) {
-            return gasFallback(stack, new MultiGasTank(this.delegate), maxAmount, actionType, true);
+            return doGas(stack, maxAmount, actionType, false);
         }
 
         @Override
         @Optional.Method(modid = "mekanism")
         public long mmceguiext$doGasIO(GasStack stack, long maxAmount, IOType actionType) {
-            return gasFallback(stack, this.delegate, maxAmount, actionType, true);
+            return doGas(stack, maxAmount, actionType, true);
+        }
+
+        @Optional.Method(modid = "mekanism")
+        private long doGas(GasStack stack, long maxAmount, IOType actionType, boolean mutate) {
+            if (stack == null || maxAmount <= 0L) {
+                return 0L;
+            }
+            long movedTotal = 0L;
+            for (GasState state : this.states) {
+                if (movedTotal >= maxAmount) {
+                    break;
+                }
+                long remaining = maxAmount - movedTotal;
+                if (actionType == IOType.INPUT) {
+                    if (state.prototype == null || state.prototype.getGas() != stack.getGas() || state.amount <= 0L) {
+                        continue;
+                    }
+                    long moved = Math.min(remaining, state.amount);
+                    if (mutate) {
+                        state.amount -= moved;
+                        if (state.amount == 0L) {
+                            state.prototype = null;
+                        }
+                    }
+                    movedTotal += moved;
+                    continue;
+                }
+                if (state.prototype != null && state.prototype.getGas() != stack.getGas()) {
+                    continue;
+                }
+                long free = Math.max(0L, state.capacity - state.amount);
+                if (free <= 0L) {
+                    continue;
+                }
+                long moved = Math.min(remaining, free);
+                if (mutate) {
+                    if (state.prototype == null) {
+                        state.prototype = stack.copy();
+                        state.prototype.amount = 1;
+                    }
+                    state.amount += moved;
+                }
+                movedTotal += moved;
+            }
+            return movedTotal;
+        }
+
+        private static final class GasState {
+            private GasStack prototype;
+            private long amount;
+            private final long capacity;
+
+            private GasState(GasStack prototype, long amount, long capacity) {
+                this.prototype = prototype;
+                this.amount = amount;
+                this.capacity = capacity;
+            }
+        }
+
+        private static final class SnapshotGasTankInfo implements GasTankInfo {
+            private final GasState state;
+
+            private SnapshotGasTankInfo(GasState state) {
+                this.state = state;
+            }
+
+            @Nullable
+            @Override
+            @Optional.Method(modid = "mekanism")
+            public GasStack getGas() {
+                if (this.state.prototype == null || this.state.amount <= 0L) {
+                    return null;
+                }
+                GasStack result = this.state.prototype.copy();
+                result.amount = downcastAmount(this.state.amount);
+                return result;
+            }
+
+            @Override
+            @Optional.Method(modid = "mekanism")
+            public int getStored() {
+                return downcastAmount(this.state.amount);
+            }
+
+            @Override
+            @Optional.Method(modid = "mekanism")
+            public int getMaxGas() {
+                return downcastAmount(this.state.capacity);
+            }
         }
     }
 

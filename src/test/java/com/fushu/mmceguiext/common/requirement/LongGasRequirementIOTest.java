@@ -6,6 +6,7 @@ import hellfirepvp.modularmachinery.common.crafting.helper.ProcessingComponent;
 import hellfirepvp.modularmachinery.common.lib.ComponentTypesMM;
 import hellfirepvp.modularmachinery.common.machine.IOType;
 import hellfirepvp.modularmachinery.common.machine.MachineComponent;
+import github.kasuminova.mmce.common.util.MultiGasTank;
 import mekanism.api.gas.Gas;
 import mekanism.api.gas.GasStack;
 import mekanism.api.gas.GasTankInfo;
@@ -89,6 +90,42 @@ public class LongGasRequirementIOTest {
                 IOType.INPUT
             )
         );
+    }
+
+    @Test
+    public void ordinaryGasSnapshotSimulationDoesNotConsumeOrFillState() {
+        final Gas hydrogen = new Gas("mmcege_test_ordinary_hydrogen", "mmcege_test_ordinary_hydrogen");
+        MultiGasTank source = new MultiGasTank(1_000, 1);
+        source.receiveGas(null, new GasStack(hydrogen, 400), true);
+        MachineComponent<IExtendedGasHandler> component =
+            new MachineComponent<IExtendedGasHandler>(IOType.INPUT) {
+                @Override
+                public ComponentType getComponentType() {
+                    return ComponentTypesMM.COMPONENT_GAS;
+                }
+
+                @Override
+                public IExtendedGasHandler getContainerProvider() {
+                    return source;
+                }
+            };
+        ProcessingComponent<IExtendedGasHandler> processing =
+            new ProcessingComponent<IExtendedGasHandler>(component, source, null);
+        IExtendedGasHandler snapshot = (IExtendedGasHandler) LongGasRequirementIO.copyGasComponents(
+            Collections.<ProcessingComponent<?>>singletonList(processing)
+        ).get(0).getProvidedComponent();
+
+        GasStack request = new GasStack(hydrogen, 250);
+        assertEquals(250L, LongGasRequirementIO.simulateGas(
+            request, Collections.singletonList(snapshot), 250L, IOType.INPUT));
+        assertEquals(250L, LongGasRequirementIO.simulateGas(
+            request, Collections.singletonList(snapshot), 250L, IOType.INPUT));
+        assertEquals(250L, LongGasRequirementIO.simulateGas(
+            request, Collections.singletonList(snapshot), 250L, IOType.INPUT));
+
+        LongGasRequirementIO.doGas(request, Collections.singletonList(snapshot), 250L, IOType.INPUT);
+        assertEquals(150L, LongGasRequirementIO.simulateGas(
+            request, Collections.singletonList(snapshot), 250L, IOType.INPUT));
     }
 
     private static final class FakeLongGasHandler implements IExtendedGasHandler, LongGasIOHandler {

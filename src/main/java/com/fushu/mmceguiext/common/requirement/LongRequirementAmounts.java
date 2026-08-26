@@ -43,6 +43,13 @@ public final class LongRequirementAmounts {
         return value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.max(0L, value);
     }
 
+    public static long clampReportedAmount(long requested, long reported) {
+        if (requested <= 0L || reported <= 0L) {
+            return 0L;
+        }
+        return Math.min(requested, reported);
+    }
+
     public static long saturatedMultiply(long left, int right) {
         if (left <= 0L || right <= 0) {
             return 0L;
@@ -51,6 +58,18 @@ public final class LongRequirementAmounts {
             return Long.MAX_VALUE;
         }
         return left * (long) right;
+    }
+
+    /**
+     * Returns the amount that can be consumed or produced as complete
+     * requirement units, never exceeding the requested parallel limit.
+     */
+    public static long completeAmount(long available, long required, int maxMultiplier) {
+        if (available <= 0L || required <= 0L || maxMultiplier <= 0) {
+            return 0L;
+        }
+        long completed = Math.min((long) maxMultiplier, available / required);
+        return completed * required;
     }
 
     public static long saturatedAdd(long left, long right) {

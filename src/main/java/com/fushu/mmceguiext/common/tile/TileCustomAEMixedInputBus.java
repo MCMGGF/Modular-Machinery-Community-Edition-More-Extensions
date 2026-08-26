@@ -821,8 +821,11 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
                 continue;
             }
             multiplier *= modifier.multiplier;
-            flatFluid += modifier.flatFluid;
-            flatGas += modifier.flatGas;
+            if (!Double.isFinite(multiplier) || multiplier <= 0.0D) {
+                multiplier = Double.MAX_VALUE;
+            }
+            flatFluid = LongRequirementAmounts.saturatedAdd(flatFluid, modifier.flatFluid);
+            flatGas = LongRequirementAmounts.saturatedAdd(flatGas, modifier.flatGas);
         }
         int newFluidCapacity = clampCapacity(FLUID_TANK_CAPACITY, multiplier, flatFluid);
         int newGasCapacity = clampCapacity(GAS_TANK_CAPACITY, multiplier, flatGas);
@@ -846,9 +849,11 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
     }
 
     private int clampCapacity(int baseCapacity, double multiplier, long flatBonus) {
-        double scaled = Math.max(1.0D, baseCapacity * multiplier);
-        long capacity = Math.round(scaled) + Math.max(0L, flatBonus);
-        return (int) Math.max(1L, Math.min(Integer.MAX_VALUE, capacity));
+        double safeMultiplier = Double.isFinite(multiplier) && multiplier > 0.0D ? multiplier : 1.0D;
+        double scaled = Math.max(1.0D, baseCapacity * safeMultiplier);
+        long scaledCapacity = scaled >= Long.MAX_VALUE ? Long.MAX_VALUE : Math.max(1L, Math.round(scaled));
+        long capacity = LongRequirementAmounts.saturatedAdd(scaledCapacity, Math.max(0L, flatBonus));
+        return LongRequirementAmounts.downcastAmount(Math.max(1L, capacity));
     }
 
     private void tryRebalanceOverCapacity() {
@@ -881,8 +886,13 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
             }
             long overflow = stack.getStackSize() - this.currentFluidCapacity;
             IAEFluidStack left = insertFluidToAE(inv, stack.copy().setStackSize(overflow));
-            long remainingOverflow = left == null ? 0L : left.getStackSize();
-            this.fluidTanks.setFluidInSlot(slot, stack.copy().setStackSize(this.currentFluidCapacity + remainingOverflow));
+            long remainingOverflow = left == null
+                ? 0L
+                : Math.min(overflow, Math.max(0L, left.getStackSize()));
+            this.fluidTanks.setFluidInSlot(
+                slot,
+                stack.copy().setStackSize(LongRequirementAmounts.saturatedAdd(this.currentFluidCapacity, remainingOverflow))
+            );
         }
     }
 
@@ -895,9 +905,13 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
             GasStack overflow = stack.copy();
             overflow.amount = stack.amount - this.currentGasCapacity;
             IAEGasStack left = insertGasToAE(inv, overflow);
-            int remainingOverflow = left == null ? 0 : (int) left.getStackSize();
+            long remainingOverflow = left == null
+                ? 0L
+                : Math.min((long) overflow.amount, Math.max(0L, left.getStackSize()));
             GasStack resized = stack.copy();
-            resized.amount = this.currentGasCapacity + remainingOverflow;
+            resized.amount = LongRequirementAmounts.downcastAmount(
+                LongRequirementAmounts.saturatedAdd(this.currentGasCapacity, remainingOverflow)
+            );
             this.gasTanks.setGas(slot, resized);
         }
     }
@@ -1182,7 +1196,7 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
                         success = true;
                     }
                 } else {
-                    int countToExtract = (int) (invStack.getStackSize() - capacity);
+                    long countToExtract = invStack.getStackSize() - capacity;
                     IAEFluidStack left = insertFluidToAE(inv, invStack.copy().setStackSize(countToExtract));
                     if (left == null) {
                         this.fluidTanks.setFluidInSlot(slot, invStack.copy().setStackSize(invStack.getStackSize() - countToExtract));
@@ -1253,7 +1267,9 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
                     IAEGasStack stack = extractGasFromAE(inv, copied);
                     if (stack != null) {
                         copied = invStack.copy();
-                        copied.amount = (int) (invStack.amount + stack.getStackSize());
+                        copied.amount = LongRequirementAmounts.downcastAmount(
+                            LongRequirementAmounts.saturatedAdd(invStack.amount, stack.getStackSize())
+                        );
                         this.gasTanks.setGas(slot, copied);
                         success = true;
                     }
@@ -1267,7 +1283,9 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
                         this.gasTanks.setGas(slot, copied);
                     } else {
                         copied = invStack.copy();
-                        copied.amount = (int) (capacity + left.getStackSize());
+                        copied.amount = LongRequirementAmounts.downcastAmount(
+                            LongRequirementAmounts.saturatedAdd(capacity, left.getStackSize())
+                        );
                         this.gasTanks.setGas(slot, copied);
                     }
                     success = true;
@@ -1340,7 +1358,14 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
             return ItemStack.EMPTY;
         }
         IAEItemStack extracted = Platform.poweredExtraction(this.proxy.getEnergy(), inv, aeStack, this.source);
-        return extracted == null ? ItemStack.EMPTY : extracted.createItemStack();
+        if (extracted == null) {
+            return ItemStack.EMPTY;
+        }
+        long amount = LongRequirementAmounts.clampReportedAmount(
+            aeStack.getStackSize(),
+            extracted.getStackSize()
+        );
+        return amount <= 0L ? ItemStack.EMPTY : extracted.copy().setStackSize(amount).createItemStack();
     }
 
     private ItemStack insertItemToAE(final IMEMonitor<IAEItemStack> inv, final ItemStack stack) throws GridAccessException {
@@ -1349,7 +1374,14 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
             return stack;
         }
         IAEItemStack left = Platform.poweredInsert(this.proxy.getEnergy(), inv, aeStack, this.source);
-        return left == null ? ItemStack.EMPTY : left.createItemStack();
+        if (left == null) {
+            return ItemStack.EMPTY;
+        }
+        long amount = LongRequirementAmounts.clampReportedAmount(
+            aeStack.getStackSize(),
+            left.getStackSize()
+        );
+        return amount <= 0L ? ItemStack.EMPTY : left.copy().setStackSize(amount).createItemStack();
     }
 
     private IAEItemStack createItemStack(final ItemStack stack) {
@@ -1357,19 +1389,51 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
     }
 
     private IAEFluidStack extractFluidFromAE(final IMEMonitor<IAEFluidStack> inv, final IAEFluidStack stack) throws GridAccessException {
-        return Platform.poweredExtraction(this.proxy.getEnergy(), inv, stack.copy(), this.source);
+        IAEFluidStack extracted = Platform.poweredExtraction(this.proxy.getEnergy(), inv, stack.copy(), this.source);
+        return clampFluidTransfer(stack, extracted);
     }
 
     private IAEFluidStack insertFluidToAE(final IMEMonitor<IAEFluidStack> inv, final IAEFluidStack stack) throws GridAccessException {
-        return Platform.poweredInsert(this.proxy.getEnergy(), inv, stack.copy(), this.source);
+        IAEFluidStack left = Platform.poweredInsert(this.proxy.getEnergy(), inv, stack.copy(), this.source);
+        return clampFluidTransfer(stack, left);
     }
 
     private IAEGasStack extractGasFromAE(final IMEMonitor<IAEGasStack> inv, final GasStack stack) throws GridAccessException {
-        return Platform.poweredExtraction(this.proxy.getEnergy(), inv, AEGasStack.of(stack), this.source);
+        IAEGasStack request = AEGasStack.of(stack);
+        IAEGasStack extracted = Platform.poweredExtraction(this.proxy.getEnergy(), inv, request, this.source);
+        return clampGasTransfer(request, extracted);
     }
 
     private IAEGasStack insertGasToAE(final IMEMonitor<IAEGasStack> inv, final GasStack stack) throws GridAccessException {
-        return Platform.poweredInsert(this.proxy.getEnergy(), inv, AEGasStack.of(stack), this.source);
+        IAEGasStack request = AEGasStack.of(stack);
+        IAEGasStack left = Platform.poweredInsert(this.proxy.getEnergy(), inv, request, this.source);
+        return clampGasTransfer(request, left);
+    }
+
+    @Nullable
+    private static IAEFluidStack clampFluidTransfer(@Nullable IAEFluidStack requested,
+                                                    @Nullable IAEFluidStack result) {
+        if (requested == null || result == null) {
+            return result;
+        }
+        long amount = LongRequirementAmounts.clampReportedAmount(
+            requested.getStackSize(),
+            result.getStackSize()
+        );
+        return amount <= 0L ? null : result.copy().setStackSize(amount);
+    }
+
+    @Nullable
+    private static IAEGasStack clampGasTransfer(@Nullable IAEGasStack requested,
+                                                @Nullable IAEGasStack result) {
+        if (requested == null || result == null) {
+            return result;
+        }
+        long amount = LongRequirementAmounts.clampReportedAmount(
+            requested.getStackSize(),
+            result.getStackSize()
+        );
+        return amount <= 0L ? null : result.copy().setStackSize(amount);
     }
 
     @Override
@@ -1446,6 +1510,12 @@ public class TileCustomAEMixedInputBus extends TileColorableMachineComponent imp
 
     @Override
     public void gridChanged() {
+        markAllSlotsChanged();
+        try {
+            this.proxy.getTick().alertDevice(this.proxy.getNode());
+        } catch (GridAccessException ignored) {
+            // The next periodic full check will retry if the grid is not ready yet.
+        }
     }
 
     @Nonnull

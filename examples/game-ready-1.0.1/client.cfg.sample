@@ -2,6 +2,8 @@
 
 general {
     B:enabled=true
+    # Shared limit for all MMCE More Extensions JSON files, including GUI,
+    # custom hatches, custom AE buses, capacity cards, and button policies.
     I:maxGuiConfigFileSizeMiB=8
     I:wheelStep=10
 

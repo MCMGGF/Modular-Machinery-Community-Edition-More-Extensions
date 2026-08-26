@@ -131,11 +131,12 @@ public class RequirementLongFluid extends RequirementFluid {
         long maxRequired = LongRequirementAmounts.saturatedMultiply(required, maxMultiplier);
         List<IFluidHandler> handlers = HybridFluidUtils.castFluidHandlerComponents(components);
         long available = LongRequirementIO.simulateFluid(this.required, handlers, maxRequired, this.actionType);
-        if (available < required) {
+        long completedAmount = LongRequirementAmounts.completeAmount(available, required, maxMultiplier);
+        if (completedAmount <= 0L) {
             return 0;
         }
-        LongRequirementIO.doFluid(this.required, handlers, available, this.actionType);
-        return (int) Math.min((long) maxMultiplier, available / required);
+        LongRequirementIO.doFluid(this.required, handlers, completedAmount, this.actionType);
+        return (int) (completedAmount / required);
     }
 
     private static final class LongFluidJeiComponent extends ComponentRequirement.JEIComponent<FluidStack> {

@@ -7,7 +7,7 @@ Define a brand-new hatch from one JSON file (a **block + item + tile**), acting 
 - Default state: not registered; set `customContent.enableCustomHatches=true` in `config/mmceguiext/client.cfg`
 - Directory: `config/mmceguiext/custom_hatches/*.json`
 - Scanned: **at game start** after enabling (edits need a restart, not `/ct reload`)
-- Max file size: 1 MB
+- Max file size: `maxGuiConfigFileSizeMiB` MiB (default `8`, range `1-64`) from `config/mmceguiext/client.cfg`
 - Registers the block as `mmceguiext:<id>`
 
 Working examples:

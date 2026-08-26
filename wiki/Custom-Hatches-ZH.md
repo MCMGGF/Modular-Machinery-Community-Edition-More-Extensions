@@ -7,7 +7,7 @@
 - 默认状态：不注册；需在 `config/mmceguiext/client.cfg` 开启 `customContent.enableCustomHatches=true`
 - 放置目录：`config/mmceguiext/custom_hatches/*.json`
 - 扫描时机：开启后在**游戏启动时**扫描（修改后需重启，`/ct reload` 无效）
-- 单文件上限：1 MB
+- 单文件上限：使用 `config/mmceguiext/client.cfg` 中的 `maxGuiConfigFileSizeMiB`，默认 `8 MiB`，范围 `1-64 MiB`
 - 注册结果：方块注册为 `mmceguiext:<id>`
 
 真实可参考示例：

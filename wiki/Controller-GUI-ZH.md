@@ -26,7 +26,7 @@ MMCE 更多扩展（MMCEME）挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开�
 - Smart Interface 编辑器：`enableSmartInterfaceEditor`、`smartInterfaceEditorX`/`Y`（`-1`=自动右下）、`smartInterfaceEditorInputWidth`、`smartInterfaceEditorVirtualKey`（无绑定 DataPort 时写入控制器 `customData[key]`，多个 key 用 `,` 或 `;` 分隔）
 - 仅工厂：`factoryController.specialThreadBackgroundColor`（十六进制 `RRGGBB` 或 `AARRGGBB`，核心/特殊线程行着色）
 
-全局开关 `enabled`、滚轮步长 `wheelStep` 等也在此文件。`maxGuiConfigFileSizeMiB` 默认是 `8`，用于设置机器 GUI、独立样式、subGUI 和外链 GUI 样式的文件大小上限，范围为 `1-64`；它不改变自定义仓口和 AE 总线 JSON 的限制。可参考 `examples/game-ready-1.0.1/client.cfg.sample`。
+全局开关 `enabled`、滚轮步长 `wheelStep` 等也在此文件。`maxGuiConfigFileSizeMiB` 默认是 `8`，是 MMCE More Extensions 全部 JSON 的共享文件大小上限，包括 GUI、自定义仓口、自定义 AE 总线、容量卡和按钮策略文件，范围为 `1-64`。配置键名称为兼容旧版本而保留。可参考 `examples/game-ready-1.0.1/client.cfg.sample`。
 
 **背景规则**：有自定义贴图 → 用自定义贴图；没有 → 用 MMCE 默认贴图；没有且 `hideDefaultBackground=true` → 不画背景。使用 MMCE 默认贴图时信息文本仍在原信息区渲染；多信息区仅在自定义贴图模式下启用。
 
@@ -115,6 +115,8 @@ MMCE 更多扩展（MMCEME）挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开�
 
 虚拟 DataPort：无实体端口也可写值。推荐读取方式（兼容原生+虚拟）：先读 `ctrl.getSmartInterfaceData(key)`，为空再读 `ctrl.customData`。
 
+**数值精度：** `customData` 可以来自 NBT `Long` 或 `Double`，但当前客户端动态视觉链路以 `float` 为主。超过 IEEE-754 `float` 可精确表示整数范围的大型 `Long`，以及精度高于 `float` 的 `Double`，被 GUI 读取时可能发生舍入。Smart Interface 编辑器、滑块、`smart_set`、`smart_add` 和虚拟 DataPort 的数值写入主要走 `Float` 通道，因此不能可靠地写入任意超大 `Long` 的每一位数字。需要精确保存大整数时，请优先使用字符串或服务端/脚本侧的 `Long` 处理，并在用于动态视觉前先将大数归一化。
+
 ---
 
 ## 7. 自定义按钮与页面
@@ -194,7 +196,7 @@ MMCE 更多扩展（MMCEME）挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开�
 
 `dynamicVisuals[]` 在普通控制器和集成控制器样式里都支持。它是变量驱动视觉的统一系统：`source` -> 归一化 -> 可选显隐 / 变换 / renderer 切换 / 颜色覆盖 -> 可选 `history` -> `renderer`。
 
-当前 renderer 支持：`textureSwitch`、`fill`、`pie`/`ring`、`lineChart`。source 可以读取控制器 `customData` / Smart Interface 数值，也可以读取内置机器指标，例如 `recipeProgress`、`energyRatio`、`parallelism`、`threadCount`，以及工厂线程数量指标。
+当前 renderer 支持：`textureSwitch`、`animatedTexture`、`fill`、`pie`/`ring`、`lineChart`。source 可以读取控制器 `customData` / Smart Interface 数值，也可以读取内置机器指标，例如 `recipeProgress`、`energyRatio`、`parallelism`、`threadCount`，以及工厂线程数量指标。
 
 `source.type` 目前支持：
 - `customData`
@@ -204,6 +206,48 @@ MMCE 更多扩展（MMCEME）挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开�
 `combined` 会先把多个子 source 解析成原始数值并完成组合，然后再对父级 source 应用 `min`、`max`、`clamp`、`invert`。`combine` 支持：`sum`、`average`、`weightedSum`、`weightedAverage`、`min`、`max`、`multiply`、`subtract`、`divide`、`first`、`last`。子项可以是 `customData`、`machine`，也可以继续嵌套 `combined`。每个子项还可以写 `weight`，供 `weightedSum` / `weightedAverage` 使用。
 
 动态上下限使用 `minSource` / `maxSource`（也支持 `min_source` / `max_source`）。两者都接受完整的 `customData`、`machine` 或 `combined` source；有限动态值覆盖静态 `min` / `max`，缺失或非有限值回退静态值。bound source 按原始值读取，不执行自己的归一化。最终 `max <= min` 时归一化结果固定为 `0`。
+
+`animatedTexture` 是按 tick/时间驱动的 PNG 帧动画，支持单张帧图集或按顺序播放多张 PNG。类型别名包括 `animated_texture`、`animation`、`spriteSheet`、`spritesheet`。
+
+帧图集字段：
+- `texture`、`frameWidth`、`frameHeight`、`frameCount`
+- 可选 `columns`、`textureWidth`、`textureHeight`、`u`、`v`
+- `ticksPerFrame`（默认 `2`）、`startFrame`（默认 `0`）、`loop`（默认 `true`）、`reverse`（默认 `false`）、`pingPong`（默认 `false`）
+
+多 PNG 文件字段：
+- `frames[]` 按播放顺序排列
+- 每帧可以是贴图字符串，也可以是包含 `texture`、`u`、`v`、`textureWidth`、`textureHeight` 的对象
+
+未填写 `columns` 时会尝试用 `textureWidth / frameWidth` 推导；无法推导时按单行图集处理。不支持 GIF 解码或 GIF 自动播放；为兼容 Minecraft，请使用 PNG 帧图或 PNG 帧图集。`textureSwitch` 仍然是按数值切换，`animatedTexture` 则按时间播放。
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "texture": "yourmod:textures/gui/fan_sheet.png",
+  "frameWidth": 16,
+  "frameHeight": 16,
+  "frameCount": 8,
+  "columns": 4,
+  "textureWidth": 64,
+  "textureHeight": 32,
+  "ticksPerFrame": 2,
+  "loop": true
+}
+```
+
+也可以使用多张 PNG：
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "ticksPerFrame": 3,
+  "frames": [
+    "yourmod:textures/gui/spark_0.png",
+    "yourmod:textures/gui/spark_1.png",
+    { "texture": "yourmod:textures/gui/spark_2.png", "u": 0, "v": 0, "textureWidth": 16, "textureHeight": 16 }
+  ]
+}
+```
 
 ```json
 "source": {

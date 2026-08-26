@@ -862,8 +862,17 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
                     inventory.setStackInSlot(slot, ItemStack.EMPTY);
                     success = true;
                 } else {
-                    inventory.setStackInSlot(slot, left.createItemStack());
-                    success |= left.getStackSize() != aeStack.getStackSize();
+                    long remaining = LongRequirementAmounts.clampReportedAmount(
+                        aeStack.getStackSize(),
+                        left.getStackSize()
+                    );
+                    if (remaining <= 0L) {
+                        inventory.setStackInSlot(slot, ItemStack.EMPTY);
+                        success = true;
+                    } else {
+                        inventory.setStackInSlot(slot, left.copy().setStackSize(remaining).createItemStack());
+                        success |= remaining != aeStack.getStackSize();
+                    }
                 }
             }
         } finally {
@@ -897,8 +906,17 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
                     fluidTanks.setFluidInSlot(slot, null);
                     success = true;
                 } else {
-                    fluidTanks.setFluidInSlot(slot, left);
-                    success |= left.getStackSize() != fluid.getStackSize();
+                    long remaining = LongRequirementAmounts.clampReportedAmount(
+                        fluid.getStackSize(),
+                        left.getStackSize()
+                    );
+                    if (remaining <= 0L) {
+                        fluidTanks.setFluidInSlot(slot, null);
+                        success = true;
+                    } else {
+                        fluidTanks.setFluidInSlot(slot, left.copy().setStackSize(remaining));
+                        success |= remaining != fluid.getStackSize();
+                    }
                 }
             }
         } finally {
@@ -930,8 +948,21 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
                     gasTanks.setGas(slot, null);
                     success = true;
                 } else {
-                    gasTanks.setGas(slot, left.getGasStack());
-                    success |= left.getStackSize() != gas.amount;
+                    long remaining = LongRequirementAmounts.clampReportedAmount(
+                        gas.amount,
+                        left.getStackSize()
+                    );
+                    if (remaining <= 0L) {
+                        gasTanks.setGas(slot, null);
+                        success = true;
+                    } else {
+                        GasStack remainingGas = left.getGasStack();
+                        if (remainingGas != null) {
+                            remainingGas.amount = LongRequirementAmounts.downcastAmount(remaining);
+                            gasTanks.setGas(slot, remainingGas);
+                            success |= remaining != gas.amount;
+                        }
+                    }
                 }
             }
         }
@@ -1033,8 +1064,11 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
                 continue;
             }
             multiplier *= modifier.multiplier;
-            flatFluid += modifier.flatFluid;
-            flatGas += modifier.flatGas;
+            if (!Double.isFinite(multiplier) || multiplier <= 0.0D) {
+                multiplier = Double.MAX_VALUE;
+            }
+            flatFluid = LongRequirementAmounts.saturatedAdd(flatFluid, modifier.flatFluid);
+            flatGas = LongRequirementAmounts.saturatedAdd(flatGas, modifier.flatGas);
         }
         int newFluidCapacity = clampCapacity(FLUID_TANK_CAPACITY, multiplier, flatFluid);
         int newGasCapacity = clampCapacity(GAS_TANK_CAPACITY, multiplier, flatGas);
@@ -1058,9 +1092,11 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
     }
 
     private int clampCapacity(int baseCapacity, double multiplier, long flatBonus) {
-        double scaled = Math.max(1.0D, baseCapacity * multiplier);
-        long capacity = Math.round(scaled) + Math.max(0L, flatBonus);
-        return (int) Math.max(1L, Math.min(Integer.MAX_VALUE, capacity));
+        double safeMultiplier = Double.isFinite(multiplier) && multiplier > 0.0D ? multiplier : 1.0D;
+        double scaled = Math.max(1.0D, baseCapacity * safeMultiplier);
+        long scaledCapacity = scaled >= Long.MAX_VALUE ? Long.MAX_VALUE : Math.max(1L, Math.round(scaled));
+        long capacity = LongRequirementAmounts.saturatedAdd(scaledCapacity, Math.max(0L, flatBonus));
+        return LongRequirementAmounts.downcastAmount(Math.max(1L, capacity));
     }
 
     private void markAllSlotsChanged() {
@@ -1090,8 +1126,13 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
             }
             long overflow = stack.getStackSize() - this.currentFluidCapacity;
             IAEFluidStack left = Platform.poweredInsert(this.proxy.getEnergy(), inv, stack.copy().setStackSize(overflow), this.source);
-            long remainingOverflow = left == null ? 0L : left.getStackSize();
-            this.fluidTanks.setFluidInSlot(slot, stack.copy().setStackSize(this.currentFluidCapacity + remainingOverflow));
+            long remainingOverflow = left == null
+                ? 0L
+                : Math.min(overflow, Math.max(0L, left.getStackSize()));
+            this.fluidTanks.setFluidInSlot(
+                slot,
+                stack.copy().setStackSize(LongRequirementAmounts.saturatedAdd(this.currentFluidCapacity, remainingOverflow))
+            );
         }
     }
 
@@ -1104,9 +1145,13 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
             GasStack overflow = stack.copy();
             overflow.amount = stack.amount - this.currentGasCapacity;
             IAEGasStack left = Platform.poweredInsert(this.proxy.getEnergy(), inv, AEGasStack.of(overflow), this.source);
-            int remainingOverflow = left == null ? 0 : (int) left.getStackSize();
+            long remainingOverflow = left == null
+                ? 0L
+                : Math.min((long) overflow.amount, Math.max(0L, left.getStackSize()));
             GasStack resized = stack.copy();
-            resized.amount = this.currentGasCapacity + remainingOverflow;
+            resized.amount = LongRequirementAmounts.downcastAmount(
+                LongRequirementAmounts.saturatedAdd(this.currentGasCapacity, remainingOverflow)
+            );
             this.gasTanks.setGas(slot, resized);
         }
     }
@@ -1145,6 +1190,12 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
 
     @Override
     public void gridChanged() {
+        markAllSlotsChanged();
+        try {
+            this.proxy.getTick().alertDevice(this.proxy.getNode());
+        } catch (GridAccessException ignored) {
+            // The next periodic full check will retry if the grid is not ready yet.
+        }
     }
 
     @Nonnull

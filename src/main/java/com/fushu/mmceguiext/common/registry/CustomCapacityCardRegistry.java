@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.common.registry;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.common.integration.ae.AEIntegrationState;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -21,6 +22,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +34,6 @@ import java.util.stream.Stream;
 public final class CustomCapacityCardRegistry {
     private static final Logger LOGGER = LogManager.getLogger(MMCEGuiExt.MODID);
     private static final Path CONFIG_DIR = resolveConfigDir();
-    private static final long MAX_CONFIG_BYTES = 1024L * 1024L;
     private static final double DEFAULT_MULTIPLIER = 1.0D;
     private static final List<Entry> JSON_ENTRIES = new ArrayList<Entry>();
     private static final List<Entry> SCRIPT_ENTRIES = new CopyOnWriteArrayList<Entry>();
@@ -98,8 +99,10 @@ public final class CustomCapacityCardRegistry {
 
     private static void load(Path path) {
         try {
-            if (Files.size(path) > MAX_CONFIG_BYTES) {
-                LOGGER.warn("Skipping custom capacity card config {} because it is larger than {} bytes.", path, MAX_CONFIG_BYTES);
+            long fileSize = Files.size(path);
+            long maxFileSize = MMCEGuiExtConfig.getMaxExtensionConfigFileBytes();
+            if (!MMCEGuiExtConfig.isExtensionConfigFileSizeAllowed(fileSize)) {
+                LOGGER.warn("Skipping custom capacity card config {} because it is larger than {} bytes.", path, maxFileSize);
                 return;
             }
             String text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
@@ -304,7 +307,15 @@ public final class CustomCapacityCardRegistry {
     }
 
     private static Path resolveConfigDir() {
-        Path dir = Loader.instance().getConfigDir().toPath().resolve("mmceguiext").resolve("capacity_cards");
+        Path configDir;
+        try {
+            configDir = Loader.instance() != null && Loader.instance().getConfigDir() != null
+                ? Loader.instance().getConfigDir().toPath()
+                : Paths.get("config");
+        } catch (RuntimeException ex) {
+            configDir = Paths.get("config");
+        }
+        Path dir = configDir.resolve("mmceguiext").resolve("capacity_cards");
         try {
             Files.createDirectories(dir);
         } catch (IOException ignored) {

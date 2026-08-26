@@ -26,7 +26,7 @@ Styles come from two layers; per-machine wins, falling back to global:
 - Smart Interface editor: `enableSmartInterfaceEditor`, `smartInterfaceEditorX`/`Y` (`-1` = auto bottom-right), `smartInterfaceEditorInputWidth`, `smartInterfaceEditorVirtualKey` (writes to controller `customData[key]` when no DataPort is bound; multiple keys split by `,` or `;`)
 - Factory only: `factoryController.specialThreadBackgroundColor` (hex `RRGGBB` or `AARRGGBB`, tint for core/special thread rows)
 
-The global switch `enabled`, scroll step `wheelStep`, etc. live here too. `maxGuiConfigFileSizeMiB` defaults to `8` and controls the file size limit for machine GUI, standalone style, subGUI, and external GUI style JSON files; its range is `1-64`. It does not change custom hatch or custom AE bus JSON limits. See `examples/game-ready-1.0.1/client.cfg.sample`.
+The global switch `enabled`, scroll step `wheelStep`, etc. live here too. `maxGuiConfigFileSizeMiB` defaults to `8` and is the shared file size limit for all MMCE More Extensions JSON files, including GUI, custom hatches, custom AE buses, capacity cards, and button policies; its range is `1-64`. The historical key name is retained for compatibility. See `examples/game-ready-1.0.1/client.cfg.sample`.
 
 **Background rules**: custom texture present → use it; absent → use MMCE default; absent and `hideDefaultBackground=true` → draw no background. When the MMCE default texture is used, info text stays in the original info area; multi-panel mode is enabled only in custom-texture mode.
 
@@ -115,6 +115,8 @@ Custom editors: `smartInterfaceEditors[]`, each supports `id`, `x`, `y`, `inputW
 
 Virtual DataPort: write values even without a physical port. Recommended read (compatible with both native + virtual): read `ctrl.getSmartInterfaceData(key)` first, then fall back to `ctrl.customData`.
 
+**Numeric precision:** `customData` may contain NBT `Long` or `Double` values, but the current client-side dynamic-visual path is float-oriented. Large `Long` values outside the exact integer range of an IEEE-754 `float`, and `Double` values with more precision than a `float` can retain, may be rounded when read by the GUI. Smart Interface editors, sliders, `smart_set`, `smart_add`, and virtual DataPort numeric writes mainly use the `Float` pathway, so they cannot reliably write every digit of an arbitrarily large `Long`. Use strings or server/script-side `Long` handling when exact large integers matter, and normalize large values before using them as visual inputs.
+
 ---
 
 ## 7. Custom buttons & pages
@@ -194,7 +196,7 @@ Read from text lines pushed into MMCE's `ControllerGUIRenderEvent.extraInfo[]` (
 
 `dynamicVisuals[]` works in both Machine and Factory controller styles. It is the unified system for variable-driven visuals: `source` -> normalization -> optional visibility / transform / renderer selection / color overrides -> optional `history` -> `renderer`.
 
-Renderers supported now: `textureSwitch`, `fill`, `pie`/`ring`, and `lineChart`. Sources can read controller `customData` / Smart Interface numeric values, or built-in machine metrics such as `recipeProgress`, `energyRatio`, `parallelism`, `threadCount`, plus factory thread-count metrics.
+Renderers supported now: `textureSwitch`, `animatedTexture`, `fill`, `pie`/`ring`, and `lineChart`. Sources can read controller `customData` / Smart Interface numeric values, or built-in machine metrics such as `recipeProgress`, `energyRatio`, `parallelism`, `threadCount`, plus factory thread-count metrics.
 
 `source.type` currently supports:
 - `customData`
@@ -204,6 +206,48 @@ Renderers supported now: `textureSwitch`, `fill`, `pie`/`ring`, and `lineChart`.
 `combined` first resolves multiple child sources as raw numeric values, then applies the parent source's `min`, `max`, `clamp`, and `invert`. Supported `combine` modes: `sum`, `average`, `weightedSum`, `weightedAverage`, `min`, `max`, `multiply`, `subtract`, `divide`, `first`, `last`. Child entries may be `customData`, `machine`, or nested `combined`. Each child may also define `weight`, used by `weightedSum` / `weightedAverage`.
 
 Use `minSource` / `maxSource` (aliases `min_source` / `max_source`) for dynamic bounds. Each accepts a complete `customData`, `machine`, or `combined` source. Finite dynamic values override static `min` / `max`; missing or non-finite values fall back to the static bounds. Bound sources are read raw without applying their own normalization. Final `max <= min` produces normalized value `0`.
+
+`animatedTexture` is tick/time-driven and supports PNG frame animation from either a sprite sheet or an ordered list of PNG files. Accepted type aliases are `animated_texture`, `animation`, `spriteSheet`, and `spritesheet`.
+
+Sprite-sheet fields:
+- `texture`, `frameWidth`, `frameHeight`, `frameCount`
+- optional `columns`, `textureWidth`, `textureHeight`, `u`, `v`
+- `ticksPerFrame` (default `2`), `startFrame` (default `0`), `loop` (default `true`), `reverse` (default `false`), `pingPong` (default `false`)
+
+Multi-file fields:
+- `frames[]` in playback order
+- each frame can be a texture string or an object with `texture`, `u`, `v`, `textureWidth`, and `textureHeight`
+
+If `columns` is omitted, it is inferred from `textureWidth / frameWidth`; if that is unavailable, the sheet is treated as one row. GIF decoding and automatic GIF playback are not supported. Use PNG files or a PNG sprite sheet for Minecraft compatibility. `textureSwitch` remains value-driven, while `animatedTexture` is time-driven.
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "texture": "yourmod:textures/gui/fan_sheet.png",
+  "frameWidth": 16,
+  "frameHeight": 16,
+  "frameCount": 8,
+  "columns": 4,
+  "textureWidth": 64,
+  "textureHeight": 32,
+  "ticksPerFrame": 2,
+  "loop": true
+}
+```
+
+The renderer can also use multiple files:
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "ticksPerFrame": 3,
+  "frames": [
+    "yourmod:textures/gui/spark_0.png",
+    "yourmod:textures/gui/spark_1.png",
+    { "texture": "yourmod:textures/gui/spark_2.png", "u": 0, "v": 0, "textureWidth": 16, "textureHeight": 16 }
+  ]
+}
+```
 
 ```json
 "source": {

@@ -111,8 +111,8 @@ Important keys / 重要键：
 - `machineController.smartInterfaceEditorY` (`-1` = auto right-bottom)
 - `machineController.smartInterfaceEditorInputWidth`
 - `machineController.smartInterfaceEditorVirtualKey` (used when no bound DataPort, writes to controller `customData[key]`; supports multiple keys split by `,` or `;`)
-- `maxGuiConfigFileSizeMiB` (default `8`, range `1-64`) sets the maximum size of MMCEME GUI JSON files in `config/modularmachinery/machinery`, `config/mmceguiext/styles`, `config/mmceguiext/subgui`, and external GUI style files. It does not change custom hatch or custom AE bus JSON limits.
-  / `maxGuiConfigFileSizeMiB`（默认 `8`，范围 `1-64`）设置 MMCEME GUI JSON 文件上限，包括机器 GUI、独立样式、subGUI 和外链 GUI 样式；不会改变自定义仓口或 AE 总线 JSON 的限制。
+- `maxGuiConfigFileSizeMiB` (default `8`, range `1-64`) is the shared maximum size for MMCE More Extensions JSON files, including machine GUI, standalone style, subGUI, external GUI style, custom hatch, custom AE bus, capacity card, and GUI button policy files. The historical key name is retained for config compatibility.
+  / `maxGuiConfigFileSizeMiB`（默认 `8`，范围 `1-64`）是 MMCE More Extensions 全部 JSON 的共享上限，包括 GUI、自定义仓口、自定义 AE 总线、容量卡和按钮策略文件；配置键名称为兼容旧版本而保留。
 - `factoryController.*` — same keys as `machineController.*` / 与 `machineController.*` 同名键
 - `factoryController.specialThreadBackgroundColor` (hex `RRGGBB` or `AARRGGBB`, for core/special thread row tint / 十六进制颜色，用于核心/特殊线程行着色)
 - `factoryController.threadQueueX/Y`, `threadVisibleRows`, `threadRowWidth/Height` customize the integrated-controller thread queue and can trigger self-proxy replacement by themselves.
@@ -415,6 +415,9 @@ Each bus type is JSON-defined (one `.json` per definition) and registered as a b
 Common JSON fields / 通用 JSON 字段：`id`, `displayName`, the GUI layout (`gui.components[]` with `slot` / `tank` entries, or legacy flat `configSlots` / `storageSlots`), block model/texture. The mixed buses additionally describe item/fluid/gas config + storage regions.
 通用字段：`id`、`displayName`、GUI 布局（`gui.components[]` 含 `slot`/`tank`，或旧式扁平 `configSlots`/`storageSlots`）、方块模型/贴图。混合总线另外描述物品/流体/气体的 config + storage 区域。
 
+Sparse arrays are supported. Use explicit `index` values for sparse item slots, fluid/gas tanks, or other GUI components; slot-group layouts that expose `slotIndices[]` can use that field for explicit container mapping. Holes remain unused and are not compacted or remapped automatically. Duplicate indexes and out-of-range indexes are invalid: the loader warns and skips the conflicting mapping. This is separate from duplicate definition IDs across JSON files; after deterministic file ordering, the first definition wins and later duplicate IDs are skipped with a warning.
+支持稀疏数组。物品槽、流体/气体罐或其他 GUI 组件存在空洞时，请显式填写 `index`；如果是提供了 `slotIndices[]` 的槽位组布局，可使用该字段显式映射容器槽位。空洞会保持未使用，不会自动压缩或重新映射。重复索引和越界索引均无效：加载器会警告并跳过冲突映射。这与多个 JSON 文件使用重复定义 ID 是两回事；文件按确定顺序加载后，首个定义生效，后续重复 ID 会警告并跳过。
+
 ---
 
 # Part 4 — Long-Capacity Recipe Requirements | 第四部分 · Long 容量配方需求
@@ -478,6 +481,8 @@ Supported sources:
 - `customData`: reads a numeric value from controller custom data / Smart Interface virtual key: `key`, `default`, `min`, `max`, `minSource`, `maxSource`, `clamp`, `invert`.
 - `machine`: built-in metrics: `recipeProgress`, `recipeMaxProgress`, `energyStored`, `energyCapacity`, `energyRatio`, `parallelism`, `threadCount`, `activeThreadCount`, `idleThreadCount`; factory also supports `factoryThreadCount`, `factoryActiveThreadCount`, `factoryIdleThreadCount`.
 - `combined`: combines multiple child sources first, then applies the parent source's `min` / `max` / `clamp` / `invert`. Fields: `combine`, `sources[]`. Child entries can themselves be `customData`, `machine`, or nested `combined`. Each child may also define `weight`, used by `weightedSum` / `weightedAverage`.
+
+`customData` may carry NBT `Long` or `Double` values, but GUI-side dynamic visuals currently use float-oriented numeric APIs. Large `Long` values beyond the exact integer range of IEEE-754 `float`, and high-precision `Double` values, may be rounded before rendering. Smart Interface editors, sliders, `smart_set`, `smart_add`, and virtual DataPort numeric writes mainly use `Float`, so an input box cannot reliably preserve every digit of an arbitrarily large `Long`. Use strings or server/script-side `Long` handling for exact large integers, and normalize large values before feeding them to a progress bar or other visual.
 
 `minSource` / `maxSource` (aliases `min_source` / `max_source`) accept a complete `customData`, `machine`, or `combined` source. A finite dynamic bound overrides static `min` / `max`; a missing or non-finite bound falls back to the static value. Bound sources are read as raw values and do not normalize themselves. If the final `max <= min`, the normalized result is `0`.
 

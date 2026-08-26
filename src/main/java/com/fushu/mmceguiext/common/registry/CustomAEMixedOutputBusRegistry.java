@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.common.registry;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.common.config.TextureLayerDef;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -16,18 +17,20 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public final class CustomAEMixedOutputBusRegistry {
     private static final Logger LOGGER = LogManager.getLogger(MMCEGuiExt.MODID);
     private static final Path BUS_DIR = resolveBusDir();
-    private static final long MAX_CONFIG_BYTES = 1024L * 1024L;
     private static final int MAX_GUI_COMPONENTS = 2048;
     private static final int MAX_COMPONENT_INDEX = 4095;
     private static final int MAX_COMPONENT_SIZE = 4096;
@@ -45,11 +48,18 @@ public final class CustomAEMixedOutputBusRegistry {
             return Collections.emptyList();
         }
         try (Stream<Path> stream = Files.list(BUS_DIR)) {
-            stream.filter(p -> p.toString().endsWith(".json")).forEach(path -> {
+            stream.filter(p -> p.toString().endsWith(".json"))
+                .sorted()
+                .forEach(path -> {
                 Def def = load(path);
-                if (def != null && !REGISTERED.containsKey(normalizeId(def.id))) {
-                    CACHE.add(def);
-                    REGISTERED.put(normalizeId(def.id), def);
+                if (def != null) {
+                    String key = normalizeId(def.id);
+                    if (REGISTERED.containsKey(key)) {
+                        LOGGER.warn("Skipping duplicate custom AE mixed output bus id {} from {}.", def.id, path);
+                    } else {
+                        CACHE.add(def);
+                        REGISTERED.put(key, def);
+                    }
                 }
             });
         } catch (IOException ex) {
@@ -96,8 +106,10 @@ public final class CustomAEMixedOutputBusRegistry {
     @Nullable
     public static Def load(Path path) {
         try {
-            if (Files.size(path) > MAX_CONFIG_BYTES) {
-                LOGGER.warn("Skipping custom AE mixed output bus {} because it is larger than {} bytes.", path, MAX_CONFIG_BYTES);
+            long fileSize = Files.size(path);
+            long maxFileSize = MMCEGuiExtConfig.getMaxExtensionConfigFileBytes();
+            if (!MMCEGuiExtConfig.isExtensionConfigFileSizeAllowed(fileSize)) {
+                LOGGER.warn("Skipping custom AE mixed output bus {} because it is larger than {} bytes.", path, maxFileSize);
                 return null;
             }
             String text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
@@ -139,6 +151,7 @@ public final class CustomAEMixedOutputBusRegistry {
         if (def == null || def.gui == null || def.gui.components == null || def.gui.components.isEmpty()) {
             return;
         }
+        Set<String> seenComponentIndexes = new HashSet<String>();
         int itemIndex = 0;
         int fluidIndex = 0;
         int gasIndex = 0;
@@ -153,7 +166,7 @@ public final class CustomAEMixedOutputBusRegistry {
                     if (component.index < 0) {
                         component.index = itemIndex;
                     }
-                    if (!isValidComponentIndex(component, def)) {
+                    if (!registerComponentIndex(seenComponentIndexes, component, def)) {
                         continue;
                     }
                     itemIndex = Math.max(itemIndex, component.index + 1);
@@ -161,7 +174,7 @@ public final class CustomAEMixedOutputBusRegistry {
                     if (component.index < 0) {
                         component.index = capacityCardIndex;
                     }
-                    if (!isValidComponentIndex(component, def)) {
+                    if (!registerComponentIndex(seenComponentIndexes, component, def)) {
                         continue;
                     }
                     capacityCardIndex = Math.max(capacityCardIndex, component.index + 1);
@@ -175,7 +188,7 @@ public final class CustomAEMixedOutputBusRegistry {
                     if (component.index < 0) {
                         component.index = fluidIndex;
                     }
-                    if (!isValidComponentIndex(component, def)) {
+                    if (!registerComponentIndex(seenComponentIndexes, component, def)) {
                         continue;
                     }
                     fluidIndex = Math.max(fluidIndex, component.index + 1);
@@ -183,7 +196,7 @@ public final class CustomAEMixedOutputBusRegistry {
                     if (component.index < 0) {
                         component.index = gasIndex;
                     }
-                    if (!isValidComponentIndex(component, def)) {
+                    if (!registerComponentIndex(seenComponentIndexes, component, def)) {
                         continue;
                     }
                     gasIndex = Math.max(gasIndex, component.index + 1);
@@ -198,6 +211,27 @@ public final class CustomAEMixedOutputBusRegistry {
         }
         LOGGER.warn("Skipping AE mixed output component with invalid index {} in {}", component.index, def == null ? "<unknown>" : def.id);
         return false;
+    }
+
+    private static boolean registerComponentIndex(Set<String> seen, ComponentDef component, Def def) {
+        if (!isValidComponentIndex(component, def)) {
+            return false;
+        }
+        String role = component.role == null ? "" : component.role;
+        if ("item_output".equals(role)) {
+            role = "item_storage";
+        }
+        String key = (component.type == null ? "" : component.type) + ":" + role + ":" + component.index;
+        if (!seen.add(key)) {
+            LOGGER.warn(
+                "Skipping duplicate AE mixed output component role {} index {} in {}.",
+                role,
+                component.index,
+                def == null ? "<unknown>" : def.id
+            );
+            return false;
+        }
+        return true;
     }
 
     private static List<ComponentDef> parseComponents(@Nullable com.google.gson.JsonArray array) {
@@ -414,7 +448,15 @@ public final class CustomAEMixedOutputBusRegistry {
     }
 
     private static Path resolveBusDir() {
-        Path dir = Loader.instance().getConfigDir().toPath().resolve("mmceguiext").resolve("custom_ae_mixed_output_buses");
+        Path configDir;
+        try {
+            configDir = Loader.instance() != null && Loader.instance().getConfigDir() != null
+                ? Loader.instance().getConfigDir().toPath()
+                : Paths.get("config");
+        } catch (RuntimeException ex) {
+            configDir = Paths.get("config");
+        }
+        Path dir = configDir.resolve("mmceguiext").resolve("custom_ae_mixed_output_buses");
         try {
             Files.createDirectories(dir);
         } catch (IOException ignored) {

@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import net.minecraftforge.fml.common.Loader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,7 +27,6 @@ import java.util.stream.Stream;
 public final class CustomHatchRegistry {
     private static final Logger LOGGER = LogManager.getLogger(MMCEGuiExt.MODID);
     private static final Path HATCH_DIR = resolveHatchDir();
-    private static final long MAX_CONFIG_BYTES = 1024L * 1024L;
     private static final int MAX_GRID_ROWS = 256;
     private static final int MAX_GRID_COLUMNS = 256;
     private static final int MAX_GRID_SLOTS = 4096;
@@ -114,8 +114,10 @@ public final class CustomHatchRegistry {
     @Nullable
     public static CustomHatchDef load(Path path) {
         try {
-            if (Files.size(path) > MAX_CONFIG_BYTES) {
-                LOGGER.warn("Skipping custom hatch {} because it is larger than {} bytes.", path, MAX_CONFIG_BYTES);
+            long fileSize = Files.size(path);
+            long maxFileSize = MMCEGuiExtConfig.getMaxExtensionConfigFileBytes();
+            if (!MMCEGuiExtConfig.isExtensionConfigFileSizeAllowed(fileSize)) {
+                LOGGER.warn("Skipping custom hatch {} because it is larger than {} bytes.", path, maxFileSize);
                 return null;
             }
             String text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);

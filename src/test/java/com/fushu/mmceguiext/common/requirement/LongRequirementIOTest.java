@@ -2,6 +2,7 @@ package com.fushu.mmceguiext.common.requirement;
 
 import hellfirepvp.modularmachinery.common.crafting.helper.ProcessingComponent;
 import hellfirepvp.modularmachinery.common.machine.IOType;
+import github.kasuminova.mmce.common.util.MultiFluidTank;
 import hellfirepvp.modularmachinery.common.machine.MachineComponent;
 import net.minecraft.init.Bootstrap;
 import net.minecraft.util.ResourceLocation;
@@ -116,6 +117,36 @@ public class LongRequirementIOTest {
                 IOType.INPUT
             )
         );
+    }
+
+    @Test
+    public void ordinaryFluidSnapshotSimulationDoesNotConsumeOrFillState() {
+        final Fluid water = testFluid("ordinary_snapshot_water");
+        MultiFluidTank source = new MultiFluidTank(1_000, 1);
+        source.fill(new FluidStack(water, 400), true);
+        MachineComponent.FluidHatch component = new MachineComponent.FluidHatch(IOType.INPUT) {
+            @Override
+            public IFluidHandler getContainerProvider() {
+                return source;
+            }
+        };
+        ProcessingComponent<IFluidHandler> processing =
+            new ProcessingComponent<IFluidHandler>(component, source, null);
+        IFluidHandler snapshot = (IFluidHandler) LongRequirementIO.copyFluidComponents(
+            Collections.<ProcessingComponent<?>>singletonList(processing)
+        ).get(0).getProvidedComponent();
+
+        FluidStack request = new FluidStack(water, 250);
+        assertEquals(250L, LongRequirementIO.simulateFluid(
+            request, Collections.singletonList(snapshot), 250L, IOType.INPUT));
+        assertEquals(250L, LongRequirementIO.simulateFluid(
+            request, Collections.singletonList(snapshot), 250L, IOType.INPUT));
+        assertEquals(250L, LongRequirementIO.simulateFluid(
+            request, Collections.singletonList(snapshot), 250L, IOType.INPUT));
+
+        LongRequirementIO.doFluid(request, Collections.singletonList(snapshot), 250L, IOType.INPUT);
+        assertEquals(150L, LongRequirementIO.simulateFluid(
+            request, Collections.singletonList(snapshot), 250L, IOType.INPUT));
     }
 
     private static Fluid testFluid(String name) {

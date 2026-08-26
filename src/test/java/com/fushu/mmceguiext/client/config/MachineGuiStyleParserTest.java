@@ -622,6 +622,56 @@ public class MachineGuiStyleParserTest {
     }
 
     @Test
+    public void parseMachineJsonPreservesTextureSwitchFrameUvOverrides() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "texture-switch-frame-uv.json",
+            "{\n" +
+                "  \"registryname\": \"demo:texture_switch_frame_uv\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"dynamicVisuals\": [\n" +
+                "        {\n" +
+                "          \"id\": \"state\",\n" +
+                "          \"x\": 1,\n" +
+                "          \"y\": 2,\n" +
+                "          \"width\": 16,\n" +
+                "          \"height\": 16,\n" +
+                "          \"source\": {\"type\": \"customData\", \"key\": \"state\"},\n" +
+                "          \"renderer\": {\n" +
+                "            \"type\": \"textureSwitch\",\n" +
+                "            \"u\": 2,\n" +
+                "            \"v\": 3,\n" +
+                "            \"textureWidth\": 64,\n" +
+                "            \"textureHeight\": 64,\n" +
+                "            \"frames\": [\n" +
+                "              {\"equals\": 1, \"texture\": \"demo:textures/gui/one.png\", \"u\": 8, \"v\": 9, \"textureWidth\": 32, \"textureHeight\": 16}\n" +
+                "            ]\n" +
+                "          }\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer =
+            result.machineStyle.dynamicVisuals.get(0).renderer;
+        assertNotNull(renderer);
+        assertEquals("textureSwitch", renderer.type);
+        assertEquals(Integer.valueOf(2), renderer.u);
+        assertEquals(Integer.valueOf(3), renderer.v);
+        assertEquals(Integer.valueOf(64), renderer.textureWidth);
+        assertEquals(Integer.valueOf(64), renderer.textureHeight);
+        assertNotNull(renderer.frames);
+        assertEquals(Integer.valueOf(8), renderer.frames.get(0).u);
+        assertEquals(Integer.valueOf(9), renderer.frames.get(0).v);
+        assertEquals(Integer.valueOf(32), renderer.frames.get(0).textureWidth);
+        assertEquals(Integer.valueOf(16), renderer.frames.get(0).textureHeight);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
     public void parseMachineJsonSkipsInvalidAnimatedTextureRenderer() {
         MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
             "animated-invalid.json",

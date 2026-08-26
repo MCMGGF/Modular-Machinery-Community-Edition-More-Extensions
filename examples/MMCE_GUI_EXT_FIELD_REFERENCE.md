@@ -625,6 +625,8 @@ EN: Common tweaks:
 
 When a `SlotLayoutProvider` group and JSON group share the same `id`, fields merge individually. JSON geometry wins, while omitted index fields inherit the provider mapping. A JSON-only legacy group without explicit indices is allocated sequentially after the default player slots. Duplicate and out-of-range indices are warned and skipped.
 
+For custom AE bus `gui.components[]`, explicit `index` values can describe sparse item/fluid/gas layouts. `slotIndices[]` belongs to slot-group layouts described above and is not a custom AE bus component field. Holes stay unused and are not compacted. Duplicate or out-of-range indexes are warned and the conflicting mapping is skipped. This is distinct from duplicate bus definition IDs: the first deterministically loaded definition wins and later duplicate IDs are skipped.
+
 `playerInventory` fields:
 
 - `x`, `y`, `hotbarX`, `hotbarY`
@@ -902,6 +904,54 @@ Metrics: `recipeProgress`, `recipeMaxProgress`, `energyStored`, `energyCapacity`
   ]
 }
 ```
+
+### renderer: `animatedTexture`
+
+`animatedTexture` is time-driven PNG animation. It accepts the aliases `animated_texture`, `animation`, `spriteSheet`, and `spritesheet`. GIF decoding and automatic GIF playback are not supported.
+
+Sprite-sheet form:
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "texture": "yourmod:textures/gui/fan_sheet.png",
+  "frameWidth": 16,
+  "frameHeight": 16,
+  "frameCount": 8,
+  "columns": 4,
+  "textureWidth": 64,
+  "textureHeight": 32,
+  "u": 0,
+  "v": 0,
+  "ticksPerFrame": 2,
+  "startFrame": 0,
+  "loop": true,
+  "reverse": false,
+  "pingPong": false
+}
+```
+
+If `columns` is omitted, it is inferred from `textureWidth / frameWidth`; if it cannot be inferred, frames are treated as one row. Frame bounds are still limited by `frameCount` and the declared texture dimensions.
+
+Multi-file form:
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "ticksPerFrame": 3,
+  "frames": [
+    "yourmod:textures/gui/spark_0.png",
+    "yourmod:textures/gui/spark_1.png",
+    { "texture": "yourmod:textures/gui/spark_2.png", "u": 0, "v": 0, "textureWidth": 16, "textureHeight": 16 }
+  ]
+}
+```
+
+`frames[]` is played in array order. Each entry is either a texture string or an object with `texture`, `u`, `v`, `textureWidth`, and `textureHeight`. `textureSwitch` is value-driven; `animatedTexture` is tick/time-driven. / `textureSwitch` 按数值切换；`animatedTexture` 按 tick/时间播放。请使用 PNG 帧图或 PNG 帧图集，不要使用 GIF。
+
+### `customData` numeric precision / `customData` 数值精度
+
+`customData` may contain NBT `Long` or `Double` values, but dynamic visual evaluation is currently float-oriented. Large `Long` values and high-precision `Double` values may be rounded when converted to `float`. Smart Interface editors, sliders, `smart_set`, `smart_add`, and virtual DataPort numeric writes mainly use `Float`, so GUI input fields cannot reliably preserve every digit of an arbitrarily large `Long`. Use strings or server/script-side `Long` handling for exact large integers, and normalize large values before rendering ratios or progress bars. / `customData` 可包含 NBT `Long` 或 `Double`，但动态视觉当前主要走 `float`；Smart Interface、滑块、`smart_set`、`smart_add` 和虚拟 DataPort 数值写入主要走 `Float`，无法保证超大 Long 的每一位精确保存。
 
 ### renderer: `fill`
 

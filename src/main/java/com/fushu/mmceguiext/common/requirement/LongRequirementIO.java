@@ -1,6 +1,6 @@
 package com.fushu.mmceguiext.common.requirement;
 
-import github.kasuminova.mmce.common.util.MultiFluidTank;
+import github.kasuminova.mmce.common.util.IOneToOneFluidHandler;
 import hellfirepvp.modularmachinery.common.crafting.helper.ProcessingComponent;
 import hellfirepvp.modularmachinery.common.machine.IOType;
 import hellfirepvp.modularmachinery.common.machine.MachineComponent;
@@ -138,42 +138,208 @@ public final class LongRequirementIO {
     }
 
     private static final class IntSnapshotFluidHandler implements IFluidHandler, LongFluidIOHandler {
-        private final MultiFluidTank delegate;
+        private final List<FluidState> states = new ArrayList<FluidState>();
+        private final boolean oneFluidOneSlot;
 
         private IntSnapshotFluidHandler(IFluidHandler source) {
-            this.delegate = new MultiFluidTank(source);
+            IFluidTankProperties[] properties = source == null ? null : source.getTankProperties();
+            this.oneFluidOneSlot = source instanceof IOneToOneFluidHandler
+                && ((IOneToOneFluidHandler) source).isOneFluidOneSlot();
+            if (properties == null) {
+                return;
+            }
+            for (IFluidTankProperties property : properties) {
+                if (property == null) {
+                    continue;
+                }
+                FluidStack contents = property.getContents();
+                FluidStack prototype = contents == null ? null : contents.copy();
+                if (prototype != null) {
+                    prototype.amount = 1;
+                }
+                this.states.add(new FluidState(
+                    prototype,
+                    contents == null ? 0L : Math.max(0L, contents.amount),
+                    Math.max(0L, property.getCapacity())
+                ));
+            }
         }
 
         @Override
         public IFluidTankProperties[] getTankProperties() {
-            return this.delegate.getTankProperties();
+            IFluidTankProperties[] properties = new IFluidTankProperties[this.states.size()];
+            for (int i = 0; i < this.states.size(); i++) {
+                properties[i] = new SnapshotFluidTankProperties(this.states.get(i));
+            }
+            return properties;
         }
 
         @Override
         public int fill(FluidStack resource, boolean doFill) {
-            return this.delegate.fill(resource, doFill);
+            return downcastAmount(doFluid(resource, resource == null ? 0L : resource.amount, IOType.OUTPUT, doFill));
         }
 
         @Nullable
         @Override
         public FluidStack drain(FluidStack resource, boolean doDrain) {
-            return this.delegate.drain(resource, doDrain);
+            if (resource == null) {
+                return null;
+            }
+            long moved = doFluid(resource, resource.amount, IOType.INPUT, doDrain);
+            if (moved <= 0L) {
+                return null;
+            }
+            FluidStack result = resource.copy();
+            result.amount = downcastAmount(moved);
+            return result;
         }
 
         @Nullable
         @Override
         public FluidStack drain(int maxDrain, boolean doDrain) {
-            return this.delegate.drain(maxDrain, doDrain);
+            if (maxDrain <= 0) {
+                return null;
+            }
+            for (FluidState state : this.states) {
+                if (state.prototype == null || state.amount <= 0L) {
+                    continue;
+                }
+                long moved = doFluid(state.prototype, maxDrain, IOType.INPUT, doDrain);
+                if (moved > 0L) {
+                    FluidStack result = state.prototype.copy();
+                    result.amount = downcastAmount(moved);
+                    return result;
+                }
+            }
+            return null;
         }
 
         @Override
         public long mmceguiext$simulateFluidIO(FluidStack stack, long maxAmount, IOType actionType) {
-            return fluidFallback(stack, new MultiFluidTank(this.delegate), maxAmount, actionType, true);
+            return doFluid(stack, maxAmount, actionType, false);
         }
 
         @Override
         public long mmceguiext$doFluidIO(FluidStack stack, long maxAmount, IOType actionType) {
-            return fluidFallback(stack, this.delegate, maxAmount, actionType, true);
+            return doFluid(stack, maxAmount, actionType, true);
+        }
+
+        private long doFluid(FluidStack stack, long maxAmount, IOType actionType, boolean mutate) {
+            if (stack == null || maxAmount <= 0L) {
+                return 0L;
+            }
+            long movedTotal = 0L;
+            boolean foundMatchingState = false;
+            for (FluidState state : this.states) {
+                if (state.prototype != null && state.prototype.isFluidEqual(stack)) {
+                    foundMatchingState = true;
+                    break;
+                }
+            }
+            for (FluidState state : this.states) {
+                if (movedTotal >= maxAmount) {
+                    break;
+                }
+                long remaining = maxAmount - movedTotal;
+                if (actionType == IOType.INPUT) {
+                    if (state.prototype == null || !state.prototype.isFluidEqual(stack) || state.amount <= 0L) {
+                        continue;
+                    }
+                    long moved = Math.min(remaining, state.amount);
+                    if (mutate) {
+                        state.amount -= moved;
+                        if (state.amount == 0L) {
+                            state.prototype = null;
+                        }
+                    }
+                    movedTotal += moved;
+                    continue;
+                }
+
+                if (state.prototype != null && !state.prototype.isFluidEqual(stack)) {
+                    continue;
+                }
+                if (this.oneFluidOneSlot && foundMatchingState
+                    && (state.prototype == null || !state.prototype.isFluidEqual(stack))) {
+                    continue;
+                }
+                long free = Math.max(0L, state.capacity - state.amount);
+                if (free <= 0L) {
+                    continue;
+                }
+                long moved = Math.min(remaining, free);
+                if (mutate) {
+                    if (state.prototype == null) {
+                        state.prototype = stack.copy();
+                        state.prototype.amount = 1;
+                    }
+                    state.amount += moved;
+                }
+                movedTotal += moved;
+                if (this.oneFluidOneSlot) {
+                    break;
+                }
+            }
+            return movedTotal;
+        }
+
+        private static final class FluidState {
+            private FluidStack prototype;
+            private long amount;
+            private final long capacity;
+
+            private FluidState(FluidStack prototype, long amount, long capacity) {
+                this.prototype = prototype;
+                this.amount = amount;
+                this.capacity = capacity;
+            }
+        }
+
+        private static final class SnapshotFluidTankProperties implements IFluidTankProperties {
+            private final FluidState state;
+
+            private SnapshotFluidTankProperties(FluidState state) {
+                this.state = state;
+            }
+
+            @Nullable
+            @Override
+            public FluidStack getContents() {
+                if (this.state.prototype == null || this.state.amount <= 0L) {
+                    return null;
+                }
+                FluidStack result = this.state.prototype.copy();
+                result.amount = downcastAmount(this.state.amount);
+                return result;
+            }
+
+            @Override
+            public int getCapacity() {
+                return downcastAmount(this.state.capacity);
+            }
+
+            @Override
+            public boolean canFill() {
+                return true;
+            }
+
+            @Override
+            public boolean canDrain() {
+                return true;
+            }
+
+            @Override
+            public boolean canFillFluidType(FluidStack fluidStack) {
+                return fluidStack != null
+                    && (this.state.prototype == null || this.state.prototype.isFluidEqual(fluidStack));
+            }
+
+            @Override
+            public boolean canDrainFluidType(FluidStack fluidStack) {
+                return fluidStack != null
+                    && this.state.prototype != null
+                    && this.state.prototype.isFluidEqual(fluidStack);
+            }
         }
     }
 

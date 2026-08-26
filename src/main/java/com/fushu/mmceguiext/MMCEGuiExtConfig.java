@@ -18,7 +18,7 @@ public class MMCEGuiExtConfig {
     @Config.RangeInt(min = 2, max = 64)
     public static int wheelStep = 10;
 
-    @Config.Comment("MMCEME GUI JSON 文件大小上限（MiB），用于机器 GUI、独立样式、subGUI 和外链 GUI 样式 / Maximum size of MMCEME GUI JSON files in MiB. Applies to machine GUI, standalone style, subGUI, and external GUI style files.")
+    @Config.Comment("MMCE More Extensions 全部 JSON 文件大小上限（MiB），包括 GUI、自定义仓口、自定义 AE 总线、容量卡和按钮策略 / Shared maximum size of all MMCE More Extensions JSON files, including GUI, custom hatches, custom AE buses, capacity cards, and button policies.")
     @Config.RangeInt(min = MIN_GUI_CONFIG_FILE_SIZE_MIB, max = MAX_GUI_CONFIG_FILE_SIZE_MIB)
     public static int maxGuiConfigFileSizeMiB = DEFAULT_GUI_CONFIG_FILE_SIZE_MIB;
 
@@ -191,7 +191,13 @@ public class MMCEGuiExtConfig {
         return raw;
     }
 
-    public static long getMaxGuiConfigFileBytes() {
+    /**
+     * Returns the shared byte limit for all MMCE More Extensions JSON files.
+     *
+     * The field name is retained for config compatibility with the original
+     * GUI-only limit introduced in 1.4.1.
+     */
+    public static long getMaxExtensionConfigFileBytes() {
         int sizeMiB = maxGuiConfigFileSizeMiB;
         if (sizeMiB < MIN_GUI_CONFIG_FILE_SIZE_MIB) {
             sizeMiB = MIN_GUI_CONFIG_FILE_SIZE_MIB;
@@ -201,8 +207,24 @@ public class MMCEGuiExtConfig {
         return sizeMiB * 1024L * 1024L;
     }
 
+    public static boolean isExtensionConfigFileSizeAllowed(long sizeBytes) {
+        return sizeBytes >= 0L && sizeBytes <= getMaxExtensionConfigFileBytes();
+    }
+
+    /**
+     * @deprecated use {@link #getMaxExtensionConfigFileBytes()}.
+     */
+    @Deprecated
+    public static long getMaxGuiConfigFileBytes() {
+        return getMaxExtensionConfigFileBytes();
+    }
+
+    /**
+     * @deprecated use {@link #isExtensionConfigFileSizeAllowed(long)}.
+     */
+    @Deprecated
     public static boolean isGuiConfigFileSizeAllowed(long sizeBytes) {
-        return sizeBytes >= 0L && sizeBytes <= getMaxGuiConfigFileBytes();
+        return isExtensionConfigFileSizeAllowed(sizeBytes);
     }
 
     private static String normalizeSmartInterfaceKey(String raw) {

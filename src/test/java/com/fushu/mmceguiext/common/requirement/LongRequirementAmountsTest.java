@@ -21,6 +21,13 @@ public class LongRequirementAmountsTest {
     }
 
     @Test
+    public void clampReportedAmountNeverExceedsRequestedAmount() {
+        assertEquals(12L, LongRequirementAmounts.clampReportedAmount(12L, 99L));
+        assertEquals(0L, LongRequirementAmounts.clampReportedAmount(12L, -1L));
+        assertEquals(0L, LongRequirementAmounts.clampReportedAmount(0L, 12L));
+    }
+
+    @Test
     public void saturatedMultiplyPreservesNormalProducts() {
         assertEquals(42L, LongRequirementAmounts.saturatedMultiply(6L, 7));
     }
@@ -35,6 +42,34 @@ public class LongRequirementAmountsTest {
     @Test
     public void saturatedMultiplySaturatesOnOverflow() {
         assertEquals(Long.MAX_VALUE, LongRequirementAmounts.saturatedMultiply(Long.MAX_VALUE / 2 + 1, 3));
+    }
+
+    @Test
+    public void completeAmountUsesOnlyCompleteRequirementUnits() {
+        assertEquals(100L, LongRequirementAmounts.completeAmount(150L, 100L, 2));
+        assertEquals(200L, LongRequirementAmounts.completeAmount(250L, 100L, 2));
+    }
+
+    @Test
+    public void completeAmountReturnsZeroWhenOneCompleteUnitIsUnavailable() {
+        assertEquals(0L, LongRequirementAmounts.completeAmount(99L, 100L, 2));
+    }
+
+    @Test
+    public void completeAmountRespectsParallelLimitAndLongBoundary() {
+        assertEquals(300L, LongRequirementAmounts.completeAmount(Long.MAX_VALUE, 100L, 3));
+        assertEquals(Long.MAX_VALUE, LongRequirementAmounts.completeAmount(
+            Long.MAX_VALUE,
+            Long.MAX_VALUE,
+            2
+        ));
+    }
+
+    @Test
+    public void completeAmountRejectsNonPositiveArguments() {
+        assertEquals(0L, LongRequirementAmounts.completeAmount(100L, 0L, 2));
+        assertEquals(0L, LongRequirementAmounts.completeAmount(100L, 100L, 0));
+        assertEquals(0L, LongRequirementAmounts.completeAmount(-1L, 100L, 2));
     }
 
     @Test

@@ -50,20 +50,38 @@ public class MMCEGuiExtConfigTest {
         assertEquals(8, previous);
         try {
             MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 8;
-            assertEquals(8L * 1024L * 1024L, MMCEGuiExtConfig.getMaxGuiConfigFileBytes());
-            assertFalse(MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(-1L));
-            assertTrue(MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(8L * 1024L * 1024L));
-            assertFalse(MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(8L * 1024L * 1024L + 1L));
+            assertEquals(8L * 1024L * 1024L, MMCEGuiExtConfig.getMaxExtensionConfigFileBytes());
+            assertFalse(MMCEGuiExtConfig.isExtensionConfigFileSizeAllowed(-1L));
+            assertTrue(MMCEGuiExtConfig.isExtensionConfigFileSizeAllowed(8L * 1024L * 1024L));
+            assertFalse(MMCEGuiExtConfig.isExtensionConfigFileSizeAllowed(8L * 1024L * 1024L + 1L));
 
             MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 1;
-            assertEquals(1L * 1024L * 1024L, MMCEGuiExtConfig.getMaxGuiConfigFileBytes());
+            assertEquals(1L * 1024L * 1024L, MMCEGuiExtConfig.getMaxExtensionConfigFileBytes());
             MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 64;
-            assertEquals(64L * 1024L * 1024L, MMCEGuiExtConfig.getMaxGuiConfigFileBytes());
+            assertEquals(64L * 1024L * 1024L, MMCEGuiExtConfig.getMaxExtensionConfigFileBytes());
 
             MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 0;
-            assertEquals(1L * 1024L * 1024L, MMCEGuiExtConfig.getMaxGuiConfigFileBytes());
+            assertEquals(1L * 1024L * 1024L, MMCEGuiExtConfig.getMaxExtensionConfigFileBytes());
             MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 65;
-            assertEquals(64L * 1024L * 1024L, MMCEGuiExtConfig.getMaxGuiConfigFileBytes());
+            assertEquals(64L * 1024L * 1024L, MMCEGuiExtConfig.getMaxExtensionConfigFileBytes());
+        } finally {
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = previous;
+        }
+    }
+
+    @Test
+    public void legacyGuiLimitMethodsDelegateToSharedExtensionLimit() {
+        int previous = MMCEGuiExtConfig.maxGuiConfigFileSizeMiB;
+        try {
+            MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = 16;
+            assertEquals(
+                MMCEGuiExtConfig.getMaxExtensionConfigFileBytes(),
+                MMCEGuiExtConfig.getMaxGuiConfigFileBytes()
+            );
+            assertEquals(
+                MMCEGuiExtConfig.isExtensionConfigFileSizeAllowed(16L * 1024L * 1024L),
+                MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(16L * 1024L * 1024L)
+            );
         } finally {
             MMCEGuiExtConfig.maxGuiConfigFileSizeMiB = previous;
         }

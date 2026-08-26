@@ -8,6 +8,7 @@ import appeng.api.storage.data.IAEItemStack;
 import appeng.me.GridAccessException;
 import appeng.util.Platform;
 import com.fushu.mmceguiext.common.registry.CustomAEItemInputBusRegistry;
+import com.fushu.mmceguiext.common.requirement.LongRequirementAmounts;
 import com.fushu.mmceguiext.common.util.CustomIdValidator;
 import github.kasuminova.mmce.common.tile.MEItemInputBus;
 import hellfirepvp.modularmachinery.ModularMachinery;
@@ -372,7 +373,14 @@ public class TileCustomMEItemInputBus extends MEItemInputBus {
             return ItemStack.EMPTY;
         }
         IAEItemStack extracted = Platform.poweredExtraction(proxy.getEnergy(), inv, aeStack, source);
-        return extracted == null ? ItemStack.EMPTY : extracted.createItemStack();
+        if (extracted == null) {
+            return ItemStack.EMPTY;
+        }
+        long amount = LongRequirementAmounts.clampReportedAmount(
+            aeStack.getStackSize(),
+            extracted.getStackSize()
+        );
+        return amount <= 0L ? ItemStack.EMPTY : extracted.copy().setStackSize(amount).createItemStack();
     }
 
     private ItemStack insertStackToAE(final IMEMonitor<IAEItemStack> inv, final ItemStack stack) throws GridAccessException {
@@ -381,7 +389,14 @@ public class TileCustomMEItemInputBus extends MEItemInputBus {
             return stack;
         }
         IAEItemStack left = Platform.poweredInsert(proxy.getEnergy(), inv, aeStack, source);
-        return left == null ? ItemStack.EMPTY : left.createItemStack();
+        if (left == null) {
+            return ItemStack.EMPTY;
+        }
+        long amount = LongRequirementAmounts.clampReportedAmount(
+            aeStack.getStackSize(),
+            left.getStackSize()
+        );
+        return amount <= 0L ? ItemStack.EMPTY : left.copy().setStackSize(amount).createItemStack();
     }
 
     @Override

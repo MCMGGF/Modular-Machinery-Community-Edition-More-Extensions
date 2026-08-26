@@ -25,6 +25,11 @@ import java.util.Map;
 public class DynamicVisualRenderer {
     public interface MetricProvider {
         float getMachineMetric(String metric, float fallback);
+
+        default double getMachineMetricValue(String metric, double fallback) {
+            float value = getMachineMetric(metric, (float) fallback);
+            return Float.isFinite(value) ? value : fallback;
+        }
     }
 
     private static final float EPSILON = 1.0E-4F;
@@ -52,8 +57,9 @@ public class DynamicVisualRenderer {
             if (!shouldRender(visual, foreground, priorityFilter, pagePredicate, defaultPriority)) {
                 continue;
             }
-            float raw = resolveRawValue(visual.source, controller, metricProvider);
-            float normalized = normalizeValue(raw, visual.source, controller, metricProvider);
+            double rawNumber = resolveRawValueNumber(visual.source, controller, metricProvider);
+            float raw = toFloat(rawNumber);
+            float normalized = normalizeValue(rawNumber, visual.source, controller, metricProvider);
             if (!resolveVisibilityByValue(visual.visibleByValue, normalized, controller, metricProvider)) {
                 continue;
             }
@@ -111,73 +117,78 @@ public class DynamicVisualRenderer {
         return visual.priority == null ? defaultPriority : visual.priority.intValue();
     }
 
-    private float resolveRawValue(
+    private double resolveRawValueNumber(
         @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle source,
         @Nullable TileMultiblockMachineController controller,
         MetricProvider metricProvider
     ) {
-        float fallback = source == null || source.defaultValue == null ? 0.0F : source.defaultValue.floatValue();
-        return resolveRawValue(source, controller, metricProvider, fallback);
+        double fallback = source == null || source.defaultValue == null ? 0.0D : source.defaultValue.doubleValue();
+        return resolveRawValueNumber(source, controller, metricProvider, fallback);
     }
 
-    private float resolveRawValue(
+    private double resolveRawValueNumber(
         @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle source,
         @Nullable TileMultiblockMachineController controller,
         MetricProvider metricProvider,
-        float fallback
+        double fallback
     ) {
         if (source == null) {
             return fallback;
         }
         if (source.sources != null && !source.sources.isEmpty()) {
-            return combineSourceValues(source, controller, metricProvider, fallback);
+            return combineSourceValuesNumber(source, controller, metricProvider, fallback);
         }
         String type = source.type == null ? "machine" : source.type;
         if ("customData".equals(type)) {
             if (source.key == null || source.key.trim().isEmpty()) {
                 return fallback;
             }
-            Float value = ControllerCustomDataAccess.readNumber(controller, source.key.trim());
-            return value == null || !Float.isFinite(value.floatValue()) ? fallback : value.floatValue();
+            Number value = ControllerCustomDataAccess.readNumberValue(controller, source.key.trim());
+            double resolved = value == null ? Double.NaN : value.doubleValue();
+            return Double.isFinite(resolved) ? resolved : fallback;
         }
         String metric = source.metric == null || source.metric.trim().isEmpty() ? "recipeProgress" : source.metric.trim();
-        return metricProvider == null ? fallback : metricProvider.getMachineMetric(metric, fallback);
+        if (metricProvider == null) {
+            return fallback;
+        }
+        double value = metricProvider.getMachineMetricValue(metric, fallback);
+        return Double.isFinite(value) ? value : fallback;
     }
 
-    private float combineSourceValues(
+    double combineSourceValuesNumber(
         MachineGuiStyleManager.DynamicVisualSourceStyle source,
         @Nullable TileMultiblockMachineController controller,
         MetricProvider metricProvider,
-        float fallback
+        double fallback
     ) {
         if (source.sources == null || source.sources.isEmpty()) {
             return fallback;
         }
         String combine = source.combine == null ? "sum" : source.combine;
-        float result = 0.0F;
-        float totalWeight = 0.0F;
+        double result = 0.0D;
+        double totalWeight = 0.0D;
         boolean found = false;
         int count = 0;
         if ("multiply".equals(combine)) {
-            result = 1.0F;
+            result = 1.0D;
         }
         for (MachineGuiStyleManager.DynamicVisualSourceStyle child : source.sources) {
             if (child == null) {
                 continue;
             }
-            float childFallback = child.defaultValue == null ? fallback : child.defaultValue.floatValue();
-            float value = resolveRawValue(child, controller, metricProvider, childFallback);
-            if (!Float.isFinite(value)) {
+            double childFallback = child.defaultValue == null ? fallback : child.defaultValue.doubleValue();
+            double value = resolveRawValueNumber(child, controller, metricProvider, childFallback);
+            if (!Double.isFinite(value)) {
                 value = childFallback;
             }
-            if (!Float.isFinite(value)) {
+            if (!Double.isFinite(value)) {
                 continue;
             }
-            float weight = child.weight == null ? 1.0F : child.weight.floatValue();
-            if (!Float.isFinite(weight)) {
-                weight = 1.0F;
+            double weight = child.weight == null ? 1.0D : child.weight.doubleValue();
+            if (!Double.isFinite(weight)) {
+                weight = 1.0D;
             }
-            float weightedValue = value * weight;
+            double weightedValue = value * weight;
             if (!found) {
                 found = true;
                 if ("min".equals(combine) || "max".equals(combine) || "first".equals(combine) || "last".equals(combine)
@@ -223,28 +234,30 @@ public class DynamicVisualRenderer {
             return fallback;
         }
         if ("average".equals(combine)) {
-            return result / (float) count;
+            double average = result / (double) count;
+            return Double.isFinite(average) ? average : fallback;
         }
         if ("weightedAverage".equals(combine)) {
-            return Math.abs(totalWeight) > EPSILON ? result / totalWeight : fallback;
+            double average = Math.abs(totalWeight) > EPSILON ? result / totalWeight : fallback;
+            return Double.isFinite(average) ? average : fallback;
         }
-        return result;
+        return Double.isFinite(result) ? result : fallback;
     }
 
     private float normalizeValue(
-        float raw,
+        double raw,
         @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle source,
         @Nullable TileMultiblockMachineController controller,
         MetricProvider metricProvider
     ) {
-        float value = Float.isFinite(raw) ? raw : 0.0F;
-        float staticMin = source == null || source.min == null ? 0.0F : source.min.floatValue();
-        float staticMax = source == null || source.max == null ? 1.0F : source.max.floatValue();
-        float min = resolveDynamicBound(source == null ? null : source.minSource, staticMin, controller, metricProvider);
-        float max = resolveDynamicBound(source == null ? null : source.maxSource, staticMax, controller, metricProvider);
+        double value = Double.isFinite(raw) ? raw : 0.0D;
+        double staticMin = source == null || source.min == null ? 0.0D : source.min.doubleValue();
+        double staticMax = source == null || source.max == null ? 1.0D : source.max.doubleValue();
+        double min = resolveDynamicBoundNumber(source == null ? null : source.minSource, staticMin, controller, metricProvider);
+        double max = resolveDynamicBoundNumber(source == null ? null : source.maxSource, staticMax, controller, metricProvider);
         boolean clamp = source == null || source.clamp == null || source.clamp.booleanValue();
         boolean invert = source != null && Boolean.TRUE.equals(source.invert);
-        return normalizeValueWithBounds(value, min, max, clamp, invert);
+        return normalizeValueWithDoubleBounds(value, min, max, clamp, invert);
     }
 
     static float normalizeValueWithBounds(float raw,
@@ -252,20 +265,30 @@ public class DynamicVisualRenderer {
                                           float max,
                                           boolean clamp,
                                           boolean invert) {
-        if (!Float.isFinite(raw) || !Float.isFinite(min) || !Float.isFinite(max) || max <= min) {
+        return normalizeValueWithDoubleBounds(raw, min, max, clamp, invert);
+    }
+
+    static float normalizeValueWithDoubleBounds(
+        double raw,
+        double min,
+        double max,
+        boolean clamp,
+        boolean invert
+    ) {
+        if (!Double.isFinite(raw) || !Double.isFinite(min) || !Double.isFinite(max) || max <= min) {
             return 0.0F;
         }
-        float value = (raw - min) / (max - min);
+        double value = (raw - min) / (max - min);
         if (clamp) {
-            value = ProgressBarStyleSupport.clamp01(value);
+            value = clamp01(value);
         }
         if (invert) {
-            value = 1.0F - value;
+            value = 1.0D - value;
             if (clamp) {
-                value = ProgressBarStyleSupport.clamp01(value);
+                value = clamp01(value);
             }
         }
-        return value;
+        return (float) value;
     }
 
     float resolveDynamicBound(
@@ -274,14 +297,23 @@ public class DynamicVisualRenderer {
         @Nullable TileMultiblockMachineController controller,
         MetricProvider metricProvider
     ) {
+        return toFloat(resolveDynamicBoundNumber(boundSource, fallback, controller, metricProvider));
+    }
+
+    double resolveDynamicBoundNumber(
+        @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle boundSource,
+        double fallback,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
         if (boundSource == null) {
-            return Float.isFinite(fallback) ? fallback : 0.0F;
+            return Double.isFinite(fallback) ? fallback : 0.0D;
         }
-        float boundFallback = boundSource.defaultValue == null
-            ? Float.NaN
-            : boundSource.defaultValue.floatValue();
-        float resolved = resolveRawValue(boundSource, controller, metricProvider, boundFallback);
-        return Float.isFinite(resolved) ? resolved : (Float.isFinite(fallback) ? fallback : 0.0F);
+        double boundFallback = boundSource.defaultValue == null
+            ? Double.NaN
+            : boundSource.defaultValue.doubleValue();
+        double resolved = resolveRawValueNumber(boundSource, controller, metricProvider, boundFallback);
+        return Double.isFinite(resolved) ? resolved : (Double.isFinite(fallback) ? fallback : 0.0D);
     }
 
     private void renderVisual(
@@ -547,7 +579,7 @@ public class DynamicVisualRenderer {
         return min + (max - min) * input;
     }
 
-    private float resolveNormalizedInput(
+    float resolveNormalizedInput(
         @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle source,
         float fallbackNormalized,
         @Nullable TileMultiblockMachineController controller,
@@ -555,7 +587,7 @@ public class DynamicVisualRenderer {
     ) {
         float input = fallbackNormalized;
         if (source != null) {
-            float raw = resolveRawValue(source, controller, metricProvider);
+            double raw = resolveRawValueNumber(source, controller, metricProvider);
             input = normalizeValue(raw, source, controller, metricProvider);
         }
         return Float.isFinite(input) ? input : 0.0F;
@@ -604,6 +636,26 @@ public class DynamicVisualRenderer {
         return (outA << 24) | (outR << 16) | (outG << 8) | outB;
     }
 
+    private static float toFloat(double value) {
+        if (Double.isNaN(value)) {
+            return 0.0F;
+        }
+        if (value >= Float.MAX_VALUE) {
+            return Float.MAX_VALUE;
+        }
+        if (value <= -Float.MAX_VALUE) {
+            return -Float.MAX_VALUE;
+        }
+        return (float) value;
+    }
+
+    private static double clamp01(double value) {
+        if (!Double.isFinite(value)) {
+            return 0.0D;
+        }
+        return Math.max(0.0D, Math.min(1.0D, value));
+    }
+
     private void applyTransformMatrix(ResolvedTransform transform) {
         if (Math.abs(transform.rotation) > EPSILON) {
             GlStateManager.rotate(transform.rotation, 0.0F, 0.0F, 1.0F);
@@ -636,6 +688,7 @@ public class DynamicVisualRenderer {
 
     private void drawTextureSwitch(MachineGuiStyleManager.DynamicVisualRendererStyle renderer, float value, int x, int y, int width, int height) {
         String texture = null;
+        MachineGuiStyleManager.DynamicVisualFrameStyle selectedFrame = null;
         if (renderer.frames != null) {
             for (MachineGuiStyleManager.DynamicVisualFrameStyle frame : renderer.frames) {
                 if (frame == null || frame.texture == null || frame.texture.trim().isEmpty()) {
@@ -643,6 +696,7 @@ public class DynamicVisualRenderer {
                 }
                 if (matchesFrame(frame, value)) {
                     texture = frame.texture;
+                    selectedFrame = frame;
                     break;
                 }
             }
@@ -654,10 +708,28 @@ public class DynamicVisualRenderer {
         if (resource == null) {
             return;
         }
-        int texW = renderer.textureWidth == null ? width : Math.max(1, renderer.textureWidth.intValue());
-        int texH = renderer.textureHeight == null ? height : Math.max(1, renderer.textureHeight.intValue());
+        int[] drawSpec = resolveTextureSwitchDrawSpec(renderer, selectedFrame, width, height);
         Minecraft.getMinecraft().getTextureManager().bindTexture(resource);
-        GuiRenderUtils.drawTexturedRect(x, y, 0, 0, width, height, texW, texH);
+        GuiRenderUtils.drawTexturedRect(x, y, drawSpec[0], drawSpec[1], width, height, drawSpec[2], drawSpec[3]);
+    }
+
+    static int[] resolveTextureSwitchDrawSpec(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        @Nullable MachineGuiStyleManager.DynamicVisualFrameStyle selectedFrame,
+        int width,
+        int height
+    ) {
+        int baseU = resolveNonNegative(renderer.u, 0);
+        int baseV = resolveNonNegative(renderer.v, 0);
+        int u = selectedFrame == null ? baseU : resolveNonNegative(selectedFrame.u, baseU);
+        int v = selectedFrame == null ? baseV : resolveNonNegative(selectedFrame.v, baseV);
+        int texW = selectedFrame != null && selectedFrame.textureWidth != null
+            ? Math.max(1, selectedFrame.textureWidth.intValue())
+            : renderer.textureWidth == null ? Math.max(1, width) : Math.max(1, renderer.textureWidth.intValue());
+        int texH = selectedFrame != null && selectedFrame.textureHeight != null
+            ? Math.max(1, selectedFrame.textureHeight.intValue())
+            : renderer.textureHeight == null ? Math.max(1, height) : Math.max(1, renderer.textureHeight.intValue());
+        return new int[] {u, v, texW, texH};
     }
 
     private boolean matchesFrame(MachineGuiStyleManager.DynamicVisualFrameStyle frame, float value) {
@@ -740,10 +812,13 @@ public class DynamicVisualRenderer {
         int frameWidth = Math.max(1, renderer.frameWidth.intValue());
         int frameHeight = Math.max(1, renderer.frameHeight.intValue());
         int frameCount = Math.max(1, renderer.frameCount.intValue());
-        int columns = resolveAnimatedSheetColumns(renderer, frameWidth, frameCount);
-        int frameIndex = computeAnimatedFrameIndex(tick, frameCount, ticksPerFrame, startFrame, loop, reverse, pingPong);
         int baseU = resolveNonNegative(renderer.u, 0);
         int baseV = resolveNonNegative(renderer.v, 0);
+        int columns = resolveAnimatedSheetColumns(renderer, baseU, frameWidth, frameCount);
+        frameCount = resolveRenderableSheetFrameCount(
+            renderer, baseU, baseV, frameWidth, frameHeight, columns, frameCount
+        );
+        int frameIndex = computeAnimatedFrameIndex(tick, frameCount, ticksPerFrame, startFrame, loop, reverse, pingPong);
         int[] uv = computeSpriteSheetFrameUv(
             frameIndex,
             baseU,
@@ -759,17 +834,52 @@ public class DynamicVisualRenderer {
         GuiRenderUtils.drawScaledTexturedRect(x, y, width, height, uv[0], uv[1], frameWidth, frameHeight, textureWidth, textureHeight);
     }
 
-    private int resolveAnimatedSheetColumns(MachineGuiStyleManager.DynamicVisualRendererStyle renderer, int frameWidth, int frameCount) {
+    private int resolveAnimatedSheetColumns(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        int baseU,
+        int frameWidth,
+        int frameCount
+    ) {
         if (renderer.columns != null) {
-            return Math.max(1, renderer.columns.intValue());
+            int configured = Math.max(1, renderer.columns.intValue());
+            if (renderer.textureWidth != null) {
+                int available = (renderer.textureWidth.intValue() - baseU) / Math.max(1, frameWidth);
+                if (available > 0) {
+                    return Math.min(configured, available);
+                }
+            }
+            return configured;
         }
         if (renderer.textureWidth != null && frameWidth > 0) {
-            int inferred = renderer.textureWidth.intValue() / frameWidth;
+            int inferred = (renderer.textureWidth.intValue() - baseU) / frameWidth;
             if (inferred > 0) {
                 return inferred;
             }
         }
         return Math.max(1, frameCount);
+    }
+
+    private int resolveRenderableSheetFrameCount(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        int baseU,
+        int baseV,
+        int frameWidth,
+        int frameHeight,
+        int columns,
+        int frameCount
+    ) {
+        int safeCount = Math.max(1, frameCount);
+        if (renderer.textureWidth != null && renderer.textureHeight != null) {
+            int availableColumns = (renderer.textureWidth.intValue() - baseU) / Math.max(1, frameWidth);
+            int availableRows = (renderer.textureHeight.intValue() - baseV) / Math.max(1, frameHeight);
+            if (availableColumns > 0 && availableRows > 0) {
+                safeCount = Math.min(
+                    safeCount,
+                    Math.min(columns, availableColumns) * availableRows
+                );
+            }
+        }
+        return Math.max(1, safeCount);
     }
 
     private int resolvePositive(@Nullable Integer value, int fallback) {
@@ -779,7 +889,7 @@ public class DynamicVisualRenderer {
         return Math.max(1, fallback);
     }
 
-    private int resolveNonNegative(@Nullable Integer value, int fallback) {
+    private static int resolveNonNegative(@Nullable Integer value, int fallback) {
         if (value != null && value.intValue() >= 0) {
             return value.intValue();
         }
@@ -802,14 +912,30 @@ public class DynamicVisualRenderer {
         int index;
         if (pingPong && count > 1) {
             int period = count * 2 - 2;
-            long position = (long) start + step;
-            int phase = loop ? (int) (position % (long) period) : (int) Math.min(position, (long) period - 1L);
+            int phase = loop
+                ? (int) ((step % (long) period + (long) start) % (long) period)
+                : saturatingPingPongPhase(step, start, period);
             index = phase < count ? phase : period - phase;
         } else {
-            long position = (long) start + step;
-            index = loop ? (int) (position % (long) count) : (int) Math.min(position, (long) count - 1L);
+            if (loop) {
+                index = (int) ((step % (long) count + (long) start) % (long) count);
+            } else {
+                index = (int) Math.min((long) count - 1L, saturatingAdd(step, start));
+            }
         }
         return reverse ? count - 1 - index : index;
+    }
+
+    private static int saturatingPingPongPhase(long step, int start, int period) {
+        long position = saturatingAdd(step, start);
+        return (int) Math.min(position, (long) period);
+    }
+
+    private static long saturatingAdd(long left, long right) {
+        if (right > 0L && left > Long.MAX_VALUE - right) {
+            return Long.MAX_VALUE;
+        }
+        return left + right;
     }
 
     static int[] computeSpriteSheetFrameUv(int frameIndex, int baseU, int baseV, int frameWidth, int frameHeight, int columns) {
@@ -1043,10 +1169,23 @@ public class DynamicVisualRenderer {
             histories.put(historyKey(visual), state);
         }
         long tick = getWorldTime(controller);
-        if (state.values.isEmpty() || tick - state.lastTick >= interval) {
+        Object world = getWorldIdentity(controller);
+        if (state.world != world || tick < state.lastTick) {
+            state.values.clear();
+            state.lastTick = Long.MIN_VALUE;
+            state.world = world;
+        }
+        if (shouldSampleHistory(state.lastTick, tick, interval, state.values.isEmpty())) {
             state.add(Float.valueOf(ProgressBarStyleSupport.clamp01(normalized)));
             state.lastTick = tick;
         }
+    }
+
+    static boolean shouldSampleHistory(long lastTick, long tick, int interval, boolean empty) {
+        if (empty || tick < lastTick) {
+            return true;
+        }
+        return tick - lastTick >= Math.max(1, interval);
     }
 
     private List<Float> getHistoryValues(MachineGuiStyleManager.DynamicVisualStyle visual, float current) {
@@ -1080,6 +1219,14 @@ public class DynamicVisualRenderer {
             return controller.getWorld().getTotalWorldTime();
         }
         return Minecraft.getMinecraft().world == null ? 0L : Minecraft.getMinecraft().world.getTotalWorldTime();
+    }
+
+    @Nullable
+    private Object getWorldIdentity(@Nullable TileMultiblockMachineController controller) {
+        if (controller != null && controller.getWorld() != null) {
+            return controller.getWorld();
+        }
+        return Minecraft.getMinecraft().world;
     }
 
     public static float reflectMetric(Object target, float fallback, String... names) {
@@ -1168,6 +1315,8 @@ public class DynamicVisualRenderer {
     private static final class HistoryState {
         private final int capacity;
         private long lastTick = Long.MIN_VALUE;
+        @Nullable
+        private Object world;
         private final List<Float> values = new ArrayList<Float>();
 
         private HistoryState(int capacity) {

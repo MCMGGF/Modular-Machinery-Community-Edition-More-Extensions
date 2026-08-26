@@ -139,11 +139,12 @@ public class RequirementLongGas extends RequirementGas {
         long maxRequired = LongRequirementAmounts.saturatedMultiply(required, maxMultiplier);
         List<IExtendedGasHandler> handlers = HybridFluidUtils.castGasHandlerComponents(components);
         long available = LongGasRequirementIO.simulateGas(this.required, handlers, maxRequired, this.actionType);
-        if (available < required) {
+        long completedAmount = LongRequirementAmounts.completeAmount(available, required, maxMultiplier);
+        if (completedAmount <= 0L) {
             return 0;
         }
-        LongGasRequirementIO.doGas(this.required, handlers, available, this.actionType);
-        return (int) Math.min((long) maxMultiplier, available / required);
+        LongGasRequirementIO.doGas(this.required, handlers, completedAmount, this.actionType);
+        return (int) (completedAmount / required);
     }
 
     private static final class LongGasJeiComponent extends ComponentRequirement.JEIComponent<GasStack> {

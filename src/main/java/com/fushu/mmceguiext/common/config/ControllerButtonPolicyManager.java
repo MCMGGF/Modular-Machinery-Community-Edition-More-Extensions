@@ -255,8 +255,8 @@ public final class ControllerButtonPolicyManager {
     private static void loadMachineJson(Path path) {
         try {
             long fileSize = Files.size(path);
-            long maxFileSize = MMCEGuiExtConfig.getMaxGuiConfigFileBytes();
-            if (!MMCEGuiExtConfig.isGuiConfigFileSizeAllowed(fileSize)) {
+            long maxFileSize = MMCEGuiExtConfig.getMaxExtensionConfigFileBytes();
+            if (!MMCEGuiExtConfig.isExtensionConfigFileSizeAllowed(fileSize)) {
                 LOGGER.warn("Skipping MMCE GUI ext button policy {} because it is larger than {} bytes.", path, maxFileSize);
                 return;
             }

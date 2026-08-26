@@ -31,6 +31,14 @@ public final class ControllerCustomDataAccess {
         return write(controller, key, Float.valueOf(value));
     }
 
+    public static boolean writeLong(@Nullable TileMultiblockMachineController controller, String key, long value) {
+        return write(controller, key, Long.valueOf(value));
+    }
+
+    public static boolean writeDouble(@Nullable TileMultiblockMachineController controller, String key, double value) {
+        return write(controller, key, Double.valueOf(value));
+    }
+
     public static boolean writeString(@Nullable TileMultiblockMachineController controller, String key, String value) {
         return write(controller, key, value == null ? "" : value);
     }
@@ -55,12 +63,34 @@ public final class ControllerCustomDataAccess {
 
     @Nullable
     public static Float readNumber(@Nullable TileMultiblockMachineController controller, String key) {
+        Number value = readNumberValue(controller, key);
+        return value == null ? null : Float.valueOf(value.floatValue());
+    }
+
+    @Nullable
+    public static Number readNumberValue(@Nullable TileMultiblockMachineController controller, String key) {
         NBTTagCompound tag = readTag(controller);
         if (tag == null || !tag.hasKey(key)) {
             return null;
         }
         NBTBase value = tag.getTag(key);
-        return value instanceof NBTPrimitive ? Float.valueOf(((NBTPrimitive) value).getFloat()) : null;
+        if (!(value instanceof NBTPrimitive)) {
+            return null;
+        }
+        NBTPrimitive primitive = (NBTPrimitive) value;
+        switch (value.getId()) {
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+                return Long.valueOf(primitive.getLong());
+            case 5:
+                return Float.valueOf(primitive.getFloat());
+            case 6:
+                return Double.valueOf(primitive.getDouble());
+            default:
+                return null;
+        }
     }
 
     @Nullable
@@ -89,7 +119,14 @@ public final class ControllerCustomDataAccess {
 
             String normalizedKey = key.trim();
             if (value instanceof Number) {
-                tag.setFloat(normalizedKey, ((Number) value).floatValue());
+                Number number = (Number) value;
+                if (number instanceof Double) {
+                    tag.setDouble(normalizedKey, number.doubleValue());
+                } else if (number instanceof Float) {
+                    tag.setFloat(normalizedKey, number.floatValue());
+                } else {
+                    tag.setLong(normalizedKey, number.longValue());
+                }
             } else {
                 tag.setString(normalizedKey, value == null ? "" : value.toString());
             }

@@ -42,6 +42,24 @@ public class PktControllerSmartInterfaceUpdateTest {
         assertEquals(Float.valueOf(7.5F), ControllerCustomDataAccess.readNumber(controller, "speed"));
     }
 
+    @Test
+    public void longCustomDataRoundTripsWithoutFloatTruncation() {
+        MirroringController controller = new MirroringController();
+        long value = 9_007_199_254_740_991L;
+
+        assertTrue(ControllerCustomDataAccess.writeLong(controller, "capacity", value));
+        assertEquals(Long.valueOf(value), ControllerCustomDataAccess.readNumberValue(controller, "capacity"));
+    }
+
+    @Test
+    public void doubleCustomDataRoundTripsWithoutFloatTruncation() {
+        MirroringController controller = new MirroringController();
+        double value = 0.123456789012345D;
+
+        assertTrue(ControllerCustomDataAccess.writeDouble(controller, "ratio", value));
+        assertEquals(Double.valueOf(value), ControllerCustomDataAccess.readNumberValue(controller, "ratio"));
+    }
+
     private static final class AccessController implements ControllerSmartInterfaceAccess {
 
         private boolean called;
