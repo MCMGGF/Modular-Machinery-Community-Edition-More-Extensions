@@ -4,6 +4,7 @@ import com.fushu.mmceguiext.MMCEGuiExt;
 import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.fushu.mmceguiext.client.config.MachineGuiStyleManager;
+import com.fushu.mmceguiext.client.config.TextAppearanceStyle;
 import com.fushu.mmceguiext.client.config.ProgressBarStyleSupport;
 import com.fushu.mmceguiext.common.network.PktControllerButtonAction;
 import com.fushu.mmceguiext.common.network.PktControllerSmartInterfaceUpdate;
@@ -2867,6 +2868,10 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             editor.showControls = style.showControls == null || style.showControls.booleanValue();
             editor.inputBackground = style.inputBackground == null || style.inputBackground.booleanValue();
             editor.title = style.title;
+            editor.titleTextStyle = style.titleTextStyle;
+            editor.infoTextStyle = style.infoTextStyle;
+            editor.controlTextStyle = style.controlTextStyle;
+            editor.inputTextStyle = style.inputTextStyle;
             editor.priority = style.priority == null ? DEFAULT_SMART_EDITOR_PRIORITY : style.priority.intValue();
             editor.page = normalizePageIdOrNull(style.page);
 
@@ -3301,10 +3306,19 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                         .replace("{index}", Integer.toString(index))
                         .replace("{count}", Integer.toString(count))
                         .replace("{key}", activeKey);
-                drawStringWithShadow(title, editor.x, editor.y - 10, 0xE0E0E0);
+                if (editor.titleTextStyle != null) {
+                    GuiRenderUtils.drawTextWithStyle(title, editor.x, editor.y - 10, editor.titleTextStyle, this.fontRenderer, false);
+                } else {
+                    drawStringWithShadow(title, editor.x, editor.y - 10, 0xE0E0E0);
+                }
             }
             if (editor.showInfo) {
-                drawStringWithShadow("Key: " + activeKey, editor.x, editor.y + SMART_EDITOR_INPUT_H + 2, 0xBFD3FF);
+                String info = "Key: " + activeKey;
+                if (editor.infoTextStyle != null) {
+                    GuiRenderUtils.drawTextWithStyle(info, editor.x, editor.y + SMART_EDITOR_INPUT_H + 2, editor.infoTextStyle, this.fontRenderer, false);
+                } else {
+                    drawStringWithShadow(info, editor.x, editor.y + SMART_EDITOR_INPUT_H + 2, 0xBFD3FF);
+                }
             }
         }
     }
@@ -3463,6 +3477,8 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             slider.page = normalizePageIdOrNull(style.page);
             slider.showText = style.showText != null && style.showText.booleanValue();
             slider.textColor = style.textColor == null ? 0xFFFFFFFF : style.textColor.intValue();
+            slider.labelTextStyle = style.labelTextStyle;
+            slider.valueTextStyle = style.valueTextStyle;
             this.customSliders.add(slider);
         }
     }
@@ -3535,9 +3551,15 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         );
         if (slider.showText) {
             String text = formatSliderValue(slider.value);
-            int textX = x + Math.max(0, (slider.width - getTextWidth(text)) / 2);
-            int textY = y + Math.max(0, (slider.height - this.fontRenderer.FONT_HEIGHT) / 2);
-            drawStringWithShadow(text, textX, textY, slider.textColor);
+            if (slider.valueTextStyle != null) {
+                int textX = x + slider.width / 2;
+                int textY = y + slider.height / 2;
+                GuiRenderUtils.drawTextWithStyle(text, textX, textY, slider.valueTextStyle, this.fontRenderer, true);
+            } else {
+                int textX = x + Math.max(0, (slider.width - getTextWidth(text)) / 2);
+                int textY = y + Math.max(0, (slider.height - this.fontRenderer.FONT_HEIGHT) / 2);
+                drawStringWithShadow(text, textX, textY, slider.textColor);
+            }
         }
     }
 
@@ -4615,6 +4637,14 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         private boolean showInfo = true;
         private boolean showControls = true;
         private boolean inputBackground = true;
+        @Nullable
+        private TextAppearanceStyle titleTextStyle;
+        @Nullable
+        private TextAppearanceStyle infoTextStyle;
+        @Nullable
+        private TextAppearanceStyle controlTextStyle;
+        @Nullable
+        private TextAppearanceStyle inputTextStyle;
     }
 
     private static class CustomButton {
@@ -4692,6 +4722,10 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         private String page;
         private boolean showText;
         private int textColor = 0xFFFFFFFF;
+        @Nullable
+        private TextAppearanceStyle labelTextStyle;
+        @Nullable
+        private TextAppearanceStyle valueTextStyle;
     }
 
     private static class IndexedSlider {

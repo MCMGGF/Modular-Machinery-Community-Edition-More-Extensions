@@ -1,0 +1,88 @@
+﻿{
+  "mmce_gui_ext": {
+    "machineController": {
+      "texts": [
+        {
+          "id": "simple_text",
+          "x": 10,
+          "y": 10,
+          "text": "Simple default text"
+        },
+        {
+          "id": "styled_text",
+          "x": 10,
+          "y": 25,
+          "text": "Scaled text with textStyle",
+          "textStyle": {
+            "scale": 1.5,
+            "color": 65280,
+            "shadow": true
+          }
+        },
+        {
+          "id": "flat_compat_text",
+          "x": 10,
+          "y": 50,
+          "text": "Old flat color/scale",
+          "scale": 0.8,
+          "color": 16777215
+        }
+      ],
+      "buttons": [
+        {
+          "id": "styled_button",
+          "x": 10,
+          "y": 70,
+          "width": 80,
+          "height": 20,
+          "label": "Styled Button",
+          "action": "event",
+          "targetEvent": "test_event",
+          "textStyle": {
+            "scale": 1.2,
+            "color": 16711680,
+            "shadow": false
+          }
+        }
+      ],
+      "sliders": [
+        {
+          "id": "styled_slider",
+          "x": 120,
+          "y": 10,
+          "width": 80,
+          "height": 12,
+          "key": "test_slider",
+          "min": 0,
+          "max": 100,
+          "showText": true,
+          "valueTextStyle": {
+            "scale": 0.9,
+            "color": 65535,
+            "shadow": true
+          }
+        }
+      ],
+      "smartInterfaceEditors": [
+        {
+          "id": "styled_editor",
+          "x": 10,
+          "y": 100,
+          "inputWidth": 80,
+          "virtualKey": "test_key",
+          "title": "Styled Editor",
+          "titleTextStyle": {
+            "scale": 1.1,
+            "color": 16776960,
+            "shadow": true
+          },
+          "infoTextStyle": {
+            "scale": 0.85,
+            "color": 12632256,
+            "shadow": false
+          }
+        }
+      ]
+    }
+  }
+}

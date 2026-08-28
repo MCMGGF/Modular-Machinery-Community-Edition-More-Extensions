@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.client.gui;
 
 import com.fushu.mmceguiext.client.config.MachineGuiStyleManager;
+import com.fushu.mmceguiext.client.config.TextAppearanceStyle;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
@@ -35,6 +36,8 @@ public class GuiTexturedButton extends GuiButton {
     private final int disabledTextColor;
     private final float charSpacing;
     private final boolean drawLabel;
+    @Nullable
+    private final TextAppearanceStyle textStyle;
 
     private GuiTexturedButton(Builder builder) {
         super(builder.id, builder.x, builder.y, builder.width, builder.height, builder.label == null ? "" : builder.label);
@@ -59,6 +62,7 @@ public class GuiTexturedButton extends GuiButton {
         this.disabledTextColor = builder.disabledTextColor;
         this.charSpacing = builder.charSpacing;
         this.drawLabel = builder.drawLabel;
+        this.textStyle = builder.textStyle;
     }
 
     public static Builder builder(int id, int x, int y, int width, int height, @Nullable String label) {
@@ -114,6 +118,7 @@ public class GuiTexturedButton extends GuiButton {
             .textColors(normalTextColor, hoverTextColor, disabledTextColor)
             .charSpacing(charSpacing)
             .drawLabel(drawLabel)
+            .textStyle(style.textStyle)
             .build();
     }
 
@@ -152,6 +157,7 @@ public class GuiTexturedButton extends GuiButton {
         merged.disabledTextColor = stateStyle.disabledTextColor != null ? stateStyle.disabledTextColor : style.disabledTextColor;
         merged.charSpacing = stateStyle.charSpacing != null ? stateStyle.charSpacing : style.charSpacing;
         merged.drawLabel = stateStyle.drawLabel != null ? stateStyle.drawLabel : style.drawLabel;
+        merged.textStyle = stateStyle.textStyle != null ? stateStyle.textStyle : style.textStyle;
         String effectiveLabel = stateStyle.label != null ? stateStyle.label : label;
         return forStyle(id, x, y, width, height, effectiveLabel, merged);
     }
@@ -190,8 +196,14 @@ public class GuiTexturedButton extends GuiButton {
 
         if (this.drawLabel && this.displayString != null && !this.displayString.isEmpty()) {
             int color = this.enabled ? (this.hovered ? this.hoverTextColor : this.textColor) : this.disabledTextColor;
-            drawCenteredStringWithCharSpacing(mc, this.displayString, this.x + this.width / 2,
-                this.y + (this.height - 8) / 2, color);
+            float centerX = this.x + this.width / 2.0F;
+            float centerY = this.y + (this.height - 8) / 2.0F;
+            if (this.textStyle != null) {
+                GuiRenderUtils.drawTextWithStyle(mc.fontRenderer, this.displayString, centerX, centerY,
+                    this.textStyle, color, true, this.charSpacing);
+            } else {
+                drawCenteredStringWithCharSpacing(mc, this.displayString, centerX, centerY, color);
+            }
         }
     }
 
@@ -215,7 +227,7 @@ public class GuiTexturedButton extends GuiButton {
         this.mouseDragged(mc, mouseX, mouseY);
     }
 
-    private void drawCenteredStringWithCharSpacing(Minecraft mc, String text, int centerX, int y, int color) {
+    private void drawCenteredStringWithCharSpacing(Minecraft mc, String text, float centerX, float y, int color) {
         float width = GuiRenderUtils.getStringWidth(mc.fontRenderer, text, this.charSpacing);
         GuiRenderUtils.drawString(mc.fontRenderer, text, centerX - width / 2.0F, y, color, true, this.charSpacing);
     }
@@ -303,6 +315,8 @@ public class GuiTexturedButton extends GuiButton {
         private int disabledTextColor = 0xA0A0A0;
         private float charSpacing = 0.0F;
         private boolean drawLabel = true;
+        @Nullable
+        private TextAppearanceStyle textStyle;
 
         private Builder(int id, int x, int y, int width, int height, @Nullable String label) {
             this.id = id;
@@ -388,6 +402,11 @@ public class GuiTexturedButton extends GuiButton {
 
         public Builder drawLabel(boolean value) {
             this.drawLabel = value;
+            return this;
+        }
+
+        public Builder textStyle(@Nullable TextAppearanceStyle value) {
+            this.textStyle = value;
             return this;
         }
 
