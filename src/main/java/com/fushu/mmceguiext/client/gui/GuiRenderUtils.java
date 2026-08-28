@@ -1,5 +1,6 @@
 package com.fushu.mmceguiext.client.gui;
 
+import com.fushu.mmceguiext.client.config.TextAppearanceStyle;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
@@ -533,4 +534,107 @@ public final class GuiRenderUtils {
         }
         return active;
     }
+
+    // ---------- TextAppearanceStyle Unified Methods ----------
+
+    public static float getEffectiveScale(@Nullable TextAppearanceStyle style, float fallback) {
+        if (style == null || style.scale == null) {
+            return fallback;
+        }
+        return Math.max(0.05f, Math.min(style.scale.floatValue(), 8.0f));
+    }
+
+    public static int getEffectiveColor(@Nullable TextAppearanceStyle style, int fallback) {
+        return (style != null && style.color != null) ? style.color.intValue() : fallback;
+    }
+
+    public static boolean getEffectiveShadow(@Nullable TextAppearanceStyle style, boolean fallback) {
+        return (style != null && style.shadow != null) ? style.shadow.booleanValue() : fallback;
+    }
+
+    @Nullable
+    public static String getEffectiveAlign(@Nullable TextAppearanceStyle style, @Nullable String fallback) {
+        return (style != null && style.align != null && !style.align.isEmpty()) ? style.align : fallback;
+    }
+
+    public static float getEffectiveCharSpacing(@Nullable TextAppearanceStyle style, float fallback) {
+        return (style != null && style.charSpacing != null) ? style.charSpacing.floatValue() : fallback;
+    }
+
+    public static float getEffectiveLineSpacing(@Nullable TextAppearanceStyle style, float fallback) {
+        return (style != null && style.lineSpacing != null) ? style.lineSpacing.floatValue() : fallback;
+    }
+
+    /**
+     * Draw text with full TextAppearanceStyle.
+     * Applies scale, color, shadow, charSpacing. Does NOT apply align, wrap, or lineSpacing here—those should be handled by caller layout.
+     */
+    public static void drawTextWithStyle(
+        FontRenderer fr,
+        String text,
+        float x,
+        float y,
+        @Nullable TextAppearanceStyle style,
+        int fallbackColor,
+        boolean fallbackShadow,
+        float fallbackCharSpacing
+    ) {
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+        float scale = getEffectiveScale(style, 1.0f);
+        int color = getEffectiveColor(style, fallbackColor);
+        boolean shadow = getEffectiveShadow(style, fallbackShadow);
+        float charSpacing = getEffectiveCharSpacing(style, fallbackCharSpacing);
+
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(x, y, 0.0f);
+        GlStateManager.scale(scale, scale, 1.0f);
+        drawString(fr, text, 0, 0, color, shadow, charSpacing);
+        GlStateManager.popMatrix();
+    }
+
+    /**
+     * Wrap text according to style.maxWidth and style.wrap. If not wrapping or maxWidth <= 0, returns single-line list.
+     */
+    public static List<String> wrapTextWithStyle(
+        FontRenderer fr,
+        String text,
+        @Nullable TextAppearanceStyle style,
+        int fallbackMaxWidth
+    ) {
+        if (text == null || text.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        boolean wrap = (style != null && style.wrap != null && style.wrap.booleanValue());
+        int maxWidth = (style != null && style.maxWidth != null && style.maxWidth.intValue() > 0)
+            ? style.maxWidth.intValue()
+            : fallbackMaxWidth;
+        if (!wrap || maxWidth <= 0) {
+            return java.util.Collections.singletonList(text);
+        }
+        float charSpacing = getEffectiveCharSpacing(style, 0.0f);
+        return listFormattedStringToWidth(fr, text, maxWidth, charSpacing);
+    }
+
+    /**
+     * Get text width with style.scale applied.
+     */
+    public static float getTextWidthScaled(
+        FontRenderer fr,
+        String text,
+        @Nullable TextAppearanceStyle style,
+        float fallbackCharSpacing
+    ) {
+        if (text == null || text.isEmpty()) {
+            return 0.0f;
+        }
+        float charSpacing = getEffectiveCharSpacing(style, fallbackCharSpacing);
+        float baseWidth = getStringWidth(fr, text, charSpacing);
+        float scale = getEffectiveScale(style, 1.0f);
+        return baseWidth * scale;
+    }
+
+    // ---------- End TextAppearanceStyle Methods ----------
+
 }

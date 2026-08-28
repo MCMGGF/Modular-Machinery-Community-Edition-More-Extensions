@@ -1127,6 +1127,8 @@ public final class MachineGuiStyleManager {
         public String align;
         @Nullable
         public Float charSpacing;
+        @Nullable
+        public TextAppearanceStyle textStyle;
 
         public static TextStyle copyOf(@Nullable TextStyle source) {
             TextStyle copy = new TextStyle();
@@ -1145,6 +1147,7 @@ public final class MachineGuiStyleManager {
             copy.page = source.page;
             copy.align = source.align;
             copy.charSpacing = source.charSpacing;
+            copy.textStyle = TextAppearanceStyle.copyOf(source.textStyle);
             return copy;
         }
     }
@@ -1171,6 +1174,14 @@ public final class MachineGuiStyleManager {
         public Integer priority;
         @Nullable
         public String page;
+        @Nullable
+        public TextAppearanceStyle titleTextStyle;
+        @Nullable
+        public TextAppearanceStyle infoTextStyle;
+        @Nullable
+        public TextAppearanceStyle controlTextStyle;
+        @Nullable
+        public TextAppearanceStyle inputTextStyle;
 
         public static SmartInterfaceEditorStyle copyOf(@Nullable SmartInterfaceEditorStyle source) {
             SmartInterfaceEditorStyle copy = new SmartInterfaceEditorStyle();
@@ -1189,6 +1200,10 @@ public final class MachineGuiStyleManager {
             copy.inputBackground = source.inputBackground;
             copy.priority = source.priority;
             copy.page = source.page;
+            copy.titleTextStyle = TextAppearanceStyle.copyOf(source.titleTextStyle);
+            copy.infoTextStyle = TextAppearanceStyle.copyOf(source.infoTextStyle);
+            copy.controlTextStyle = TextAppearanceStyle.copyOf(source.controlTextStyle);
+            copy.inputTextStyle = TextAppearanceStyle.copyOf(source.inputTextStyle);
             return copy;
         }
     }
@@ -1286,6 +1301,8 @@ public final class MachineGuiStyleManager {
         public Boolean cycleWrap;
         @Nullable
         public List<ButtonCycleStateStyle> cycleStates;
+        @Nullable
+        public TextAppearanceStyle textStyle;
 
         public static ButtonStyle copyOf(@Nullable ButtonStyle source) {
             ButtonStyle copy = new ButtonStyle();
@@ -1344,6 +1361,7 @@ public final class MachineGuiStyleManager {
                     copy.cycleStates.add(ButtonCycleStateStyle.copyOf(state));
                 }
             }
+            copy.textStyle = TextAppearanceStyle.copyOf(source.textStyle);
             return copy;
         }
     }
@@ -1391,6 +1409,8 @@ public final class MachineGuiStyleManager {
         public Float charSpacing;
         @Nullable
         public Boolean drawLabel;
+        @Nullable
+        public TextAppearanceStyle textStyle;
 
         public static ButtonCycleStateStyle copyOf(@Nullable ButtonCycleStateStyle source) {
             ButtonCycleStateStyle copy = new ButtonCycleStateStyle();
@@ -1418,6 +1438,7 @@ public final class MachineGuiStyleManager {
             copy.disabledTextColor = source.disabledTextColor;
             copy.charSpacing = source.charSpacing;
             copy.drawLabel = source.drawLabel;
+            copy.textStyle = TextAppearanceStyle.copyOf(source.textStyle);
             return copy;
         }
     }
@@ -1665,6 +1686,10 @@ public final class MachineGuiStyleManager {
         public Boolean showText;
         @Nullable
         public Integer textColor;
+        @Nullable
+        public TextAppearanceStyle labelTextStyle;
+        @Nullable
+        public TextAppearanceStyle valueTextStyle;
 
         public static SliderStyle copyOf(@Nullable SliderStyle source) {
             SliderStyle copy = new SliderStyle();
@@ -1694,6 +1719,8 @@ public final class MachineGuiStyleManager {
             copy.page = source.page;
             copy.showText = source.showText;
             copy.textColor = source.textColor;
+            copy.labelTextStyle = TextAppearanceStyle.copyOf(source.labelTextStyle);
+            copy.valueTextStyle = TextAppearanceStyle.copyOf(source.valueTextStyle);
             return copy;
         }
     }

@@ -19,6 +19,7 @@ final class MachineGuiStyleParser {
     private static final int MAX_CORNER = 128;
     private static final float MIN_TEXT_SCALE = 0.05F;
     private static final float MAX_TEXT_SCALE = 8.0F;
+    private static final int MAX_TEXT_LINE_WIDTH = 8192;
 
     private MachineGuiStyleParser() {
     }
@@ -646,6 +647,7 @@ final class MachineGuiStyleParser {
             text.page = getTrimmedString(obj, result, itemScope, "page", "pageId", "page_id", "tab", "state", "stateId", "state_id", "guiState", "gui_state");
             text.align = normalizeTextAlign(getTrimmedString(obj, result, itemScope, "align", "alignment", "textAlign", "text_align"));
             text.charSpacing = getCharSpacing(obj, result, itemScope, "charSpacing", "characterSpacing", "letterSpacing", "char_spacing", "letter_spacing");
+            text.textStyle = parseTextAppearance(obj, result, itemScope);
             texts.add(text);
         }
 
@@ -700,6 +702,10 @@ final class MachineGuiStyleParser {
             editor.inputBackground = getBoolean(editorObj, result, itemScope, "inputBackground", "input_background");
             editor.priority = getInt(editorObj, result, itemScope, "priority", "zIndex", "z_index", "z", "layer");
             editor.page = getTrimmedString(editorObj, result, itemScope, "page", "pageId", "page_id", "tab", "state", "stateId", "state_id", "guiState", "gui_state");
+            editor.titleTextStyle = parseTextAppearance(editorObj, result, itemScope, "titleTextStyle", "title_text_style", "titleFontStyle", "title_font_style");
+            editor.infoTextStyle = parseTextAppearance(editorObj, result, itemScope, "infoTextStyle", "info_text_style", "infoFontStyle", "info_font_style");
+            editor.controlTextStyle = parseTextAppearance(editorObj, result, itemScope, "controlTextStyle", "control_text_style", "controlFontStyle", "control_font_style");
+            editor.inputTextStyle = parseTextAppearance(editorObj, result, itemScope, "inputTextStyle", "input_text_style", "inputFontStyle", "input_font_style");
             editors.add(editor);
         }
 
@@ -965,6 +971,7 @@ final class MachineGuiStyleParser {
         button.drawLabel = getBoolean(obj, result, itemScope, "drawLabel", "draw_label", "showLabel", "show_label");
         button.cycleWrap = getBoolean(obj, result, itemScope, "cycleWrap", "cycle_wrap", "wrap");
         button.cycleStates = cycleStates;
+        button.textStyle = parseTextAppearance(obj, result, itemScope);
         return button;
     }
 
@@ -1124,6 +1131,8 @@ final class MachineGuiStyleParser {
             slider.page = getTrimmedString(obj, result, itemScope, "page", "pageId", "page_id", "tab", "state", "stateId", "state_id", "guiState", "gui_state");
             slider.showText = getBoolean(obj, result, itemScope, "showText", "show_text", "displayText", "display_text");
             slider.textColor = getColor(obj, result, itemScope, "textColor", "text_color");
+            slider.labelTextStyle = parseTextAppearance(obj, result, itemScope, "labelTextStyle", "label_text_style", "labelFontStyle", "label_font_style");
+            slider.valueTextStyle = parseTextAppearance(obj, result, itemScope, "valueTextStyle", "value_text_style", "valueFontStyle", "value_font_style");
             sliders.add(slider);
         }
         return sliders.isEmpty() ? null : sliders;
@@ -2350,6 +2359,7 @@ final class MachineGuiStyleParser {
             state.disabledTextColor = getColor(stateObj, result, itemScope, "disabledTextColor", "disabled_text_color", "labelDisabledColor", "label_disabled_color");
             state.charSpacing = getCharSpacing(stateObj, result, itemScope, "charSpacing", "characterSpacing", "letterSpacing", "char_spacing", "letter_spacing");
             state.drawLabel = getBoolean(stateObj, result, itemScope, "drawLabel", "draw_label", "showLabel", "show_label");
+            state.textStyle = parseTextAppearance(stateObj, result, itemScope);
             out.add(state);
         }
         return out.isEmpty() ? null : out;
@@ -2686,6 +2696,48 @@ final class MachineGuiStyleParser {
             return "right";
         }
         return null;
+    }
+
+    @Nullable
+    private static TextAppearanceStyle parseTextAppearance(
+        JsonObject obj,
+        MachineFileParseResult result,
+        String scope
+    ) {
+        return parseTextAppearance(obj, result, scope, "textStyle", "text_style", "textAppearance", "text_appearance", "fontStyle", "font_style");
+    }
+
+    @Nullable
+    private static TextAppearanceStyle parseTextAppearance(
+        JsonObject obj,
+        MachineFileParseResult result,
+        String scope,
+        String... keys
+    ) {
+        MatchedElement match = findElement(obj, keys);
+        if (match == null || !match.element.isJsonObject()) {
+            return null;
+        }
+        JsonObject styleObj = match.element.getAsJsonObject();
+        String styleScope = field(scope, match.key);
+        TextAppearanceStyle style = new TextAppearanceStyle();
+        style.scale = normalizeScale(getFloat(styleObj, result, styleScope, "scale", "fontSize", "font_size"));
+        style.color = getColor(styleObj, result, styleScope, "color", "textColor", "text_color");
+        style.shadow = getBoolean(styleObj, result, styleScope, "shadow", "withShadow", "with_shadow", "dropShadow", "drop_shadow");
+        style.align = normalizeTextAlign(getTrimmedString(styleObj, result, styleScope, "align", "alignment", "textAlign", "text_align"));
+        style.charSpacing = getCharSpacing(styleObj, result, styleScope, "charSpacing", "characterSpacing", "letterSpacing", "char_spacing", "letter_spacing");
+        style.lineSpacing = getFloat(styleObj, result, styleScope, "lineSpacing", "line_spacing", "leading");
+        Integer maxWidthRaw = getInt(styleObj, result, styleScope, "maxWidth", "max_width", "wrapWidth", "wrap_width", "lineWidth", "line_width");
+        if (maxWidthRaw != null) {
+            style.maxWidth = Math.max(0, Math.min(maxWidthRaw.intValue(), MAX_TEXT_LINE_WIDTH));
+        }
+        style.wrap = getBoolean(styleObj, result, styleScope, "wrap", "wrapText", "wrap_text", "multiLine", "multi_line");
+        return style;
+    }
+
+    @Nullable
+    private static Float getLineSpacing(JsonObject obj, MachineFileParseResult result, String scope, String... keys) {
+        return getFloat(obj, result, scope, keys);
     }
 
     @Nullable
