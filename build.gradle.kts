@@ -7,6 +7,10 @@ plugins {
 group = "com.fushu.mmce"
 version = "1.4.1"
 
+base {
+    archivesName.set("Modular-Machinery-Community-Edition-More-Extensions")
+}
+
 java {
     withSourcesJar()
 }
@@ -105,7 +109,10 @@ dependencies {
     testCompileOnly("CraftTweaker2:CraftTweaker2-MC1120-Main:1.12-4.1.20.715")
     testRuntimeOnly("CraftTweaker2:CraftTweaker2-API:4.1.20.715")
     testRuntimeOnly("CraftTweaker2:CraftTweaker2-MC1120-Main:1.12-4.1.20.715")
-    val craftTweakerModsDir = System.getenv("MMCEGE_CRAFTTWEAKER_MODS_DIR")
+    val craftTweakerModsDir =
+        System.getenv("MODULAR_MACHINERY_COMMUNITY_EDITION_MORE_EXTENSIONS_CRAFTTWEAKER_MODS_DIR")
+            ?: System.getenv("MMCE_MORE_EXTENSIONS_CRAFTTWEAKER_MODS_DIR")
+            ?: System.getenv("MMCEGE_CRAFTTWEAKER_MODS_DIR")
     val localCraftTweakerJars = if (!craftTweakerModsDir.isNullOrBlank()) {
         fileTree(craftTweakerModsDir) {
             include("*CraftTweaker2*.jar")

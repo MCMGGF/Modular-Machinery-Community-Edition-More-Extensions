@@ -1,8 +1,8 @@
 [
   {
     "modid": "mmceguiext",
-    "name": "MMCE More Extensions",
-    "description": "MMCEME - GUI, custom hatch, AE bus, dynamic visual, and long-capacity extensions for ModularMachinery CE.",
+    "name": "Modular Machinery: Community Edition More Extensions",
+    "description": "Modular Machinery: Community Edition More Extensions - GUI, custom hatch, AE bus, dynamic visual, and long-capacity extensions.",
     "version": "${version}",
     "mcversion": "${mcversion}",
     "url": "",

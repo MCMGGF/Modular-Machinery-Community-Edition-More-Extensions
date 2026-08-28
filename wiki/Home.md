@@ -1,10 +1,10 @@
-# MMCE More Extensions Wiki (MMCEME)
+# Modular Machinery: Community Edition More Extensions Wiki (formerly MMCEGE)
 
-**MMCE More Extensions (MMCEME)** · MC `1.12.2` · version `1.4.1`
+**Modular Machinery: Community Edition More Extensions (MMCEME)** · MC `1.12.2` · version `1.4.1`
 
 > Language / 语言: **English** below · [跳转到中文](#中文)
 
-MMCE More Extensions is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork). It bundles four subsystems:
+Modular Machinery: Community Edition More Extensions is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork). It bundles the controller GUI, custom hatches, custom AE buses, Long V2 requirements, dynamic visuals, and optional static parallel-controller tiers:
 
 > Formerly known as MMCE GUI Edit / MMCEGE. The mod id, configuration path, Java packages, public API, and CraftTweaker namespace remain unchanged.
 
@@ -14,6 +14,7 @@ MMCE More Extensions is an addon for **Modular Machinery: Community Edition** (t
 | Custom Hatches | Define new fluid/gas/item/energy hatch **blocks** from JSON, no code | [Custom Hatches](Custom-Hatches-EN) |
 | Custom AE2 Buses | ME item input + mixed (item+fluid+gas) input/output buses, from JSON | [Custom AE2 Buses](Custom-AE-Buses-EN) |
 | Long-Capacity Requirements | Experimental opt-in support for fluid/gas recipe amounts beyond the vanilla `int` limit (~2.1 billion mB) | [Long-Capacity Requirements](Long-Capacity-Requirements-EN) |
+| Static Parallel-Controller Tiers | Experimental opt-in `mmceme_0` ... `mmceme_15` tiers with configurable maximum parallelism | [README configuration](https://github.com/MCMGGF/Modular-Machinery-Community-Edition-More-Extensions#optional-static-parallel-controller-tiers--可选静态并行控制器等级) |
 
 ### Dependencies
 
@@ -37,8 +38,7 @@ MMCE More Extensions is an addon for **Modular Machinery: Community Edition** (t
 
 ```powershell
 .\mmce-src\gradlew.bat -p .\mmce-gui-ext build
-# -> mmce-gui-ext/build/libs/MMCEGE-1.4.1.jar
-# The technical artifact filename remains MMCEGE-1.4.1.jar for compatibility.
+# -> build/libs/Modular-Machinery-Community-Edition-More-Extensions-1.4.1.jar
 ```
 
 ---
@@ -48,7 +48,7 @@ MMCE More Extensions is an addon for **Modular Machinery: Community Edition** (t
 
 **MMCE 更多扩展（MMCEME）** · MC `1.12.2` · 版本 `1.4.1`
 
-MMCE 更多扩展是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组，包含四个子系统：
+MMCE 更多扩展是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组，包含五个子系统：
 
 > 原名为 MMCE GUI Edit / MMCEGE。本次仅更新品牌名称，mod id、配置路径、Java 包名、公开 API 和 CraftTweaker 命名空间保持不变。
 
@@ -58,6 +58,7 @@ MMCE 更多扩展是 **Modular Machinery: Community Edition**（KasumiNova 分�
 | 自定义仓口 | 用 JSON 定义新的流体/气体/物品/能量仓口**方块**，无需写代码 | [自定义仓口](Custom-Hatches-ZH) |
 | 自定义 AE2 总线 | ME 物品输入 + 混合（物品+流体+气体）输入/输出总线，由 JSON 定义 | [自定义 AE2 总线](Custom-AE-Buses-ZH) |
 | Long 容量配方需求 | 实验性手动开启：流体/气体配方量突破原版 `int` 上限（约 21 亿 mB） | [Long 容量配方需求](Long-Capacity-Requirements-ZH) |
+| 静态并行控制器等级 | 实验性手动开启：注册 `mmceme_0` 到 `mmceme_15`，每级最大并行数可配置 | [README 配置说明](https://github.com/MCMGGF/Modular-Machinery-Community-Edition-More-Extensions#optional-static-parallel-controller-tiers--可选静态并行控制器等级) |
 
 ### 依赖
 
@@ -81,6 +82,5 @@ MMCE 更多扩展是 **Modular Machinery: Community Edition**（KasumiNova 分�
 
 ```powershell
 .\mmce-src\gradlew.bat -p .\mmce-gui-ext build
-# -> mmce-gui-ext/build/libs/MMCEGE-1.4.1.jar
-# 技术构建文件名为保持兼容暂不变。
+# -> build/libs/Modular-Machinery-Community-Edition-More-Extensions-1.4.1.jar
 ```

@@ -470,6 +470,41 @@ public class MMCEGuiExtConfig {
             "修改该选项后必须完整重启游戏或服务器。"
         })
         public boolean enableLongFluidGasRequirements = false;
+
+        @Config.Comment({
+            "EXPERIMENTAL: register additional static MMCE parallel-controller tiers.",
+            "The extra tiers are named mmceme_0, mmceme_1, ... and reuse MMCE's native block, tile, GUI and parallelism behavior.",
+            "Enable this option, restart the game, then edit parallel-controller.mmceme_* in modularmachinery.cfg if needed.",
+            "Do not enable this while another mod owns the same parallel-controller enum extension.",
+            "实验性：注册额外的静态 MMCE 并行控制器等级。",
+            "额外等级名称为 mmceme_0、mmceme_1……，复用 MMCE 原生方块、Tile、GUI 和并行逻辑。",
+            "启用后需要重启游戏；如需调整数值，请修改 modularmachinery.cfg 的 parallel-controller.mmceme_*。",
+            "如果其他模组已经扩展同一个并行控制器枚举，请不要同时开启。"
+        })
+        public boolean enableCustomParallelControllerTiers = false;
+
+        @Config.Comment({
+            "Number of additional static parallel-controller tiers to register.",
+            "Range: 1-16.",
+            "额外静态并行控制器等级数量，范围：1-16。"
+        })
+        @Config.RangeInt(min = 1, max = 16)
+        public int customParallelControllerTierCount = 1;
+
+        @Config.Comment({
+            "Default max parallelism for each new tier when MMCE first creates its config entry.",
+            "This value is only a default; edit parallel-controller.mmceme_* afterwards.",
+            "每个新等级首次生成配置项时使用的默认最大并行数；之后请直接修改 parallel-controller.mmceme_*。"
+        })
+        @Config.RangeInt(min = 1, max = Integer.MAX_VALUE)
+        public int customParallelControllerDefaultMaxParallelism = 32;
+
+        @Config.Comment({
+            "Optional per-tier max parallelism values in mmceme_0, mmceme_1, ... order.",
+            "Missing entries use customParallelControllerDefaultMaxParallelism.",
+            "可选：按 mmceme_0、mmceme_1……顺序设置每级最大并行数；缺少的档位使用统一默认值。"
+        })
+        public String[] customParallelControllerMaxParallelisms = new String[0];
     }
 
     public static boolean isLongFluidGasRequirementsEnabled() {

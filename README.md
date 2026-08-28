@@ -1,12 +1,12 @@
-# MMCE More Extensions (MMCEME, 1.12.2)
+# Modular Machinery: Community Edition More Extensions (formerly MMCEGE, 1.12.2)
 
-MMCE More Extensions (MMCEME) is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork).
+Modular Machinery: Community Edition More Extensions (MMCEME) is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork).
 MMCE 更多扩展（MMCEME）是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组。
 It was formerly known as **MMCE GUI Edit / MMCEGE**. The mod id, configuration path, Java packages, public API, and CraftTweaker namespace remain unchanged.
 本模组原名为 **MMCE GUI Edit / MMCEGE**。本次仅更新品牌名称，mod id、配置路径、Java 包名、公开 API 和 CraftTweaker 命名空间保持不变。
 
-It started as a controller-GUI editor, but now bundles four subsystems:
-它最初只是控制器 GUI 编辑器，目前已包含四个子系统：
+It started as a controller-GUI editor, but now bundles the following extension areas:
+它最初只是控制器 GUI 编辑器，目前已包含五个子系统：
 
 1. **Controller GUI replacement / customization** — resizable, texture-driven, multi-panel controller GUIs.
    **控制器 GUI 替换 / 自定义** — 可调整大小、贴图驱动、多信息区的控制器 GUI。
@@ -16,6 +16,8 @@ It started as a controller-GUI editor, but now bundles four subsystems:
    **JSON 定义的自定义 AE2 总线** — ME 物品输入总线，以及混合（物品+流体+气体）输入/输出总线。
 4. **Long-capacity recipe requirements (experimental opt-in)** — fluid/gas recipe amounts beyond the vanilla `int` limit.
    **Long 容量配方需求（实验性，需要手动开启）** — 流体/气体配方量可突破原版 `int`（约 21 亿 mB）上限。
+5. **Additional static parallel-controller tiers (experimental opt-in)** — register configurable `mmceme_0`, `mmceme_1`, ... tiers while reusing MMCE's native controller behavior.
+   **额外静态并行控制器等级（实验性，需要手动开启）** — 注册可配置的 `mmceme_0`、`mmceme_1`……等级，并复用 MMCE 原生控制器行为。
 
 Current version / 当前版本: **`1.4.1`** · API level **`1`** · MC `1.12.2` · author / 作者: WuXiaoYa
 
@@ -52,12 +54,12 @@ From the repo root / 在仓库根目录执行：
 
 Output / 产物：
 
-- `build/libs/MMCEGE-1.4.1.jar` (the technical artifact filename remains unchanged for compatibility / 技术构建文件名为保持兼容暂不变)
+- `build/libs/Modular-Machinery-Community-Edition-More-Extensions-1.4.1.jar`
 
-GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `MMCEME-<commit-sha>` artifact to let testers build without using the local machine.
-GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `MMCEME-<commit-sha>` artifact 即可，不需要本机编译。
+GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `Modular-Machinery-Community-Edition-More-Extensions-<commit-sha>` artifact to let testers build without using the local machine.
+GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `Modular-Machinery-Community-Edition-More-Extensions-<commit-sha>` artifact 即可，不需要本机编译。
 
-MMCEME is a coremod (`FMLCorePlugin = com.fushu.mmceguiext.core.MMCEGuiExtEarlyMixinLoader`); its Mixins load before MMCE.
+Modular Machinery: Community Edition More Extensions is a coremod (`FMLCorePlugin = com.fushu.mmceguiext.core.MMCEGuiExtEarlyMixinLoader`); its Mixins load before MMCE.
 MMCEME 是一个 coremod（`FMLCorePlugin`），其 Mixin 会在 MMCE 之前加载。
 
 ---
@@ -83,6 +85,31 @@ Config directories MMCEME reads at startup / MMCEME 启动时读取的配置目�
 | `config/mmceguiext/custom_ae_item_input_buses/*.json` | Custom ME item input bus definitions; requires `customContent.enableCustomAEBuses=true` / 自定义 ME 物品输入总线；需开启 `customContent.enableCustomAEBuses=true` |
 | `config/mmceguiext/custom_ae_mixed_input_buses/*.json` | Custom mixed input bus definitions; requires `customContent.enableCustomAEBuses=true` / 自定义混合输入总线；需开启 `customContent.enableCustomAEBuses=true` |
 | `config/mmceguiext/custom_ae_mixed_output_buses/*.json` | Custom mixed output bus definitions; requires `customContent.enableCustomAEBuses=true` / 自定义混合输出总线；需开启 `customContent.enableCustomAEBuses=true` |
+
+---
+
+## Optional static parallel-controller tiers | 可选静态并行控制器等级
+
+This feature is disabled by default and requires a full restart because it extends MMCE's controller enum during early loading. Enable it under `experimental` in `config/mmceguiext/client.cfg`:
+该功能默认关闭，并且需要完整重启，因为它会在早期加载阶段扩展 MMCE 的控制器枚举。可在 `config/mmceguiext/client.cfg` 的 `experimental` 节点中开启：
+
+```ini
+experimental {
+    B:enableCustomParallelControllerTiers=true
+    I:customParallelControllerTierCount=2
+    I:customParallelControllerDefaultMaxParallelism=32
+    S:customParallelControllerMaxParallelisms <
+        32
+        128
+     >
+}
+```
+
+The example registers `mmceme_0` and `mmceme_1`. `customParallelControllerTierCount` accepts `1-16`; omitted entries in `customParallelControllerMaxParallelisms` use `customParallelControllerDefaultMaxParallelism`. MMCE then exposes the same controller block, tile, GUI, recipe, and parallelism behavior for these tiers. If WhimCraft already owns the same MMCE parallel-controller extension, MMCEME does not add a second enum extension.
+上例会注册 `mmceme_0` 和 `mmceme_1`。`customParallelControllerTierCount` 支持 `1-16`；`customParallelControllerMaxParallelisms` 中缺少的档位使用 `customParallelControllerDefaultMaxParallelism`。之后 MMCE 会对这些等级使用同一套控制器方块、Tile、GUI、配方和并行逻辑。如果 WhimCraft 已经占用了同一个 MMCE 并行控制器扩展入口，MMCEME 不会再次添加枚举扩展。
+
+This is static controller-tier support, not a runtime per-machine parallelism rule. The maximum parallelism is configured per registered tier in `modularmachinery.cfg` after the first startup; recipe and machine behavior remains MMCE-native.
+这是静态控制器等级支持，不是运行时按机器动态改变并行数的规则。首次启动后也可以在 `modularmachinery.cfg` 的 `parallel-controller.mmceme_*` 配置项中逐级调整最大并行数；配方和机器行为仍由 MMCE 原生逻辑执行。
 
 ---
 

@@ -32,6 +32,26 @@ The global switch `enabled`, scroll step `wheelStep`, etc. live here too. `maxGu
 
 ---
 
+## Optional static parallel-controller tiers
+
+`experimental.enableCustomParallelControllerTiers` is disabled by default. After a full restart, enabling it adds static `mmceme_0` through `mmceme_15` parallel-controller tiers to MMCE during early loading:
+
+```ini
+experimental {
+    B:enableCustomParallelControllerTiers=true
+    I:customParallelControllerTierCount=2
+    I:customParallelControllerDefaultMaxParallelism=32
+    S:customParallelControllerMaxParallelisms <
+        32
+        128
+     >
+}
+```
+
+`customParallelControllerTierCount` accepts `1-16`. Values in `customParallelControllerMaxParallelisms` are read in tier order; missing entries fall back to `customParallelControllerDefaultMaxParallelism`. This is static controller-tier support, not a runtime rule that changes parallelism from machine state. After the first startup, each tier can also be adjusted in `modularmachinery.cfg` under `parallel-controller.mmceme_*`. If WhimCraft already extends the same MMCE parallel-controller enum, MMCEME declines to add a second extension.
+
+---
+
 ## 2. Per-machine override `mmce_gui_ext`
 
 Write it into each machine JSON:

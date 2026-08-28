@@ -32,6 +32,26 @@ MMCE 更多扩展（MMCEME）挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开�
 
 ---
 
+## 可选静态并行控制器等级
+
+`experimental.enableCustomParallelControllerTiers` 默认关闭。开启后需要完整重启，MMCEME 会在早期加载阶段为 MMCE 增加 `mmceme_0` 到 `mmceme_15` 的静态并行控制器等级：
+
+```ini
+experimental {
+    B:enableCustomParallelControllerTiers=true
+    I:customParallelControllerTierCount=2
+    I:customParallelControllerDefaultMaxParallelism=32
+    S:customParallelControllerMaxParallelisms <
+        32
+        128
+     >
+}
+```
+
+`customParallelControllerTierCount` 范围为 `1-16`。`customParallelControllerMaxParallelisms` 按等级顺序填写最大并行数，缺少的项回退到 `customParallelControllerDefaultMaxParallelism`。这是静态控制器等级，不会按机器运行状态动态改变并行数；首次启动后仍可在 `modularmachinery.cfg` 的 `parallel-controller.mmceme_*` 项中逐级调整。如果检测到 WhimCraft 已经扩展同一个 MMCE 并行控制器枚举，MMCEME 会放弃添加自己的扩展，避免冲突。
+
+---
+
 ## 2. 机器级覆盖 `mmce_gui_ext`
 
 写进每台机器 JSON：
