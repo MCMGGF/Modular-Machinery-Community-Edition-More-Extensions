@@ -14,8 +14,10 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class GuiMachineControllerResizableTest {
@@ -56,6 +58,54 @@ public class GuiMachineControllerResizableTest {
     }
 
     @Test
+    public void sliderThumbOutsideTrackCanStartDragging() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        Object slider = newSlider("thumb", true, 5, 10, 10, 80, 12);
+        set(slider, "thumbHeight", Integer.valueOf(14));
+        set(gui, "customSliders", new ArrayList<Object>(Collections.singletonList(slider)));
+        set(gui, "activePageId", "main");
+        set(gui, "guiLeft", Integer.valueOf(100));
+        set(gui, "guiTop", Integer.valueOf(50));
+
+        Object started = invoke(
+            gui,
+            "startSliderDragAt",
+            new Class<?>[] {int.class, int.class},
+            Integer.valueOf(147),
+            Integer.valueOf(73)
+        );
+
+        assertSame(slider, started);
+        assertSame(slider, get(gui, "draggingSlider"));
+    }
+
+    @Test
+    public void activeSliderDragIsHandledBeforeBackgroundRouting() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        Object slider = newSlider("dragged", true, 5, 10, 10, 80, 12);
+        set(gui, "draggingSlider", slider);
+        set(gui, "guiLeft", Integer.valueOf(0));
+        set(gui, "guiTop", Integer.valueOf(0));
+
+        assertEquals(Boolean.TRUE, invoke(
+            gui,
+            "handleActiveSliderMouseDrag",
+            new Class<?>[] {int.class, int.class, int.class},
+            Integer.valueOf(50),
+            Integer.valueOf(16),
+            Integer.valueOf(0)
+        ));
+        assertEquals(Boolean.FALSE, invoke(
+            gui,
+            "handleActiveSliderMouseDrag",
+            new Class<?>[] {int.class, int.class, int.class},
+            Integer.valueOf(50),
+            Integer.valueOf(16),
+            Integer.valueOf(1)
+        ));
+    }
+
+    @Test
     public void hotkeyMatcherAcceptsNamedKeysAndExactModifiers() throws Exception {
         assertEquals(Boolean.TRUE, invokeStatic(
             "matchesHotkey",
@@ -90,6 +140,40 @@ public class GuiMachineControllerResizableTest {
     }
 
     @Test
+    public void hiddenHotkeyButtonTriggersPageAction() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        Object hotkeyButton = newHotkeyPageButton("C", "settings", true);
+        set(gui, "customButtons", new ArrayList<Object>(Collections.singletonList(hotkeyButton)));
+        set(gui, "activePageId", "main");
+
+        assertEquals(Boolean.TRUE, invoke(
+            gui,
+            "handleCustomButtonKeyTyped",
+            new Class<?>[] {char.class, int.class},
+            Character.valueOf('c'),
+            Integer.valueOf(0)
+        ));
+        assertEquals("settings", get(gui, "activePageId"));
+    }
+
+    @Test
+    public void hotkeyButtonCanActivateWithoutConsumingKey() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        Object hotkeyButton = newHotkeyPageButton("C", "settings", false);
+        set(gui, "customButtons", new ArrayList<Object>(Collections.singletonList(hotkeyButton)));
+        set(gui, "activePageId", "main");
+
+        assertEquals(Boolean.FALSE, invoke(
+            gui,
+            "handleCustomButtonKeyTyped",
+            new Class<?>[] {char.class, int.class},
+            Character.valueOf('c'),
+            Integer.valueOf(0)
+        ));
+        assertEquals("settings", get(gui, "activePageId"));
+    }
+
+    @Test
     public void setWidthHeightKeepsOversizedGuiWhenOffscreenIsAllowed() throws Exception {
         GuiMachineControllerResizable gui = allocateGui();
         MMCEGuiExtConfig.MachineController original = MMCEGuiExtConfig.machineController;
@@ -110,6 +194,70 @@ public class GuiMachineControllerResizableTest {
         } finally {
             MMCEGuiExtConfig.machineController = original;
         }
+    }
+
+    @Test
+    public void legacyConfigSmartInterfaceFallbackDoesNotEnableDefaultEditor() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        MMCEGuiExtConfig.MachineController cfg = new MMCEGuiExtConfig.MachineController();
+        cfg.enableSmartInterfaceEditor = true;
+        cfg.smartInterfaceEditorVirtualKey = "mmcege_virtual_port";
+
+        set(gui, "styleOverride", MachineGuiStyleManager.ControllerStyle.EMPTY);
+
+        assertFalse(((Boolean) invoke(
+            gui,
+            "getSmartInterfaceEditorEnabled",
+            new Class<?>[] {MMCEGuiExtConfig.MachineController.class},
+            cfg
+        )).booleanValue());
+    }
+
+    @Test
+    public void styleSmartInterfaceFallbackStillHonorsExplicitJsonKey() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        MMCEGuiExtConfig.MachineController cfg = new MMCEGuiExtConfig.MachineController();
+        cfg.enableSmartInterfaceEditor = false;
+        cfg.smartInterfaceEditorVirtualKey = "mmcege_virtual_port";
+        MachineGuiStyleManager.ControllerStyle style = new MachineGuiStyleManager.ControllerStyle();
+        style.smartInterfaceEditorVirtualKey = "demo_default_port_a,demo_default_port_b";
+
+        set(gui, "styleOverride", style);
+
+        @SuppressWarnings("unchecked")
+        List<String> keys = (List<String>) invoke(
+            gui,
+            "getSmartInterfaceEditorVirtualKeys",
+            new Class<?>[] {MMCEGuiExtConfig.MachineController.class},
+            cfg
+        );
+
+        assertEquals(2, keys.size());
+        assertEquals("demo_default_port_a", keys.get(0));
+        assertEquals("demo_default_port_b", keys.get(1));
+    }
+
+    @Test
+    public void pressedTextureOnlyButtonCreatesVisibleWidget() throws Exception {
+        GuiMachineControllerResizable gui = allocateGui();
+        MachineGuiStyleManager.ControllerStyle style = new MachineGuiStyleManager.ControllerStyle();
+        MachineGuiStyleManager.ButtonStyle buttonStyle = pressedTextureOnlyButtonStyle();
+        style.buttons = Collections.singletonList(buttonStyle);
+        set(gui, "styleOverride", style);
+        set(gui, "renderWidth", Integer.valueOf(176));
+        set(gui, "renderHeight", Integer.valueOf(166));
+
+        invoke(
+            gui,
+            "initCustomButtons",
+            new Class<?>[] {MMCEGuiExtConfig.MachineController.class},
+            new MMCEGuiExtConfig.MachineController()
+        );
+
+        List<?> buttons = (List<?>) get(gui, "customButtons");
+        assertEquals(1, buttons.size());
+        assertNotNull(get(buttons.get(0), "button"));
+        assertTrue(get(buttons.get(0), "button") instanceof GuiTexturedButton);
     }
 
     private static GuiMachineControllerResizable allocateGui() throws Exception {
@@ -149,9 +297,35 @@ public class GuiMachineControllerResizableTest {
         set(slider, "max", Float.valueOf(10.0F));
         set(slider, "step", Float.valueOf(0.0F));
         set(slider, "value", Float.valueOf(5.0F));
+        set(slider, "thumbWidth", Integer.valueOf(8));
+        set(slider, "thumbHeight", Integer.valueOf(height));
         set(slider, "visible", Boolean.TRUE);
         set(slider, "page", "main");
         return slider;
+    }
+
+    private static Object newHotkeyPageButton(String hotkey, String targetPage, boolean consumeHotkey) throws Exception {
+        Class<?> buttonClass = Class.forName("com.fushu.mmceguiext.client.gui.GuiMachineControllerResizable$CustomButton");
+        Constructor<?> ctor = buttonClass.getDeclaredConstructor();
+        ctor.setAccessible(true);
+        Object button = ctor.newInstance();
+        set(button, "action", "page");
+        set(button, "targetPage", targetPage);
+        set(button, "page", null);
+        set(button, "hotkeys", new ArrayList<String>(Collections.singletonList(hotkey)));
+        set(button, "consumeHotkey", Boolean.valueOf(consumeHotkey));
+        return button;
+    }
+
+    private static MachineGuiStyleManager.ButtonStyle pressedTextureOnlyButtonStyle() {
+        MachineGuiStyleManager.ButtonStyle style = new MachineGuiStyleManager.ButtonStyle();
+        style.id = "pressed_only";
+        style.action = "page";
+        style.targetPage = "main";
+        style.width = Integer.valueOf(16);
+        style.height = Integer.valueOf(16);
+        style.pressedTexture = "mmceguiext:textures/gui/pressed_only.png";
+        return style;
     }
 
     private static Object newRuntimeState() throws Exception {

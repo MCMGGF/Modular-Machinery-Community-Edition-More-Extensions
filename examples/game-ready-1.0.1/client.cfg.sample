@@ -2,6 +2,9 @@
 
 general {
     B:enabled=true
+    # Shared limit for all Modular Machinery: Community Edition More Extensions JSON files, including GUI,
+    # custom hatches, custom AE buses, capacity cards, and button policies.
+    I:maxGuiConfigFileSizeMiB=8
     I:wheelStep=10
 
     machinecontroller {
@@ -60,5 +63,15 @@ general {
         I:smartInterfaceEditorY=-1
         S:specialThreadBackgroundColor=FF7DD3FC
         B:useNineSlice=true
+    }
+
+    experimental {
+        # Long recipe requirements and extra static parallel-controller tiers are experimental.
+        B:enableLongFluidGasRequirements=false
+        B:enableCustomParallelControllerTiers=false
+        I:customParallelControllerTierCount=1
+        I:customParallelControllerDefaultMaxParallelism=32
+        S:customParallelControllerMaxParallelisms <
+         >
     }
 }

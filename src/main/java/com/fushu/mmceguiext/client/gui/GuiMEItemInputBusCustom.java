@@ -62,10 +62,10 @@ public class GuiMEItemInputBusCustom extends GuiMEItemInputBus {
         String title = this.definition != null && this.definition.displayName != null && !this.definition.displayName.trim().isEmpty()
             ? this.definition.displayName
             : I18n.format("gui.meiteminputbus.title");
-        this.fontRenderer.drawString(title, 8, 8, 0x404040);
-        this.fontRenderer.drawString(appeng.core.localization.GuiText.Config.getLocal(), 8, 6 + 11 + 7, 0x404040);
-        this.fontRenderer.drawString(appeng.core.localization.GuiText.StoredItems.getLocal(), 97, 6 + 11 + 7, 0x404040);
-        this.fontRenderer.drawString(appeng.core.localization.GuiText.inventory.getLocal(), 8, this.ySize - 93, 0x404040);
+        GuiRenderUtils.drawString(this.fontRenderer, title, 8, 8, 0x404040, false, 0.0F);
+        GuiRenderUtils.drawString(this.fontRenderer, appeng.core.localization.GuiText.Config.getLocal(), 8, 6 + 11 + 7, 0x404040, false, 0.0F);
+        GuiRenderUtils.drawString(this.fontRenderer, appeng.core.localization.GuiText.StoredItems.getLocal(), 97, 6 + 11 + 7, 0x404040, false, 0.0F);
+        GuiRenderUtils.drawString(this.fontRenderer, appeng.core.localization.GuiText.inventory.getLocal(), 8, this.ySize - 93, 0x404040, false, 0.0F);
     }
 
     @Nullable

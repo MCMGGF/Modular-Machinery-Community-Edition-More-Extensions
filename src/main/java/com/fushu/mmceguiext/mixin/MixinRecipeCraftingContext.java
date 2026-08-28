@@ -20,9 +20,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Mixin(value = RecipeCraftingContext.class)
 public abstract class MixinRecipeCraftingContext {
@@ -44,6 +47,9 @@ public abstract class MixinRecipeCraftingContext {
         }
 
         Map<Long, List<ProcessingComponent<?>>> restored = new LinkedHashMap<>();
+        Set<ProcessingComponent<?>> seen = Collections.newSetFromMap(
+            new IdentityHashMap<ProcessingComponent<?>, Boolean>()
+        );
         for (Map.Entry<Long, Collection<ProcessingComponent<?>>> entry : this.typeComponents.entrySet()) {
             for (ProcessingComponent<?> component : entry.getValue()) {
                 if (component == null || component.component() == null) {
@@ -62,7 +68,9 @@ public abstract class MixinRecipeCraftingContext {
                 if (tag != null && !tag.equals(component.getTag())) {
                     continue;
                 }
-                restored.computeIfAbsent(entry.getKey(), ignored -> new ObjectArrayList<>()).add(component);
+                if (seen.add(component)) {
+                    restored.computeIfAbsent(entry.getKey(), ignored -> new ObjectArrayList<>()).add(component);
+                }
             }
         }
 
@@ -86,6 +94,9 @@ public abstract class MixinRecipeCraftingContext {
         }
 
         Map<Long, List<ProcessingComponent<?>>> restored = new LinkedHashMap<>();
+        Set<ProcessingComponent<?>> seen = Collections.newSetFromMap(
+            new IdentityHashMap<ProcessingComponent<?>, Boolean>()
+        );
         for (Map.Entry<Long, Collection<ProcessingComponent<?>>> entry : this.typeComponents.entrySet()) {
             for (ProcessingComponent<?> component : entry.getValue()) {
                 if (component == null || component.component() == null) {
@@ -101,7 +112,9 @@ public abstract class MixinRecipeCraftingContext {
                 if (tag != null && !tag.equals(component.getTag())) {
                     continue;
                 }
-                restored.computeIfAbsent(entry.getKey(), ignored -> new ObjectArrayList<>()).add(component);
+                if (seen.add(component)) {
+                    restored.computeIfAbsent(entry.getKey(), ignored -> new ObjectArrayList<>()).add(component);
+                }
             }
         }
 
@@ -125,6 +138,9 @@ public abstract class MixinRecipeCraftingContext {
         }
 
         Map<Long, List<ProcessingComponent<?>>> restored = new LinkedHashMap<>();
+        Set<ProcessingComponent<?>> seen = Collections.newSetFromMap(
+            new IdentityHashMap<ProcessingComponent<?>, Boolean>()
+        );
         for (Map.Entry<Long, Collection<ProcessingComponent<?>>> entry : this.typeComponents.entrySet()) {
             for (ProcessingComponent<?> component : entry.getValue()) {
                 if (component == null || component.component() == null) {
@@ -140,7 +156,9 @@ public abstract class MixinRecipeCraftingContext {
                 if (tag != null && !tag.equals(component.getTag())) {
                     continue;
                 }
-                restored.computeIfAbsent(entry.getKey(), ignored -> new ObjectArrayList<>()).add(component);
+                if (seen.add(component)) {
+                    restored.computeIfAbsent(entry.getKey(), ignored -> new ObjectArrayList<>()).add(component);
+                }
             }
         }
 
@@ -149,13 +167,18 @@ public abstract class MixinRecipeCraftingContext {
         }
     }
 
-    private boolean mmceguiext$isEmptyResult(final Map<Long, List<ProcessingComponent<?>>> map) {
+    static boolean mmceguiext$isEmptyResult(final Map<Long, List<ProcessingComponent<?>>> map) {
         if (map.isEmpty()) {
             return true;
         }
         for (List<ProcessingComponent<?>> components : map.values()) {
-            if (components != null && !components.isEmpty()) {
-                return false;
+            if (components == null) {
+                continue;
+            }
+            for (ProcessingComponent<?> component : components) {
+                if (component != null) {
+                    return false;
+                }
             }
         }
         return true;

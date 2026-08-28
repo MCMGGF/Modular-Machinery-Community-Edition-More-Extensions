@@ -6,7 +6,7 @@
 
 ## 工作机制
 
-MMCEME 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineController` / `GuiFactoryController` 的瞬间，**仅当**存在自定义贴图、隐藏默认背景或机器级样式覆盖时，才替换为可调整大小的版本。它**不修改** MMCE 的任何 GUI 类。
+MMCE 更多扩展（MMCEME）挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineController` / `GuiFactoryController` 的瞬间，**仅当**存在自定义贴图、隐藏默认背景或机器级样式覆盖时，才替换为可调整大小的版本。它**不修改** MMCE 的任何 GUI 类。
 
 样式来自两层，机器级优先、回退到全局：
 - **全局**：`config/mmceguiext/client.cfg`
@@ -26,9 +26,29 @@ MMCEME 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineContro
 - Smart Interface 编辑器：`enableSmartInterfaceEditor`、`smartInterfaceEditorX`/`Y`（`-1`=自动右下）、`smartInterfaceEditorInputWidth`、`smartInterfaceEditorVirtualKey`（无绑定 DataPort 时写入控制器 `customData[key]`，多个 key 用 `,` 或 `;` 分隔）
 - 仅工厂：`factoryController.specialThreadBackgroundColor`（十六进制 `RRGGBB` 或 `AARRGGBB`，核心/特殊线程行着色）
 
-全局开关 `enabled`、滚轮步长 `wheelStep` 等也在此文件。可参考 `examples/game-ready-1.0.1/client.cfg.sample`。
+全局开关 `enabled`、滚轮步长 `wheelStep` 等也在此文件。`maxGuiConfigFileSizeMiB` 默认是 `8`，是 MMCE More Extensions 全部 JSON 的共享文件大小上限，包括 GUI、自定义仓口、自定义 AE 总线、容量卡和按钮策略文件，范围为 `1-64`。配置键名称为兼容旧版本而保留。可参考 `examples/game-ready-1.0.1/client.cfg.sample`。
 
 **背景规则**：有自定义贴图 → 用自定义贴图；没有 → 用 MMCE 默认贴图；没有且 `hideDefaultBackground=true` → 不画背景。使用 MMCE 默认贴图时信息文本仍在原信息区渲染；多信息区仅在自定义贴图模式下启用。
+
+---
+
+## 可选静态并行控制器等级
+
+`experimental.enableCustomParallelControllerTiers` 默认关闭。开启后需要完整重启，MMCEME 会在早期加载阶段为 MMCE 增加 `mmceme_0` 到 `mmceme_15` 的静态并行控制器等级：
+
+```ini
+experimental {
+    B:enableCustomParallelControllerTiers=true
+    I:customParallelControllerTierCount=2
+    I:customParallelControllerDefaultMaxParallelism=32
+    S:customParallelControllerMaxParallelisms <
+        32
+        128
+     >
+}
+```
+
+`customParallelControllerTierCount` 范围为 `1-16`。`customParallelControllerMaxParallelisms` 按等级顺序填写最大并行数，缺少的项回退到 `customParallelControllerDefaultMaxParallelism`。这是静态控制器等级，不会按机器运行状态动态改变并行数；首次启动后仍可在 `modularmachinery.cfg` 的 `parallel-controller.mmceme_*` 项中逐级调整。如果检测到 WhimCraft 已经扩展同一个 MMCE 并行控制器枚举，MMCEME 会放弃添加自己的扩展，避免冲突。
 
 ---
 
@@ -53,9 +73,17 @@ MMCEME 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineContro
       "guiWidth": 520, "guiHeight": 240,
       "specialThreadBackgroundColor": "B2E5FF",
       "threadQueueX": 12, "threadQueueY": 14,
-      "threadScrollbarX": 98, "threadScrollbarY": 22,
       "threadVisibleRows": 7,
-      "threadRowWidth": 90, "threadRowHeight": 34
+      "threadRowWidth": 90, "threadRowHeight": 34,
+      "threadScrollbar": {
+        "x": 98, "y": 22, "width": 8, "height": 197,
+        "trackTexture": "yourmod:textures/gui/scroll_track.png",
+        "thumbTexture": "yourmod:textures/gui/scroll_thumb.png",
+        "trackColor": "66000000", "thumbColor": "FFFFFFFF",
+        "textureWidth": 8, "textureHeight": 197,
+        "thumbTextureWidth": 8, "thumbTextureHeight": 16,
+        "thumbMinHeight": 15, "visible": true
+      }
     }
   }
 }
@@ -69,7 +97,7 @@ MMCEME 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineContro
 机器级值覆盖全局。自 `1.0.1+`，只要机器定义了 `mmce_gui_ext` 节点，未填的 GUI 尺寸优先回退到 MMCE 基础尺寸（`176x213` / `280x213`），降低对全局 cfg 的耦合。
 
 机器级常用字段（详见速查表）：`backgroundTexture`、`backgroundTextureOffsetX/Y`、`hideDefaultBackground`、`guiWidth`、`guiHeight`、`enableRightExtension`、`useNineSlice`、`backgroundTextureWidth/Height`、`backgroundCorner`、`centerFullGui`、`specialThreadBackgroundColor`、`enableSmartInterfaceEditor`、`smartInterfaceEditorX/Y`、`smartInterfaceEditorInputWidth`、`smartInterfaceEditorVirtualKey`、`smartInterfaceEditorPriority`、`foregroundContentPriority`、`hideDefaultSmartInterfaceEditor`、`defaultPanelId`、`customPanels`、`smartInterfaceEditors`、`sliders`、`textureLayers`/`backgroundLayers`/`foregroundLayers`、`buttons`。
-工厂线程队列可直接照抄的字段是 `threadQueueX`、`threadQueueY`、`threadScrollbarX`、`threadScrollbarY`、`threadVisibleRows`、`threadRowWidth`、`threadRowHeight`；别名 `queueX`、`queueY`、`queueScrollbarX`、`queueScrollbarY`、`queueVisibleRows`、`queueRowWidth`、`queueRowHeight` 也可用。自定义这些字段也会触发集成控制器自代理。
+工厂线程队列布局字段是 `threadQueueX`、`threadQueueY`、`threadVisibleRows`、`threadRowWidth`、`threadRowHeight`。滚动条推荐使用结构化对象 `threadScrollbar`，可配置位置、尺寸、轨道/滑块贴图、颜色、贴图源尺寸、最小滑块高度和显隐；`height: -1` 表示根据可见线程行数自动计算高度，正数表示固定高度；旧的 `threadScrollbarX/Y` 仍兼容。自定义这些字段也会触发集成控制器自代理。
 
 ---
 
@@ -107,16 +135,24 @@ MMCEME 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineContro
 
 虚拟 DataPort：无实体端口也可写值。推荐读取方式（兼容原生+虚拟）：先读 `ctrl.getSmartInterfaceData(key)`，为空再读 `ctrl.customData`。
 
+**数值精度：** `customData` 可以来自 NBT `Long` 或 `Double`，但当前客户端动态视觉链路以 `float` 为主。超过 IEEE-754 `float` 可精确表示整数范围的大型 `Long`，以及精度高于 `float` 的 `Double`，被 GUI 读取时可能发生舍入。Smart Interface 编辑器、滑块、`smart_set`、`smart_add` 和虚拟 DataPort 的数值写入主要走 `Float` 通道，因此不能可靠地写入任意超大 `Long` 的每一位数字。需要精确保存大整数时，请优先使用字符串或服务端/脚本侧的 `Long` 处理，并在用于动态视觉前先将大数归一化。
+
 ---
 
 ## 7. 自定义按钮与页面
 
 `buttons[]` 在机器级定义，服务端策略管理器校验以防伪造。动作类型：
 - `page` — 纯客户端页面切换。
-- `event` — 服务端触发 MMCE `ControllerButtonClickEvent`。
+- `subgui` — 打开已配置的子 GUI。
+- `close_subgui` — 关闭当前子 GUI。
+- `event` — 在服务端触发一次 MMCEME `ControllerButtonClickEvent`。
 - `smart_set` / `smart_add` — 设置/累加 Smart Interface 值（可选 min/max 限幅）。
 
-示例：`examples/quick-start/buttons-and-pages.json`、`event-button-test.json`、`controller-button-test.json`。
+按钮上可写 `hotkey` / `hotkeys` 做 GUI 内快捷键。控制器级 `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` 会创建不可见的纯热键动作，例如用 `C` 打开 modal 子 GUI，用 `ESCAPE` 执行 `close_subgui`。热键只在控制器 GUI 打开时生效，文本框聚焦时仍优先输入文本。
+
+使用 `mods.mmceguiext.MMCEGEEvents.onControllerButtonClick` 注册 `event` 处理器。机器名支持短名 `machine_path` 和完整名 `namespace:machine_path`，同一处理器的别名注册会自动去重。事件已经只在服务端触发，不需要再判断 `world.isRemote()`。
+
+示例：`examples/quick-start/buttons-and-pages.json`、`event-button-test.json`、`controller-button-test.json`、`subgui-page-reference.json`。
 
 ---
 
@@ -175,3 +211,275 @@ MMCEME 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineContro
 - 建议所有可运行时控制的图层都写 `id`。
 - 多个 `virtualKey` 用英文逗号分隔；`showControls=false` 时该输入框不显示左右切换和 OK。
 - JSON 修改后建议重启验证；ZS 可先 `/ct reload`。
+
+## 9. 动态可视化组件
+
+`dynamicVisuals[]` 在普通控制器和集成控制器样式里都支持。它是变量驱动视觉的统一系统：`source` -> 归一化 -> 可选显隐 / 变换 / renderer 切换 / 颜色覆盖 -> 可选 `history` -> `renderer`。
+
+当前 renderer 支持：`textureSwitch`、`animatedTexture`、`fill`、`pie`/`ring`、`lineChart`。source 可以读取控制器 `customData` / Smart Interface 数值，也可以读取内置机器指标，例如 `recipeProgress`、`energyRatio`、`parallelism`、`threadCount`，以及工厂线程数量指标。
+
+`source.type` 目前支持：
+- `customData`
+- `machine`
+- `combined`
+
+`combined` 会先把多个子 source 解析成原始数值并完成组合，然后再对父级 source 应用 `min`、`max`、`clamp`、`invert`。`combine` 支持：`sum`、`average`、`weightedSum`、`weightedAverage`、`min`、`max`、`multiply`、`subtract`、`divide`、`first`、`last`。子项可以是 `customData`、`machine`，也可以继续嵌套 `combined`。每个子项还可以写 `weight`，供 `weightedSum` / `weightedAverage` 使用。
+
+动态上下限使用 `minSource` / `maxSource`（也支持 `min_source` / `max_source`）。两者都接受完整的 `customData`、`machine` 或 `combined` source；有限动态值覆盖静态 `min` / `max`，缺失或非有限值回退静态值。bound source 按原始值读取，不执行自己的归一化。最终 `max <= min` 时归一化结果固定为 `0`。
+
+`animatedTexture` 是按 tick/时间驱动的 PNG 帧动画，支持单张帧图集或按顺序播放多张 PNG。类型别名包括 `animated_texture`、`animation`、`spriteSheet`、`spritesheet`。
+
+帧图集字段：
+- `texture`、`frameWidth`、`frameHeight`、`frameCount`
+- 可选 `columns`、`textureWidth`、`textureHeight`、`u`、`v`
+- `ticksPerFrame`（默认 `2`）、`startFrame`（默认 `0`）、`loop`（默认 `true`）、`reverse`（默认 `false`）、`pingPong`（默认 `false`）
+
+多 PNG 文件字段：
+- `frames[]` 按播放顺序排列
+- 每帧可以是贴图字符串，也可以是包含 `texture`、`u`、`v`、`textureWidth`、`textureHeight` 的对象
+
+未填写 `columns` 时会尝试用 `textureWidth / frameWidth` 推导；无法推导时按单行图集处理。不支持 GIF 解码或 GIF 自动播放；为兼容 Minecraft，请使用 PNG 帧图或 PNG 帧图集。`textureSwitch` 仍然是按数值切换，`animatedTexture` 则按时间播放。
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "texture": "yourmod:textures/gui/fan_sheet.png",
+  "frameWidth": 16,
+  "frameHeight": 16,
+  "frameCount": 8,
+  "columns": 4,
+  "textureWidth": 64,
+  "textureHeight": 32,
+  "ticksPerFrame": 2,
+  "loop": true
+}
+```
+
+也可以使用多张 PNG：
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "ticksPerFrame": 3,
+  "frames": [
+    "yourmod:textures/gui/spark_0.png",
+    "yourmod:textures/gui/spark_1.png",
+    { "texture": "yourmod:textures/gui/spark_2.png", "u": 0, "v": 0, "textureWidth": 16, "textureHeight": 16 }
+  ]
+}
+```
+
+```json
+"source": {
+  "type": "customData",
+  "key": "oneblock.component.energy_in.amount",
+  "default": 0,
+  "min": 0,
+  "max": 1,
+  "maxSource": {
+    "type": "customData",
+    "key": "oneblock.component.energy_in.capacity",
+    "default": 1
+  }
+}
+```
+
+还支持可选变换：
+- `transform`：静态 `offsetX`、`offsetY`、`scale`、`scaleX`、`scaleY`、`rotation`、`alpha`、`pivotX`、`pivotY`、`pivotUnit`，以及兼容旧写法的 `origin`（`topLeft`、`topCenter`、`topRight`、`centerLeft`、`center`、`centerRight`、`bottomLeft`、`bottomCenter`、`bottomRight`）。
+- `transformByValue`：按变量驱动 `offsetX`、`offsetY`、`scale`、`scaleX`、`scaleY`、`rotation`、`alpha`、`pivotX`、`pivotY`。
+- 动态 `pivotX` / `pivotY` 的单位仍由静态 `transform.pivotUnit` 决定；如果没写，默认就是 `ratio`。`ratio` 表示基于宽高的 `0..1` 相对坐标，`px` 表示绝对像素坐标。
+- 每个 `transformByValue` 通道都可写独立 `source`，不写时默认复用当前 visual 的主 `source`。
+
+还支持可选显隐 / 颜色覆盖：
+- `visibleByValue`：按归一化后的变量值决定是否显示。支持 `min`、`max`、`equals`、`invert`，也支持独立 `source`。
+- `rendererSwitchByValue`：按变量值切换整套 renderer 规则数组。每条规则支持 `min`、`max`、`equals`、独立 `source` 和自己的 `renderer`。
+- `rendererByValue`：对支持颜色的 renderer 做变量驱动颜色插值。支持通道：`backgroundColor`、`fillColor`、`borderColor`、`color`、`lineColor`、`gridColor`。
+- 每个 `rendererByValue` 通道可写 `{ "fromColor": ..., "toColor": ... }`，也可单独指定 `source`。
+- `rendererSwitchByValue` 按数组顺序首个命中规则生效；如果都不命中，则回退到静态 `renderer`；静态 `renderer` 也没写时就不绘制。
+- 如果少写了一端颜色，会优先回退到静态 `renderer` 对应颜色；静态颜色也没有时，就复用已填写的那一端。
+
+```json
+"dynamicVisuals": [
+  {
+    "id": "energy_ring",
+    "x": 120,
+    "y": 24,
+    "width": 32,
+    "height": 32,
+    "source": { "type": "machine", "metric": "energyRatio", "min": 0, "max": 1 },
+    "renderer": {
+      "type": "pie",
+      "mode": "ring",
+      "startAngle": -90,
+      "innerRadius": 10,
+      "color": "FFFFAA00",
+      "backgroundColor": "33000000"
+    }
+  }
+]
+```
+
+`foreground`、`priority`、`page`、`visible`、`visibleByValue`、`rendererSwitchByValue`、`rendererByValue` 与其他控制器组件规则一致。
+
+变量驱动旋转示例：
+
+```json
+{
+  "id": "fan",
+  "x": 120,
+  "y": 30,
+  "width": 32,
+  "height": 32,
+  "source": { "type": "customData", "key": "speed", "default": 0, "min": 0, "max": 100 },
+  "transform": { "pivotX": 0.5, "pivotY": 0.5, "pivotUnit": "ratio", "alpha": 0.6 },
+  "transformByValue": {
+    "rotation": { "min": 0, "max": 360 },
+    "pivotX": { "min": 0.35, "max": 0.65 },
+    "pivotY": { "min": 0.35, "max": 0.65 },
+    "scale": { "min": 0.85, "max": 1.15 },
+    "alpha": {
+      "min": 0.4,
+      "max": 1.0,
+      "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 }
+    }
+  },
+  "renderer": {
+    "type": "textureSwitch",
+    "fallbackTexture": "pack:textures/gui/fan.png",
+    "frames": [
+      { "texture": "pack:textures/gui/fan.png" }
+    ]
+  }
+}
+```
+
+这个示例里静态 `pivotUnit` 是 `ratio`，所以动态 `pivotX` / `pivotY` 也按相对坐标解释。
+
+显隐 + 颜色联动示例：
+
+```json
+{
+  "id": "warning_ring",
+  "x": 160,
+  "y": 28,
+  "width": 28,
+  "height": 28,
+  "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 },
+  "visibleByValue": { "min": 0.05 },
+  "renderer": {
+    "type": "pie",
+    "mode": "ring",
+    "innerRadius": 8,
+    "backgroundColor": "22000000",
+    "color": "FF44FF44"
+  },
+  "rendererByValue": {
+    "color": {
+      "fromColor": "FF44FF44",
+      "toColor": "FFFF4444"
+    }
+  }
+}
+```
+
+这个示例在接近 0 时保持隐藏，随后会随着 `warning` 上升从绿色渐变到红色。
+
+多 source 示例：
+
+```json
+{
+  "id": "hybrid_fill",
+  "x": 196,
+  "y": 64,
+  "width": 64,
+  "height": 8,
+  "source": {
+    "type": "combined",
+    "combine": "weightedSum",
+    "sources": [
+      { "type": "customData", "key": "heat", "default": 0, "weight": 0.0065 },
+      { "type": "customData", "key": "warning", "default": 0, "weight": 0.35 }
+    ],
+    "min": 0,
+    "max": 1,
+    "clamp": true
+  },
+  "renderer": {
+    "type": "fill",
+    "backgroundColor": "22000000",
+    "fillColor": "FF55CCFF",
+    "borderColor": "FFFFFFFF",
+    "direction": "right"
+  },
+  "rendererByValue": {
+    "fillColor": {
+      "fromColor": "FF55CCFF",
+      "toColor": "FFFF8844"
+    }
+  }
+}
+```
+
+这个示例会把 `heat` 和 `warning` 混合成同一条填充条，同时用子项 `weight` 把不同量纲对齐，并通过 `rendererByValue` 让填充色随着混合压力升高逐步偏向橙色。
+
+同一个 weighted combined source 还可以继续复用到：
+- `visibleByValue.source`，做混合阈值驱动的显隐
+- `transformByValue.<channel>.source`，做由混合信号驱动的位移 / 旋转 / 缩放 / 透明度
+- `rendererSwitchByValue[*].source`，让 renderer 模式跟随同一份聚合状态切换
+
+经验上，`weightedSum` 更适合先对齐 mixed-scale 原始值的场景；如果各子 source 本来就都在同一个 `0..1` 量纲里，通常优先用 `weightedAverage`，语义会更直观。
+
+整套 renderer 切换示例：
+
+```json
+{
+  "id": "mode_preview",
+  "x": 196,
+  "y": 28,
+  "width": 28,
+  "height": 28,
+  "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 },
+  "renderer": {
+    "type": "fill",
+    "backgroundColor": "22000000",
+    "fillColor": "FF44AAFF",
+    "borderColor": "FFFFFFFF",
+    "direction": "up"
+  },
+  "rendererSwitchByValue": [
+    {
+      "max": 0.34,
+      "renderer": {
+        "type": "fill",
+        "backgroundColor": "22000000",
+        "fillColor": "FF44AAFF",
+        "borderColor": "FFFFFFFF",
+        "direction": "up"
+      }
+    },
+    {
+      "min": 0.34,
+      "max": 0.67,
+      "renderer": {
+        "type": "pie",
+        "mode": "ring",
+        "innerRadius": 8,
+        "backgroundColor": "22000000",
+        "color": "FFFFCC44"
+      }
+    },
+    {
+      "min": 0.67,
+      "renderer": {
+        "type": "textureSwitch",
+        "fallbackTexture": "pack:textures/gui/fan.png",
+        "frames": [
+          { "texture": "pack:textures/gui/fan.png" }
+        ]
+      }
+    }
+  ]
+}
+```
+
+这个示例会随着 `warning` 上升，把整套 renderer 从 fill -> ring -> texture 依次切换。

@@ -1,13 +1,14 @@
-# MMCE 更多扩展（MMCEME）1.1.0-beta 完整教程（可直接进游戏）
+# MMCE 更多扩展（MMCEME）1.4.1 完整教程（可直接进游戏）
 
 本目录提供的是“可直接加载”的示例，不是伪代码。
 
-MMCE 更多扩展（MMCEME）是 MMCE GUI Edit（MMCEGE）的改名延续项目，目前包含四大功能。本教程按部分组织：
+MMCE 更多扩展（MMCEME）目前包含五大功能，本教程按部分组织：
 
 - **第一部分 · 控制器 GUI**（第 1–8 章）：替换 / 自定义普通与集成控制器的 GUI。
 - **第二部分 · 自定义仓口（Hatch）**（第 9 章）：用 JSON 定义新的流体 / 气体 / 物品 / 能量仓口方块。
 - **第三部分 · 自定义 AE2 总线（实验性）**（第 10 章）：ME 物品输入、混合（物品+流体+气体）输入 / 输出总线。
-- **第四部分 · Long 容量配方需求**（第 11 章）：让流体 / 气体配方量突破原版 `int` 上限，自动生效。
+- **第四部分 · Long 容量配方需求（实验性，需要手动开启）**（第 11 章）：让流体 / 气体配方量突破原版 `int` 上限。
+- **第五部分 · 静态并行控制器等级（实验性，需要手动开启）**：注册可配置的 `mmceme_0` 到 `mmceme_15` 静态并行控制器等级。
 
 > 快速字段速查见 `examples/MMCE_GUI_EXT_FIELD_REFERENCE.md`。
 
@@ -49,6 +50,7 @@ MMCE 更多扩展（MMCEME）是 MMCE GUI Edit（MMCEGE）的改名延续项目�
 - 控制器滑块（`sliders[]`，可拖拽写入 Smart Interface / 虚拟 DataPort 数值）
 - 工厂核心线程背景色 `specialThreadBackgroundColor`
 - 集成控制器线程队列位置与尺寸自定义（`threadQueueX/Y` 等，单独配置也会启用自代理 GUI）
+- 集成控制器线程队列右侧滚动条结构化配置 `threadScrollbar`（推荐方案，支持轨道/滑块自定义贴图）
 
 ## 4. JSON 写法总览（推荐字段名）
 
@@ -89,6 +91,7 @@ MMCE 更多扩展（MMCEME）是 MMCE GUI Edit（MMCEGE）的改名延续项目�
 - `sliders`
 - `textureLayers` / `backgroundLayers` / `foregroundLayers`
 - `subGuis`
+- `showBlueprintInfo` / `showStructureInfo` / `showStatusInfo` / `showParallelismInfo` / `showPerformanceInfo` 只隐藏 MMCE 内置默认信息，不会隐藏 ZS `extraInfo`、`[panel:id]` 路由文本或自定义 panel。
 
 ### 4.4 `subGuis` 格式
 
@@ -232,6 +235,173 @@ MMCE 更多扩展（MMCEME）是 MMCE GUI Edit（MMCEGE）的改名延续项目�
 
 可直接复制的完整示例：`examples/quick-start/sliders.json`。
 
+### 4.6 `progressBars` 进度条格式
+
+`progressBars` 是控制器下的进度条数组，普通控制器和集成控制器都可用。别名也支持 `progress_bars`、`guiProgressBars`、`gui_progress_bars`。
+
+推荐主方案是双贴图：
+
+- `backgroundTexture`：空槽 / 背景贴图。
+- `fillTexture`：满槽 / 填充贴图。
+
+MMCEME 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常见 GUI 美术资源。
+
+每个进度条至少写：
+
+- `x`
+- `y`
+- `width`
+- `height`
+
+常用字段：
+
+- `id`
+- `source`
+- `direction`
+- `backgroundTexture`
+- `fillTexture`
+- `textureWidth`
+- `textureHeight`
+- `backgroundColor`
+- `fillColor`
+- `borderColor`
+- `threadIndex`
+- `coreThreadId`
+- `min`
+- `max`
+- `priority`
+- `foreground`
+- `visible`
+- `page`
+- `showText`
+- `textColor`
+
+`direction` 可填：
+
+- `left_to_right`
+- `right_to_left`
+- `top_to_bottom`
+- `bottom_to_top`
+
+`source` 可填：
+
+- 普通控制器：`machine_progress`（也可用 `active_recipe`、`recipe_progress`、`current_recipe`、`default`）
+- 集成控制器：`factory_first`、`factory_average`、`factory_max`、`factory_thread`、`factory_core`
+
+示例：
+
+```json
+"progressBars": [
+  {
+    "id": "recipe_progress",
+    "x": 80,
+    "y": 38,
+    "width": 64,
+    "height": 12,
+    "source": "machine_progress",
+    "direction": "left_to_right",
+    "backgroundTexture": "yourmod:textures/gui/progress_empty.png",
+    "fillTexture": "yourmod:textures/gui/progress_full.png",
+    "textureWidth": 64,
+    "textureHeight": 12,
+    "showText": true,
+    "textColor": "FFFFFFFF"
+  }
+]
+```
+
+没有贴图时，也可以使用纯色 fallback：
+
+```json
+"progressBars": [
+  {
+    "id": "debug_progress",
+    "x": 80,
+    "y": 56,
+    "width": 64,
+    "height": 8,
+    "source": "machine_progress",
+    "backgroundColor": "66000000",
+    "fillColor": "FF55CC66",
+    "borderColor": "FFFFFFFF"
+  }
+]
+```
+
+可直接复制的完整示例：`examples/quick-start/progress-bars.json`。
+
+### 4.7 `dynamicVisuals` 帧图动画
+
+`dynamicVisuals[].renderer.type = "animatedTexture"` 用来播放 PNG 帧动画。它是按客户端 / world tick 自动推进的动画，不绑定数值；如果要按数值切换贴图，继续用 `textureSwitch` 或 `rendererSwitchByValue`。
+
+图集模式适合把所有帧放在一张 PNG 里：
+
+```json
+"dynamicVisuals": [
+  {
+    "id": "fan_anim",
+    "x": 120,
+    "y": 32,
+    "width": 16,
+    "height": 16,
+    "foreground": true,
+    "renderer": {
+      "type": "animatedTexture",
+      "texture": "yourmod:textures/gui/fan_sheet.png",
+      "frameWidth": 16,
+      "frameHeight": 16,
+      "frameCount": 8,
+      "columns": 4,
+      "textureWidth": 64,
+      "textureHeight": 32,
+      "ticksPerFrame": 2,
+      "loop": true
+    }
+  }
+]
+```
+
+多文件模式适合直接用多张 PNG 帧：
+
+```json
+"dynamicVisuals": [
+  {
+    "id": "spark_anim",
+    "x": 140,
+    "y": 32,
+    "width": 16,
+    "height": 16,
+    "renderer": {
+      "type": "animatedTexture",
+      "ticksPerFrame": 3,
+      "frames": [
+        "yourmod:textures/gui/spark_0.png",
+        "yourmod:textures/gui/spark_1.png",
+        {
+          "texture": "yourmod:textures/gui/spark_2.png",
+          "u": 0,
+          "v": 0,
+          "textureWidth": 16,
+          "textureHeight": 16
+        }
+      ]
+    }
+  }
+]
+```
+
+可用字段：
+
+- `ticksPerFrame`：每帧持续多少 tick，默认 `2`。
+- `startFrame`：起始帧，默认 `0`。
+- `loop`：是否循环，默认 `true`。
+- `reverse`：倒序播放，默认 `false`。
+- `pingPong`：往返播放，默认 `false`。
+- 图集模式：`texture`、`frameWidth`、`frameHeight`、`frameCount`，可选 `u`、`v`、`columns`、`textureWidth`、`textureHeight`。
+- 多文件模式：`frames[]` 可写字符串，也可写对象；对象支持 `texture`、`u`、`v`、`textureWidth`、`textureHeight`。
+
+不支持 GIF 自动播放；建议把动图导出成 PNG 帧图或一张帧图集。完整示例见 `examples/quick-start/animated-texture.json`。
+
 ## 5. ZS 指令写法（`onControllerGUIRender` 的 `extraInfo`）
 
 ### 5.1 Smart Interface 显示控制
@@ -315,6 +485,8 @@ MMCE 更多扩展（MMCEME）是 MMCE GUI Edit（MMCEGE）的改名延续项目�
 
 用一个 JSON 文件就能定义一个全新的仓口方块（含方块 + 物品 + tile），并作为 MMCE 多方块的输入 / 输出组件参与配方。容量使用 **long**，可远超原版 `int`（约 21 亿）上限。
 
+> 自定义仓口默认不注册，避免玩家在 JEI 里看到示例/开发用仓室并误认为是 bug。整合包需要该功能时，先在 `.minecraft/config/mmceguiext/client.cfg` 中设置 `customContent.enableCustomHatches=true`。
+
 ## 9. 自定义仓口
 
 ### 9.1 放置位置
@@ -323,7 +495,7 @@ MMCE 更多扩展（MMCEME）是 MMCE GUI Edit（MMCEGE）的改名延续项目�
 
 `.minecraft/config/mmceguiext/custom_hatches/`
 
-模组在**启动时**扫描该目录并注册每个仓口（修改后需重启游戏，不能 `/ct reload`）。
+开启 `customContent.enableCustomHatches=true` 后，模组在**启动时**扫描该目录并注册每个仓口（修改后需重启游戏，不能 `/ct reload`）。
 
 可直接参考的真实示例：
 
@@ -419,7 +591,7 @@ MMCE 更多扩展（MMCEME）是 MMCE GUI Edit（MMCEGE）的改名延续项目�
 
 # 第三部分 · 自定义 AE2 总线（实验性）
 
-> 这是较新 / 实验性功能，JSON 结构与仓口系统同构，能力依赖 **AE2 + Mekanism Energistics** 同时在场。字段以注册表类中的 `Def` 解析为准，未来可能调整。
+> 这是较新 / 实验性功能，JSON 结构与仓口系统同构，且默认不注册。使用前需在 `.minecraft/config/mmceguiext/client.cfg` 中设置 `customContent.enableCustomAEBuses=true`。当前自定义 AE 总线注册依赖传统 **AE2（`appliedenergistics2`）+ Mekanism Energistics** 同时在场；AE2S（`ae2`）可用于模组启动，但原生 AE2S 自定义总线尚未实现。字段以注册表类中的 `Def` 解析为准，未来可能调整。
 
 每种总线一个 `.json`，启动时注册为方块 + tile，通过 `AENetworkProxy` 接入 AE2 ME 网络（需要频道、消耗网络能量）。
 
@@ -446,20 +618,48 @@ MMCE 更多扩展（MMCEME）是 MMCE GUI Edit（MMCEGE）的改名延续项目�
 
 ## 11. 突破 int 上限的流体 / 气体配方
 
-MMCE 的 `RequirementFluid` / `RequirementGas` 用 `int` 存配方 `amount`，超过约 **21 亿 mB** 会溢出。MMCEME 通过 Mixin 改造需求系统，使流体 / 气体量以 **long** 解析与处理。
+MMCEME 1.4.0 的 Long V2 只针对显式的 `mmceguiext:fluid_long` / `mmceguiext:gas_long` 需求。普通 `fluid` / `gas` 不再被 MMCEME 重新改写；如果配方只是在 `int` 范围内，继续用原来的写法即可。需要长容量时，再切到新需求类型。
 
-**无需任何配置** —— 直接在 MMCE 配方 JSON 里写大数值即可：
+**需要手动开启 / 实验性** —— 先在 `config/mmceguiext/client.cfg` 中设置：
 
-```json
-{
-  "type": "fluid",
-  "io": "input",
-  "fluid": "water",
-  "amount": 5000000000
+```properties
+experimental {
+    B:enableLongFluidGasRequirements=false
 }
 ```
 
-解析、判定能否开始合成、消耗输入、产出、计算最大并行度，全程走 long 路径；原版小数值配方不受影响（仍走原 int 逻辑）。
+默认值是 `false`。需要长容量时把它改成 `true`，然后完整重启游戏，再在 MMCE 配方 JSON 里写大数值：
+
+```json
+{
+  "type": "mmceguiext:fluid_long",
+  "io-type": "input",
+  "fluid": "water",
+  "amount": "5000000000"
+}
+```
+
+```json
+{
+  "type": "mmceguiext:gas_long",
+  "io-type": "output",
+  "gas": "hydrogen",
+  "amount": 8000000000
+}
+```
+
+`amount` 可以是 JSON 整数，也可以是十进制字符串；大数值推荐直接写字符串。开启并重启后，解析、判定能否开始合成、消耗输入、产出、计算最大并行度会走 long 路径。该选项默认关闭；关闭时 Long V2 类型仍保持注册，但加载对应配方会给出明确的配置错误。
+
+普通 `fluid` / `gas` 不会被改写。普通需求的 `amount` 一旦超过 `Integer.MAX_VALUE`，会直接报错并提示迁移到 `mmceguiext:fluid_long` / `mmceguiext:gas_long`，不会再静默溢出。
+
+1.4.0 暂时只支持普通开始/结束型 `fluid_long` / `gas_long`，不包含 long per-tick 类型。
+
+### 旧方案迁移
+
+- 只要 `fluid` / `gas` 还在 `int` 范围内，就继续沿用原写法。
+- 需要长容量的条目改成 `mmceguiext:fluid_long` / `mmceguiext:gas_long`。
+- 把旧字段 `io` 改成 `io-type`。
+- 大数值 `amount` 建议写成字符串，方便阅读和维护。
 
 正是这一改造，让第二 / 三部分中 long 容量的自定义仓口 / AE 总线能在配方中真正可用。
 
@@ -468,3 +668,32 @@ MMCE 的 `RequirementFluid` / `RequirementGas` 用 `int` 存配方 `amount`，�
 - 仓口 / 总线 JSON 修改后必须**重启游戏**（启动时注册，`/ct reload` 无效）。
 - `id` 一旦被机器结构或存档引用，不要随意改名，否则方块会丢失。
 - AE 总线为实验性，升级模组版本后请验证存档与配方是否仍正常。
+
+### 集成控制器线程滚动条
+
+新机器 JSON 推荐使用结构化对象 `factoryController.threadScrollbar`，不要再新增扁平滚动条字段。它可以单独触发集成控制器自代理 GUI。
+
+```json
+"factoryController": {
+  "threadScrollbar": {
+    "x": 98,
+    "y": 22,
+    "width": 8,
+    "height": 197,
+    "trackTexture": "yourmod:textures/gui/scroll_track.png",
+    "thumbTexture": "yourmod:textures/gui/scroll_thumb.png",
+    "trackColor": "66000000",
+    "thumbColor": "FFFFFFFF",
+    "textureWidth": 8,
+    "textureHeight": 197,
+    "thumbTextureWidth": 8,
+    "thumbTextureHeight": 16,
+    "thumbMinHeight": 15,
+    "visible": true
+  }
+}
+```
+
+- `trackTexture` 为空时使用 `trackColor` 画轨道；`thumbTexture` 为空时使用 `thumbColor` 画滑块。
+- `height = -1` 表示按线程可见行数自动计算高度；机器 JSON 中不写 `height` 也等价自动。
+- `visible = false` 只隐藏滚动条绘制和点击，鼠标滚轮仍按线程列表逻辑滚动。

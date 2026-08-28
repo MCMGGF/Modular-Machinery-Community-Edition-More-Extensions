@@ -2,6 +2,7 @@ package com.fushu.mmceguiext.common.network;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
 import com.fushu.mmceguiext.common.config.ControllerButtonPolicyManager;
+import com.fushu.mmceguiext.common.util.ControllerSmartInterfaceAccess;
 import com.fushu.mmceguiext.common.util.ControllerCustomDataAccess;
 import hellfirepvp.modularmachinery.common.container.ContainerController;
 import hellfirepvp.modularmachinery.common.container.ContainerFactoryController;
@@ -132,7 +133,7 @@ public class PktControllerSmartInterfaceUpdate implements IMessage, IMessageHand
         if (!configuredKey && !hasFoundSmartInterface(controller, interfaceType)) {
             return false;
         }
-        if (tryInvokeControllerSmartUpdate(controller, interfaceType, value)) {
+        if (tryInvokeAndMirrorControllerSmartUpdate(controller, interfaceType, value)) {
             return true;
         }
 
@@ -201,7 +202,14 @@ public class PktControllerSmartInterfaceUpdate implements IMessage, IMessageHand
         return false;
     }
 
-    private static boolean tryInvokeControllerSmartUpdate(TileMultiblockMachineController controller, String interfaceType, float value) {
+    private static boolean tryInvokeControllerSmartUpdate(Object controller, String interfaceType, float value) {
+        if (controller == null) {
+            return false;
+        }
+        if (controller instanceof ControllerSmartInterfaceAccess) {
+            return ((ControllerSmartInterfaceAccess) controller)
+                .mmceguiext$updateSmartInterfaceValue(interfaceType, value);
+        }
         try {
             Method method = controller.getClass().getMethod("updateSmartInterfaceValue", String.class, float.class);
             Object result = method.invoke(controller, interfaceType, value);
@@ -209,6 +217,18 @@ public class PktControllerSmartInterfaceUpdate implements IMessage, IMessageHand
         } catch (Exception ignored) {
             return false;
         }
+    }
+
+    static boolean tryInvokeAndMirrorControllerSmartUpdate(
+        TileMultiblockMachineController controller,
+        String interfaceType,
+        float value
+    ) {
+        if (!tryInvokeControllerSmartUpdate(controller, interfaceType, value)) {
+            return false;
+        }
+        ControllerCustomDataAccess.writeNumber(controller, interfaceType, value);
+        return true;
     }
 
     static boolean hasControllerCustomData(TileMultiblockMachineController controller, String key) {

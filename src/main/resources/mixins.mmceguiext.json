@@ -9,8 +9,9 @@
     "MixinRecipeCraftingContext",
     "MixinRequirementFluid",
     "MixinRequirementGas",
-    "MixinRequirementTypeFluid",
-    "MixinRequirementTypeGas",
+    "MixinRequirementTypeFluidAmountGuard",
+    "MixinRequirementTypeGasAmountGuard",
+    "MixinRequirementInterfaceNumInput",
     "MixinTileMultiblockMachineController"
   ]
 }

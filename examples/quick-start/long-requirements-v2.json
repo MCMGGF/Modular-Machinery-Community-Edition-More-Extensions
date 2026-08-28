@@ -1,0 +1,19 @@
+{
+  "machine": "replace_with_machine_registry_name",
+  "registryName": "mmcege_long_requirements_v2",
+  "recipeTime": 20,
+  "requirements": [
+    {
+      "type": "mmceguiext:fluid_long",
+      "io-type": "input",
+      "fluid": "water",
+      "amount": "5000000000"
+    },
+    {
+      "type": "mmceguiext:gas_long",
+      "io-type": "output",
+      "gas": "hydrogen",
+      "amount": "8000000000"
+    }
+  ]
+}

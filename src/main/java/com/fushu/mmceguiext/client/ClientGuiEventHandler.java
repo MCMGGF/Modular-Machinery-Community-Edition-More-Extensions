@@ -7,13 +7,10 @@ import com.fushu.mmceguiext.client.gui.GuiFactoryControllerResizable;
 import com.fushu.mmceguiext.client.gui.GuiFluidHatchCustom;
 import com.fushu.mmceguiext.client.gui.GuiFluidProcessorHatchCustom;
 import com.fushu.mmceguiext.client.gui.GuiItemBusCustom;
-import com.fushu.mmceguiext.client.gui.GuiMEItemInputBusCustom;
 import com.fushu.mmceguiext.client.gui.GuiMachineControllerResizable;
 import com.fushu.mmceguiext.client.gui.GuiUpgradeBusCustom;
-import com.fushu.mmceguiext.common.tile.TileCustomMEItemInputBus;
+import com.fushu.mmceguiext.common.integration.ae.AEIntegrationState;
 import com.fushu.mmceguiext.common.registry.CustomHatchRegistry;
-import github.kasuminova.mmce.client.gui.GuiMEItemInputBus;
-import github.kasuminova.mmce.common.tile.MEItemInputBus;
 import hellfirepvp.modularmachinery.common.machine.DynamicMachine;
 import hellfirepvp.modularmachinery.client.gui.GuiContainerFluidHatch;
 import hellfirepvp.modularmachinery.client.gui.GuiContainerItemBus;
@@ -26,6 +23,8 @@ import hellfirepvp.modularmachinery.common.tiles.base.TileFluidTank;
 import hellfirepvp.modularmachinery.common.tiles.TileUpgradeBus;
 import hellfirepvp.modularmachinery.common.tiles.base.TileItemBus;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -34,6 +33,10 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 @SideOnly(Side.CLIENT)
 public class ClientGuiEventHandler {
+    private static final String CUSTOM_AE_ITEM_GUI_CLASS = "com.fushu.mmceguiext.client.gui.GuiMEItemInputBusCustom";
+    private static final String CUSTOM_AE_ITEM_TILE_CLASS = "com.fushu.mmceguiext.common.tile.TileCustomMEItemInputBus";
+    private static final String MMCE_ME_ITEM_GUI_CLASS = "github.kasuminova.mmce.client.gui.GuiMEItemInputBus";
+    private static final String MMCE_ME_ITEM_CONTAINER_CLASS = "github.kasuminova.mmce.common.container.ContainerMEItemInputBus";
     private static final String DEFAULT_MACHINE_BG = "modularmachinery:textures/gui/guicontroller_large.png";
     private static final String DEFAULT_FACTORY_BG = "modularmachinery:textures/gui/guifactory.png";
     private static final int DEFAULT_SPECIAL_THREAD_BG_COLOR = 0xFFB2E5FF;
@@ -44,6 +47,12 @@ public class ClientGuiEventHandler {
     private static final int DEFAULT_THREAD_VISIBLE_ROWS = 6;
     private static final int DEFAULT_THREAD_ROW_WIDTH = 86;
     private static final int DEFAULT_THREAD_ROW_HEIGHT = 32;
+    private static final int DEFAULT_THREAD_SCROLLBAR_WIDTH = 12;
+    private static final int DEFAULT_THREAD_SCROLLBAR_HEIGHT = -1;
+    private static final int DEFAULT_THREAD_SCROLLBAR_TEXTURE_HEIGHT = 16;
+    private static final int DEFAULT_THREAD_SCROLLBAR_THUMB_HEIGHT = 15;
+    private static final int DEFAULT_THREAD_SCROLLBAR_TRACK_COLOR = 0x66000000;
+    private static final int DEFAULT_THREAD_SCROLLBAR_THUMB_COLOR = 0xFFFFFFFF;
 
     @SubscribeEvent
     public void onGuiOpen(GuiOpenEvent event) {
@@ -60,7 +69,7 @@ public class ClientGuiEventHandler {
             || gui instanceof GuiFluidHatchCustom
             || gui instanceof GuiFluidProcessorHatchCustom
             || gui instanceof GuiItemBusCustom
-            || gui instanceof GuiMEItemInputBusCustom
+            || hasClassName(gui, CUSTOM_AE_ITEM_GUI_CLASS)
             || gui instanceof GuiUpgradeBusCustom) {
             return;
         }
@@ -89,13 +98,13 @@ public class ClientGuiEventHandler {
             return;
         }
 
-        if (MMCEGuiExtConfig.aeBus.enabled && gui instanceof GuiMEItemInputBus) {
-            net.minecraft.inventory.Container container = ((GuiMEItemInputBus) gui).inventorySlots;
-            if (container instanceof github.kasuminova.mmce.common.container.ContainerMEItemInputBus) {
-                MEItemInputBus bus = ((github.kasuminova.mmce.common.container.ContainerMEItemInputBus) container).getOwner();
-                if (bus instanceof TileCustomMEItemInputBus) {
-                    event.setGui(new GuiMEItemInputBusCustom((TileCustomMEItemInputBus) bus, net.minecraft.client.Minecraft.getMinecraft().player));
-                }
+        if (MMCEGuiExtConfig.aeBus.enabled
+            && MMCEGuiExtConfig.areCustomAEBusesEnabled()
+            && AEIntegrationState.isClassicAEBusEnabled()
+            && hasClassName(gui, MMCE_ME_ITEM_GUI_CLASS)) {
+            GuiScreen custom = createCustomAEItemInputBusGui(gui);
+            if (custom != null) {
+                event.setGui(custom);
             }
             return;
         }
@@ -150,6 +159,33 @@ public class ClientGuiEventHandler {
         return found != null ? found : blueprint;
     }
 
+    private boolean hasClassName(Object value, String className) {
+        return value != null && className.equals(value.getClass().getName());
+    }
+
+    private GuiScreen createCustomAEItemInputBusGui(GuiScreen gui) {
+        if (!(gui instanceof GuiContainer)) {
+            return null;
+        }
+        try {
+            net.minecraft.inventory.Container container = ((GuiContainer) gui).inventorySlots;
+            if (!hasClassName(container, MMCE_ME_ITEM_CONTAINER_CLASS)) {
+                return null;
+            }
+            Object bus = container.getClass().getMethod("getOwner").invoke(container);
+            if (!hasClassName(bus, CUSTOM_AE_ITEM_TILE_CLASS)) {
+                return null;
+            }
+            Class<?> tileClass = Class.forName(CUSTOM_AE_ITEM_TILE_CLASS);
+            Object customGui = Class.forName(CUSTOM_AE_ITEM_GUI_CLASS)
+                .getConstructor(tileClass, EntityPlayer.class)
+                .newInstance(bus, net.minecraft.client.Minecraft.getMinecraft().player);
+            return customGui instanceof GuiScreen ? (GuiScreen) customGui : null;
+        } catch (Exception | LinkageError ignored) {
+            return null;
+        }
+    }
+
     private String pickTexture(String override, String fallback) {
         if (override != null && !override.trim().isEmpty()) {
             return override.trim();
@@ -193,7 +229,36 @@ public class ClientGuiEventHandler {
             || MMCEGuiExtConfig.factoryController.threadScrollbarY != DEFAULT_THREAD_SCROLLBAR_Y
             || MMCEGuiExtConfig.factoryController.queueVisibleRows != DEFAULT_THREAD_VISIBLE_ROWS
             || MMCEGuiExtConfig.factoryController.threadRowWidth != DEFAULT_THREAD_ROW_WIDTH
-            || MMCEGuiExtConfig.factoryController.threadRowHeight != DEFAULT_THREAD_ROW_HEIGHT;
+            || MMCEGuiExtConfig.factoryController.threadRowHeight != DEFAULT_THREAD_ROW_HEIGHT
+            || hasCustomThreadScrollbar(style);
+    }
+
+    private boolean hasCustomThreadScrollbar(MachineGuiStyleManager.ControllerStyle style) {
+        if (style.threadScrollbar != null) {
+            return true;
+        }
+        MMCEGuiExtConfig.FactoryController.ThreadScrollbar scrollbar = MMCEGuiExtConfig.factoryController.threadScrollbar;
+        if (scrollbar == null) {
+            return false;
+        }
+        return !scrollbar.visible
+            || scrollbar.x != -1
+            || scrollbar.y != -1
+            || scrollbar.width != DEFAULT_THREAD_SCROLLBAR_WIDTH
+            || scrollbar.height != DEFAULT_THREAD_SCROLLBAR_HEIGHT
+            || hasText(scrollbar.trackTexture)
+            || hasText(scrollbar.thumbTexture)
+            || GuiRenderUtils.parseColorARGBOrDefault(scrollbar.trackColor, DEFAULT_THREAD_SCROLLBAR_TRACK_COLOR) != DEFAULT_THREAD_SCROLLBAR_TRACK_COLOR
+            || GuiRenderUtils.parseColorARGBOrDefault(scrollbar.thumbColor, DEFAULT_THREAD_SCROLLBAR_THUMB_COLOR) != DEFAULT_THREAD_SCROLLBAR_THUMB_COLOR
+            || scrollbar.textureWidth != DEFAULT_THREAD_SCROLLBAR_WIDTH
+            || scrollbar.textureHeight != DEFAULT_THREAD_SCROLLBAR_TEXTURE_HEIGHT
+            || scrollbar.thumbTextureWidth != DEFAULT_THREAD_SCROLLBAR_WIDTH
+            || scrollbar.thumbTextureHeight != DEFAULT_THREAD_SCROLLBAR_THUMB_HEIGHT
+            || scrollbar.thumbMinHeight != DEFAULT_THREAD_SCROLLBAR_THUMB_HEIGHT;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     private boolean isCustomInt(Integer value, int defaultValue) {

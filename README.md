@@ -1,12 +1,12 @@
-# MMCE More Extensions (MMCEME, 1.12.2)
+# Modular Machinery: Community Edition More Extensions (formerly MMCEGE, 1.12.2)
 
-MMCE More Extensions (MMCEME) is the renamed continuation of **MMCE GUI Edit (MMCEGE)**, an addon for **Modular Machinery: Community Edition** (the KasumiNova fork).
-MMCE 更多扩展（MMCEME）是 **MMCE GUI Edit（MMCEGE）** 的改名延续项目，属于 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组。
-The project grew beyond GUI editing, so its public brand now reflects the broader extension set. The mod id, configuration path, Java packages, public API, and CraftTweaker namespace remain unchanged.
-本项目已经从单纯的 GUI 编辑扩展为更多 MMCE 功能，因此更新了面向玩家的品牌名称。为保持兼容，mod id、配置路径、Java 包名、公开 API 和 CraftTweaker 命名空间保持不变。
+Modular Machinery: Community Edition More Extensions (MMCEME) is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork).
+MMCE 更多扩展（MMCEME）是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组。
+It was formerly known as **MMCE GUI Edit / MMCEGE**. The mod id, configuration path, Java packages, public API, and CraftTweaker namespace remain unchanged.
+本模组原名为 **MMCE GUI Edit / MMCEGE**。本次仅更新品牌名称，mod id、配置路径、Java 包名、公开 API 和 CraftTweaker 命名空间保持不变。
 
-It started as a controller-GUI editor, but now bundles four subsystems:
-它最初只是控制器 GUI 编辑器，目前已包含四个子系统：
+It started as a controller-GUI editor, but now bundles the following extension areas:
+它最初只是控制器 GUI 编辑器，目前已包含五个子系统：
 
 1. **Controller GUI replacement / customization** — resizable, texture-driven, multi-panel controller GUIs.
    **控制器 GUI 替换 / 自定义** — 可调整大小、贴图驱动、多信息区的控制器 GUI。
@@ -14,10 +14,12 @@ It started as a controller-GUI editor, but now bundles four subsystems:
    **JSON 定义的自定义仓口（hatch）** — 用配置文件定义新的流体/气体/物品/能量仓口方块，无需写代码。
 3. **JSON-defined custom AE2 buses** — ME item input, and mixed (item+fluid+gas) input/output buses.
    **JSON 定义的自定义 AE2 总线** — ME 物品输入总线，以及混合（物品+流体+气体）输入/输出总线。
-4. **Long-capacity recipe requirements** — fluid/gas recipe amounts beyond the vanilla `int` limit.
-   **Long 容量配方需求** — 流体/气体配方量可突破原版 `int`（约 21 亿 mB）上限。
+4. **Long-capacity recipe requirements (experimental opt-in)** — fluid/gas recipe amounts beyond the vanilla `int` limit.
+   **Long 容量配方需求（实验性，需要手动开启）** — 流体/气体配方量可突破原版 `int`（约 21 亿 mB）上限。
+5. **Additional static parallel-controller tiers (experimental opt-in)** — register configurable `mmceme_0`, `mmceme_1`, ... tiers while reusing MMCE's native controller behavior.
+   **额外静态并行控制器等级（实验性，需要手动开启）** — 注册可配置的 `mmceme_0`、`mmceme_1`……等级，并复用 MMCE 原生控制器行为。
 
-Current version / 当前版本: **`1.1.0-beta`** · MC `1.12.2` · author / 作者: WuXiaoYa
+Current version / 当前版本: **`1.4.1`** · API level **`1`** · MC `1.12.2` · author / 作者: WuXiaoYa
 
 ---
 
@@ -26,14 +28,16 @@ Current version / 当前版本: **`1.1.0-beta`** · MC `1.12.2` · author / 作�
 Required (hard) / 必需依赖：
 
 - `modularmachinery` (Community Edition)
-- `appliedenergistics2` (AE2 Extended Life)
 - `mekanism`
-- `mekeng` (Mekanism Energistics — provides the AE gas storage channel / 提供 AE 气体存储通道)
 
 Optional (soft, compile-only) / 可选依赖：
 
+- `appliedenergistics2` (AE2 Extended Life) or `ae2` (AE2S). Current custom AE bus registration uses the classic `appeng.*` API and is enabled only with `appliedenergistics2` + `mekeng`.
+- `mekeng` (Mekanism Energistics; required only for classic custom AE mixed buses / 仅传统自定义 AE 混合总线需要)
 - The One Probe (hatch probe info / 仓口探针信息)
 - AE2 Fluid Crafting Rework, GregTech CE, HEI/JEI, GeckoLib
+- Mouse Tweaks Unofficial is optional. MMCEME 1.3.4 does not transform Mouse Tweaks classes. During client pre-initialization it clears recoverable Cleanroom class-loader failures and preloads the official Mouse Tweaks entry points and handlers.
+- Mouse Tweaks Unofficial 为可选依赖。MMCEME 1.3.4 不再转换 Mouse Tweaks 类；客户端预初始化时会清理 Cleanroom 可恢复的类加载失败缓存，并预加载官方入口及 handler。
 
 ---
 
@@ -50,12 +54,12 @@ From the repo root / 在仓库根目录执行：
 
 Output / 产物：
 
-- `mmce-gui-ext/build/libs/MMCEGE-1.1.0-beta.jar` (the technical filename remains unchanged for compatibility / 技术文件名为保持兼容暂不变)
+- `build/libs/Modular-Machinery-Community-Edition-More-Extensions-1.4.1.jar`
 
-GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `MMCEME-<commit-sha>` artifact to let testers build without using the local machine.
-GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `MMCEME-<commit-sha>` artifact 即可，不需要本机编译。
+GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `Modular-Machinery-Community-Edition-More-Extensions-<commit-sha>` artifact to let testers build without using the local machine.
+GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `Modular-Machinery-Community-Edition-More-Extensions-<commit-sha>` artifact 即可，不需要本机编译。
 
-MMCEME is a coremod (`FMLCorePlugin = com.fushu.mmceguiext.core.MMCEGuiExtEarlyMixinLoader`); its Mixins load before MMCE.
+Modular Machinery: Community Edition More Extensions is a coremod (`FMLCorePlugin = com.fushu.mmceguiext.core.MMCEGuiExtEarlyMixinLoader`); its Mixins load before MMCE.
 MMCEME 是一个 coremod（`FMLCorePlugin`），其 Mixin 会在 MMCE 之前加载。
 
 ---
@@ -77,10 +81,35 @@ Config directories MMCEME reads at startup / MMCEME 启动时读取的配置目�
 |---|---|
 | `config/mmceguiext/client.cfg` | Global client config / 全局客户端配置 |
 | `config/modularmachinery/machinery/*.json` | Per-machine controller GUI override (`mmce_gui_ext` node) / 机器级控制器 GUI 覆盖 |
-| `config/mmceguiext/custom_hatches/*.json` | Custom hatch definitions / 自定义仓口定义 |
-| `config/mmceguiext/custom_ae_item_input_buses/*.json` | Custom ME item input bus definitions / 自定义 ME 物品输入总线 |
-| `config/mmceguiext/custom_ae_mixed_input_buses/*.json` | Custom mixed input bus definitions / 自定义混合输入总线 |
-| `config/mmceguiext/custom_ae_mixed_output_buses/*.json` | Custom mixed output bus definitions / 自定义混合输出总线 |
+| `config/mmceguiext/custom_hatches/*.json` | Custom hatch definitions; requires `customContent.enableCustomHatches=true` / 自定义仓口定义；需开启 `customContent.enableCustomHatches=true` |
+| `config/mmceguiext/custom_ae_item_input_buses/*.json` | Custom ME item input bus definitions; requires `customContent.enableCustomAEBuses=true` / 自定义 ME 物品输入总线；需开启 `customContent.enableCustomAEBuses=true` |
+| `config/mmceguiext/custom_ae_mixed_input_buses/*.json` | Custom mixed input bus definitions; requires `customContent.enableCustomAEBuses=true` / 自定义混合输入总线；需开启 `customContent.enableCustomAEBuses=true` |
+| `config/mmceguiext/custom_ae_mixed_output_buses/*.json` | Custom mixed output bus definitions; requires `customContent.enableCustomAEBuses=true` / 自定义混合输出总线；需开启 `customContent.enableCustomAEBuses=true` |
+
+---
+
+## Optional static parallel-controller tiers | 可选静态并行控制器等级
+
+This feature is disabled by default and requires a full restart because it extends MMCE's controller enum during early loading. Enable it under `experimental` in `config/mmceguiext/client.cfg`:
+该功能默认关闭，并且需要完整重启，因为它会在早期加载阶段扩展 MMCE 的控制器枚举。可在 `config/mmceguiext/client.cfg` 的 `experimental` 节点中开启：
+
+```ini
+experimental {
+    B:enableCustomParallelControllerTiers=true
+    I:customParallelControllerTierCount=2
+    I:customParallelControllerDefaultMaxParallelism=32
+    S:customParallelControllerMaxParallelisms <
+        32
+        128
+     >
+}
+```
+
+The example registers `mmceme_0` and `mmceme_1`. `customParallelControllerTierCount` accepts `1-16`; omitted entries in `customParallelControllerMaxParallelisms` use `customParallelControllerDefaultMaxParallelism`. MMCE then exposes the same controller block, tile, GUI, recipe, and parallelism behavior for these tiers. If WhimCraft already owns the same MMCE parallel-controller extension, MMCEME does not add a second enum extension.
+上例会注册 `mmceme_0` 和 `mmceme_1`。`customParallelControllerTierCount` 支持 `1-16`；`customParallelControllerMaxParallelisms` 中缺少的档位使用 `customParallelControllerDefaultMaxParallelism`。之后 MMCE 会对这些等级使用同一套控制器方块、Tile、GUI、配方和并行逻辑。如果 WhimCraft 已经占用了同一个 MMCE 并行控制器扩展入口，MMCEME 不会再次添加枚举扩展。
+
+This is static controller-tier support, not a runtime per-machine parallelism rule. The maximum parallelism is configured per registered tier in `modularmachinery.cfg` after the first startup; recipe and machine behavior remains MMCE-native.
+这是静态控制器等级支持，不是运行时按机器动态改变并行数的规则。首次启动后也可以在 `modularmachinery.cfg` 的 `parallel-controller.mmceme_*` 配置项中逐级调整最大并行数；配方和机器行为仍由 MMCE 原生逻辑执行。
 
 ---
 
@@ -109,10 +138,16 @@ Important keys / 重要键：
 - `machineController.smartInterfaceEditorY` (`-1` = auto right-bottom)
 - `machineController.smartInterfaceEditorInputWidth`
 - `machineController.smartInterfaceEditorVirtualKey` (used when no bound DataPort, writes to controller `customData[key]`; supports multiple keys split by `,` or `;`)
+- `maxGuiConfigFileSizeMiB` (default `8`, range `1-64`) is the shared maximum size for MMCE More Extensions JSON files, including machine GUI, standalone style, subGUI, external GUI style, custom hatch, custom AE bus, capacity card, and GUI button policy files. The historical key name is retained for config compatibility.
+  / `maxGuiConfigFileSizeMiB`（默认 `8`，范围 `1-64`）是 MMCE More Extensions 全部 JSON 的共享上限，包括 GUI、自定义仓口、自定义 AE 总线、容量卡和按钮策略文件；配置键名称为兼容旧版本而保留。
 - `factoryController.*` — same keys as `machineController.*` / 与 `machineController.*` 同名键
 - `factoryController.specialThreadBackgroundColor` (hex `RRGGBB` or `AARRGGBB`, for core/special thread row tint / 十六进制颜色，用于核心/特殊线程行着色)
-- `factoryController.threadQueueX/Y`, `threadScrollbarX/Y`, `threadVisibleRows`, `threadRowWidth/Height` customize the integrated-controller thread queue and can trigger self-proxy replacement by themselves.
+- `factoryController.threadQueueX/Y`, `threadVisibleRows`, `threadRowWidth/Height` customize the integrated-controller thread queue and can trigger self-proxy replacement by themselves.
   / 这些字段自定义集成控制器线程队列位置，也能单独触发自代理替换。
+- `factoryController.threadScrollbar` is the preferred structured scrollbar config for the integrated-controller thread queue: `x`, `y`, `width`, `height`, `trackTexture`, `thumbTexture`, `trackColor`, `thumbColor`, `textureWidth`, `textureHeight`, `thumbTextureWidth`, `thumbTextureHeight`, `thumbMinHeight`, `visible`. Set `height` to `-1` to calculate the track height automatically from `threadVisibleRows` and `threadRowHeight`; positive values remain explicit heights.
+  / `factoryController.threadScrollbar` 是集成控制器线程队列滚动条的推荐结构化配置，可设置位置、尺寸、轨道/滑块贴图、颜色、贴图源尺寸、最小滑块高度和显隐。
+- `showBlueprintInfo`, `showStructureInfo`, `showStatusInfo`, `showParallelismInfo`, `showPerformanceInfo` hide only MMCE built-in/default info lines. They do **not** hide CraftTweaker `ControllerGUIRenderEvent.extraInfo[]`, `[panel:id]` routed text, or custom panels.
+  / 这些显示开关只隐藏 MMCE 内置/默认信息行，**不会**隐藏 CraftTweaker `ControllerGUIRenderEvent.extraInfo[]`、`[panel:id]` 路由文本或自定义信息区。
 
 Rules / 规则：
 
@@ -162,11 +197,25 @@ Put override fields inside each MMCE machine JSON (`config/modularmachinery/mach
       "specialThreadBackgroundColor": "B2E5FF",
       "threadQueueX": 12,
       "threadQueueY": 14,
-      "threadScrollbarX": 98,
-      "threadScrollbarY": 22,
       "threadVisibleRows": 7,
       "threadRowWidth": 90,
-      "threadRowHeight": 34
+      "threadRowHeight": 34,
+      "threadScrollbar": {
+        "x": 98,
+        "y": 22,
+        "width": 8,
+        "height": 197,
+        "trackTexture": "yourmod:textures/gui/scroll_track.png",
+        "thumbTexture": "yourmod:textures/gui/scroll_thumb.png",
+        "trackColor": "66000000",
+        "thumbColor": "FFFFFFFF",
+        "textureWidth": 8,
+        "textureHeight": 197,
+        "thumbTextureWidth": 8,
+        "thumbTextureHeight": 16,
+        "thumbMinHeight": 15,
+        "visible": true
+      }
     }
   }
 }
@@ -181,7 +230,7 @@ Supported aliases / 支持的别名：
 Per-machine values override global config for that machine. Since `1.0.1+`, if a machine defines any `mmce_gui_ext` node, unspecified GUI size falls back to MMCE base size (`176x213` / `280x213`) first, reducing coupling to global `client.cfg`.
 机器级值会覆盖该机器对应的全局配置。自 `1.0.1+` 起，只要机器定义了 `mmce_gui_ext` 节点，未显式填写的 GUI 尺寸会优先回退到 MMCE 基础尺寸，从而降低对全局 `client.cfg` 的耦合。
 
-For the full per-machine field list (panels, buttons, sliders, sub GUIs, texts, texture layers, Smart Interface editors), see `examples/MMCE_GUI_EXT_FIELD_REFERENCE.md`.
+For the full per-machine field list (panels, buttons, progress bars, sliders, sub GUIs, texts, texture layers, Smart Interface editors), see `examples/MMCE_GUI_EXT_FIELD_REFERENCE.md`.
 完整的机器级字段列表（信息区、按钮、滑块、子 GUI、文字、纹理图层、Smart Interface 编辑器）见 `examples/MMCE_GUI_EXT_FIELD_REFERENCE.md`。
 
 ### Texture Offset For Left/Top Decorations | 左上装饰偏移
@@ -226,16 +275,71 @@ Buttons are defined per-machine (`buttons[]`) and validated server-side by a pol
 - `page` — client-side page switch / 纯客户端页面切换
 - `subgui` — open a configured sub GUI / 打开已配置的子 GUI
 - `close_subgui` — close the current sub GUI / 关闭当前子 GUI
-- `event` — fire MMCE `ControllerButtonClickEvent` server-side / 在服务端触发 MMCE 按钮点击事件
+- `event` — fire MMCEME `ControllerButtonClickEvent` once on the server / 在服务端触发一次 MMCEME 按钮点击事件
 - `smart_set` / `smart_add` — set / add a Smart Interface value (with optional min/max clamp) / 设置 / 累加 Smart Interface 值（可选 min/max 限幅）
+
+Buttons may also define `hotkey` / `hotkeys` (for example `C`, `ctrl+C`, `shift+G`). Controller-level `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` create invisible GUI-only buttons, useful for opening `subgui` modal windows or triggering the same actions without a visible button. Hotkeys are active only while the controller GUI is open, and text fields keep priority while focused.
+按钮也可以写 `hotkey` / `hotkeys`（例如 `C`、`ctrl+C`、`shift+G`）。控制器级 `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` 会创建不可见的 GUI 内热键按钮，适合用键盘打开 `subgui` 浮窗或触发同一套按钮动作。热键只在当前控制器 GUI 打开时生效，文本框聚焦时优先输入文本。
+
+Register `event` handlers with `mods.mmceguiext.MMCEGEEvents.onControllerButtonClick`. Both `machine_path` and `namespace:machine_path` are accepted, and alias registrations are deduplicated. The event is already server-side, so scripts do not need a `world.isRemote()` guard.
+使用 `mods.mmceguiext.MMCEGEEvents.onControllerButtonClick` 注册 `event` 处理器。机器名可写 `machine_path` 或 `namespace:machine_path`，别名注册会自动去重。事件本身只在服务端触发，脚本无需再判断 `world.isRemote()`。
 
 See `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `controller-button-test.json`, `subgui-page-reference.json`.
 示例见 `examples/quick-start/` 下相应文件。
+
+## Controller Progress Bars | 控制器进度条
+
+Progress bars are defined per-machine with `progressBars[]` (aliases: `progress_bars`, `guiProgressBars`, `gui_progress_bars`). The main mode uses two textures: an empty/background texture and a full/fill texture. MMCEME draws the empty texture first, then clips the full texture by the current progress. This works in both Machine and Factory controller GUIs.
+进度条在机器级 JSON 中通过 `progressBars[]` 定义（别名：`progress_bars`、`guiProgressBars`、`gui_progress_bars`）。主模式使用两张贴图：空槽/背景贴图和满槽/填充贴图。MMCEME 会先绘制空槽，再按当前进度裁剪满槽。普通控制器和集成控制器都支持。
+
+Minimal two-texture example / 双贴图最小示例：
+
+```json
+{
+  "progressBars": [
+    {
+      "id": "recipe_progress",
+      "x": 80,
+      "y": 38,
+      "width": 64,
+      "height": 12,
+      "source": "machine_progress",
+      "direction": "left_to_right",
+      "backgroundTexture": "yourmod:textures/gui/progress_empty.png",
+      "fillTexture": "yourmod:textures/gui/progress_full.png",
+      "textureWidth": 64,
+      "textureHeight": 12,
+      "showText": true
+    }
+  ]
+}
+```
+
+Supported directions / 支持方向：`left_to_right`, `right_to_left`, `top_to_bottom`, `bottom_to_top`.
+
+Supported sources / 支持数据源：
+
+- Machine controller / 普通控制器：`machine_progress` (aliases: `active_recipe`, `recipe_progress`, `current_recipe`, `default`)
+- Factory controller / 集成控制器：`factory_first`, `factory_average`, `factory_max`, `factory_thread` (with `threadIndex`), `factory_core` (with `coreThreadId`)
+
+Supported fields / 支持字段：`id`, `x`, `y`, `width`, `height`, `source`, `direction`, `backgroundTexture`, `fillTexture`, `texture`, `textureWidth`, `textureHeight`, `backgroundColor`, `fillColor`, `borderColor`, `threadIndex`, `coreThreadId`, `min`, `max`, `priority`, `foreground`, `visible`, `page`, `showText`, `textColor`.
+
+If no textures are configured, MMCEME falls back to colored rectangles (`backgroundColor`, `fillColor`, `borderColor`).
+若未配置贴图，MMCEME 会退回使用纯色矩形（`backgroundColor`、`fillColor`、`borderColor`）。
+
+See `examples/quick-start/progress-bars.json`.
+示例见 `examples/quick-start/progress-bars.json`。
 
 ## Controller Sliders | 控制器滑块
 
 Sliders are defined per-machine with `sliders[]` (aliases: `guiSliders`, `gui_sliders`, `rangeControls`, `range_controls`). They work in both Machine and Factory controller GUIs, can be placed on pages/sub GUIs, and write numeric values to the Smart Interface / virtual DataPort key directly.
 滑块在机器级 JSON 中通过 `sliders[]` 定义（别名：`guiSliders`、`gui_sliders`、`rangeControls`、`range_controls`）。普通控制器和集成控制器都支持，可放在分页/子 GUI 内，并直接把数值写入 Smart Interface / 虚拟 DataPort key。
+
+MMCEME 1.3.4 removes the Mouse Tweaks `Main` mixin that could poison Cleanroom's permanent invalid-class cache. Mouse Tweaks compatibility now uses lifecycle-time class recovery and preloading without modifying Mouse Tweaks bytecode.
+MMCEME 1.3.4 移除了可能污染 Cleanroom 永久无效类缓存的 Mouse Tweaks `Main` Mixin，改为在模组生命周期内恢复并预加载相关类，不再修改 Mouse Tweaks 字节码。
+
+MMCEME 1.3.3 keeps slider dragging active with default or custom backgrounds, routes modal sub-GUI slider input consistently, and mirrors successful Smart Interface writes into controller `customData`.
+MMCEME 1.3.3 修复默认/自定义背景下的持续拖拽、modal 子 GUI 滑块输入，并把成功的 Smart Interface 写值同步镜像到控制器 `customData`。
 
 Minimal example / 最小示例：
 
@@ -268,8 +372,8 @@ See `examples/quick-start/sliders.json`.
 
 # Part 2 — Custom Hatches | 第二部分 · 自定义仓口
 
-Drop a `.json` into `config/mmceguiext/custom_hatches/` and MMCEME registers a new block + item + tile at startup. Each hatch acts as an MMCE multiblock component (input/output for fluid / gas / item / energy, or a combined component) and uses **long** capacities (beyond the `int` limit).
-在 `config/mmceguiext/custom_hatches/` 放入一个 `.json`，MMCEME 会在启动时注册新的方块 + 物品 + tile。每个仓口作为 MMCE 多方块组件（流体/气体/物品/能量的输入或输出，或组合组件），容量使用 **long**（突破 `int` 上限）。
+Custom hatches are opt-in. Set `customContent.enableCustomHatches=true` in `config/mmceguiext/client.cfg`, then drop a `.json` into `config/mmceguiext/custom_hatches/` and MMCEME registers a new block + item + tile at startup. Each hatch acts as an MMCE multiblock component (input/output for fluid / gas / item / energy, or a combined component) and uses **long** capacities (beyond the `int` limit).
+自定义仓口默认不注册，避免整合包玩家在 JEI 里看到示例/开发用仓室。需要时先在 `config/mmceguiext/client.cfg` 设置 `customContent.enableCustomHatches=true`，再把 `.json` 放入 `config/mmceguiext/custom_hatches/`，MMCEME 会在启动时注册新的方块 + 物品 + tile。每个仓口作为 MMCE 多方块组件（流体/气体/物品/能量的输入或输出，或组合组件），容量使用 **long**（突破 `int` 上限）。
 
 Key top-level fields / 关键顶层字段：
 
@@ -309,7 +413,7 @@ Minimal example / 最小示例（fluid input hatch）:
 }
 ```
 
-Working examples / 可用示例：`config/mmceguiext/custom_hatches/custom_gas_input_hatch.json`, `examples/custom_hatches/fluid_meter_hatch_test.json`.
+Working examples / 可用示例：`config/mmceguiext/custom_hatches/custom_gas_input_hatch.json`, `examples/custom_hatches/fluid_meter_hatch_test.json`, `examples/quick-start/horizontal-slot-grid-hatch.json`.
 
 Hatch GUIs / 仓口 GUI：
 
@@ -323,8 +427,8 @@ Probe info / 探针信息: when The One Probe is installed, hatch fill levels an
 
 # Part 3 — Custom AE2 Buses (experimental) | 第三部分 · 自定义 AE2 总线（实验性）
 
-> These are advanced/experimental. JSON shape mirrors the hatch system; capabilities depend on AE2 + Mekanism Energistics being present. Treat the `Def` parsing in the registry classes as the source of truth.
-> 这些功能较新/实验性。JSON 结构与仓口系统同构；能力依赖 AE2 + Mekanism Energistics。字段以注册表类中的 `Def` 解析为准。
+> These are advanced/experimental and opt-in. Set `customContent.enableCustomAEBuses=true` in `config/mmceguiext/client.cfg` before using these JSON directories. Current bus registration depends on classic AE2 (`appliedenergistics2`) + Mekanism Energistics being present. AE2S (`ae2`) is accepted as an AE implementation for startup, but native AE2S custom buses are not implemented yet. Treat the `Def` parsing in the registry classes as the source of truth.
+> 这些功能较新/实验性，且默认不注册。使用这些 JSON 目录前，需在 `config/mmceguiext/client.cfg` 设置 `customContent.enableCustomAEBuses=true`。当前总线注册依赖传统 AE2（`appliedenergistics2`）+ Mekanism Energistics。AE2S（`ae2`）可作为启动阶段的 AE 实现被接受，但原生 AE2S 自定义总线尚未实现。字段以注册表类中的 `Def` 解析为准。
 
 Each bus type is JSON-defined (one `.json` per definition) and registered as a block + tile at startup, connecting to the AE2 ME network via an `AENetworkProxy` (requires a channel, consumes network power).
 每种总线均由 JSON 定义（每个定义一个 `.json`），启动时注册为方块 + tile，通过 `AENetworkProxy` 接入 AE2 ME 网络（需要频道，消耗网络能量）。
@@ -338,21 +442,357 @@ Each bus type is JSON-defined (one `.json` per definition) and registered as a b
 Common JSON fields / 通用 JSON 字段：`id`, `displayName`, the GUI layout (`gui.components[]` with `slot` / `tank` entries, or legacy flat `configSlots` / `storageSlots`), block model/texture. The mixed buses additionally describe item/fluid/gas config + storage regions.
 通用字段：`id`、`displayName`、GUI 布局（`gui.components[]` 含 `slot`/`tank`，或旧式扁平 `configSlots`/`storageSlots`）、方块模型/贴图。混合总线另外描述物品/流体/气体的 config + storage 区域。
 
+Sparse arrays are supported. Use explicit `index` values for sparse item slots, fluid/gas tanks, or other GUI components; slot-group layouts that expose `slotIndices[]` can use that field for explicit container mapping. Holes remain unused and are not compacted or remapped automatically. Duplicate indexes and out-of-range indexes are invalid: the loader warns and skips the conflicting mapping. This is separate from duplicate definition IDs across JSON files; after deterministic file ordering, the first definition wins and later duplicate IDs are skipped with a warning.
+支持稀疏数组。物品槽、流体/气体罐或其他 GUI 组件存在空洞时，请显式填写 `index`；如果是提供了 `slotIndices[]` 的槽位组布局，可使用该字段显式映射容器槽位。空洞会保持未使用，不会自动压缩或重新映射。重复索引和越界索引均无效：加载器会警告并跳过冲突映射。这与多个 JSON 文件使用重复定义 ID 是两回事；文件按确定顺序加载后，首个定义生效，后续重复 ID 会警告并跳过。
+
 ---
 
 # Part 4 — Long-Capacity Recipe Requirements | 第四部分 · Long 容量配方需求
 
-MMCE's `RequirementFluid` / `RequirementGas` store the recipe `amount` as `int`, which overflows above ~2.1 billion mB. MMCEME patches the requirement system (via Mixins) so fluid/gas amounts are parsed and processed as `long`.
-MMCE 的 `RequirementFluid` / `RequirementGas` 以 `int` 存储配方 `amount`，超过约 21 亿 mB 会溢出。MMCEME 通过 Mixin 改造需求系统，使流体/气体量以 `long` 解析与处理。
+MMCEME 1.4.0 introduces the Long V2 requirement path for recipe fluids / gases. MMCEME no longer rewrites normal `fluid` / `gas` requirements behind the scenes; if you want long-capacity behavior, use the explicit `mmceguiext:fluid_long` / `mmceguiext:gas_long` requirement types.
+MMCEME 1.4.0 引入了配方流体 / 气体的 Long V2 路径。MMCEME 不再在后台改写普通 `fluid` / `gas` 需求；如果你要使用长容量行为，请改用显式的 `mmceguiext:fluid_long` / `mmceguiext:gas_long` 需求类型。
 
-**No configuration needed** — just write large `amount` values in your MMCE recipe JSON and they will be respected at parse, craft-start, finish, and parallelism checks (vanilla recipes are unaffected; int paths still work).
-**无需任何配置** — 直接在 MMCE 配方 JSON 中写大数值即可，解析、开始合成、完成、并行度计算均会正确处理（原版配方不受影响，int 路径照常工作）。
+**Configuration required / experimental** — `experimental.enableLongFluidGasRequirements` is `false` by default. Set it to `true` in `config/mmceguiext/client.cfg`, then fully restart the game/server before loading long-capacity recipes.
+**需要配置 / 实验性** — `experimental.enableLongFluidGasRequirements` 默认是 `false`；需要在 `config/mmceguiext/client.cfg` 里改成 `true`，然后完整重启游戏，Long V2 配方才会生效。该选项默认关闭，因为长容量需求仍属于实验性功能。
+
+Use `io-type` on every Long V2 requirement, and keep `amount` as a non-negative integer or a base-10 string. Strings are recommended for large values so the intent stays obvious when you read the JSON later.
+每个 Long V2 需求都必须写 `io-type`，并把 `amount` 写成非负整数或十进制字符串。大数值时推荐直接写字符串，后续回看 JSON 会更清楚。
+
+```json
+{
+  "type": "mmceguiext:fluid_long",
+  "io-type": "input",
+  "fluid": "water",
+  "amount": "5000000000"
+}
+```
+
+```json
+{
+  "type": "mmceguiext:gas_long",
+  "io-type": "output",
+  "gas": "hydrogen",
+  "amount": 8000000000
+}
+```
+
+## Migration from the old scheme | 旧方案迁移
+
+- If a recipe still fits inside `int`, keep using normal `fluid` / `gas` and leave it alone.
+- If a recipe needs long capacity, change its requirement type to `mmceguiext:fluid_long` / `mmceguiext:gas_long`.
+- Rename any old `io` field to `io-type`.
+- Prefer quoted `amount` values for large numbers; that keeps the JSON stable and easy to diff.
 
 This is what makes the long-capacity custom hatches / AE buses above actually usable in recipes.
 正是这一改造，让前面 long 容量的自定义仓口 / AE 总线能在配方中真正可用。
+
+When the option is disabled, the two Long V2 types remain registered so client/server registries stay identical, but recipe parsing fails with a clear configuration error. Normal `fluid` / `gas` requirements keep MMCE's original behavior; values above `Integer.MAX_VALUE` now fail with a migration hint instead of silently overflowing.
+关闭选项时，两个 Long V2 类型仍会注册，以保持客户端与服务端注册表一致，但配方解析会给出明确的配置错误。普通 `fluid` / `gas` 继续使用 MMCE 原逻辑；超过 `Integer.MAX_VALUE` 时会直接提示迁移，而不再静默溢出。
+
+Long V2 1.4.0 covers normal start/finish requirements. Long per-tick requirement types are not included yet.
+Long V2 1.4.0 当前覆盖普通开始/结束型需求，尚未提供 long per-tick 需求类型。
 
 ---
 
 ## License | 许可
 
 See the MMCE source license. / 见 MMCE 源码许可。
+
+## Dynamic visuals / 动态可视化组件
+
+`dynamicVisuals[]` can be used under both `machineController` and `factoryController`. It uses one unified pipeline: `source` -> normalized value -> optional visibility / transform / renderer selection / color overrides -> optional `history` -> `renderer`.
+
+Common fields: `id`, `x`, `y`, `width`, `height`, `priority`, `foreground`, `page`, `visible`, `visibleByValue`, `source`, `history`, `renderer`, `rendererSwitchByValue`, `rendererByValue`, `transform`, `transformByValue`.
+
+Supported sources:
+- `customData`: reads a numeric value from controller custom data / Smart Interface virtual key: `key`, `default`, `min`, `max`, `minSource`, `maxSource`, `clamp`, `invert`.
+- `machine`: built-in metrics: `recipeProgress`, `recipeMaxProgress`, `energyStored`, `energyCapacity`, `energyRatio`, `parallelism`, `threadCount`, `activeThreadCount`, `idleThreadCount`; factory also supports `factoryThreadCount`, `factoryActiveThreadCount`, `factoryIdleThreadCount`.
+- `combined`: combines multiple child sources first, then applies the parent source's `min` / `max` / `clamp` / `invert`. Fields: `combine`, `sources[]`. Child entries can themselves be `customData`, `machine`, or nested `combined`. Each child may also define `weight`, used by `weightedSum` / `weightedAverage`.
+
+`customData` may carry NBT `Long` or `Double` values, but GUI-side dynamic visuals currently use float-oriented numeric APIs. Large `Long` values beyond the exact integer range of IEEE-754 `float`, and high-precision `Double` values, may be rounded before rendering. Smart Interface editors, sliders, `smart_set`, `smart_add`, and virtual DataPort numeric writes mainly use `Float`, so an input box cannot reliably preserve every digit of an arbitrarily large `Long`. Use strings or server/script-side `Long` handling for exact large integers, and normalize large values before feeding them to a progress bar or other visual.
+
+`minSource` / `maxSource` (aliases `min_source` / `max_source`) accept a complete `customData`, `machine`, or `combined` source. A finite dynamic bound overrides static `min` / `max`; a missing or non-finite bound falls back to the static value. Bound sources are read as raw values and do not normalize themselves. If the final `max <= min`, the normalized result is `0`.
+
+Dynamic-capacity example:
+
+```json
+"source": {
+  "type": "customData",
+  "key": "oneblock.component.energy_in.amount",
+  "default": 0,
+  "min": 0,
+  "max": 1,
+  "maxSource": {
+    "type": "customData",
+    "key": "oneblock.component.energy_in.capacity",
+    "default": 1
+  },
+  "clamp": true
+}
+```
+
+Supported combine modes:
+- `sum`, `average`, `weightedSum`, `weightedAverage`, `min`, `max`, `multiply`
+- `subtract`, `divide` (left-associative, using the first child as the left operand)
+- `first`, `last`
+
+Supported renderers:
+- `textureSwitch`: ordered `frames[]` using `min`, `max`, `equals`, `texture`, plus optional `fallbackTexture`.
+- `animatedTexture`: time-driven PNG frame animation. Use a sprite sheet (`texture`, `frameWidth`, `frameHeight`, `frameCount`) or ordered PNG files in `frames[]`.
+- `fill`: progress-style fill with `backgroundTexture`, `fillTexture`, `direction` (`right`, `left`, `up`, `down`).
+- `pie`: color pie/ring chart with `mode` (`pie`/`ring`), `startAngle`, `innerRadius`, `segments`, `color`, `backgroundColor`.
+- `lineChart`: uses `history.enabled`, `samples`, `intervalTicks`; renderer fields include `lineColor`, `fillColor`, `gridColor`, `lineWidth`, `showGrid`.
+
+`animatedTexture` aliases: `animated_texture`, `animation`, `spriteSheet`, `spritesheet`.
+Timing fields: `ticksPerFrame` (default `2`), `startFrame` (default `0`), `loop` (default `true`), `reverse` (default `false`), `pingPong` (default `false`).
+Sprite sheet fields: `texture`, `frameWidth`, `frameHeight`, `frameCount`, optional `u`, `v`, `columns`, `textureWidth`, `textureHeight`. If `columns` is omitted, it is inferred from `textureWidth / frameWidth`; if it still cannot be inferred, frames are treated as one row.
+Multi-file fields: `frames[]` may contain strings or frame objects. String frames are texture paths; object frames support `texture`, `u`, `v`, `textureWidth`, `textureHeight`.
+GIF files are not decoded or auto-played; use PNG frames for Minecraft-compatible animation.
+
+Sprite sheet animation example:
+
+```json
+{
+  "id": "fan_anim",
+  "x": 120,
+  "y": 32,
+  "width": 16,
+  "height": 16,
+  "foreground": true,
+  "renderer": {
+    "type": "animatedTexture",
+    "texture": "yourmod:textures/gui/fan_sheet.png",
+    "frameWidth": 16,
+    "frameHeight": 16,
+    "frameCount": 8,
+    "columns": 4,
+    "textureWidth": 64,
+    "textureHeight": 32,
+    "ticksPerFrame": 2,
+    "loop": true
+  }
+}
+```
+
+Multi-file animation example:
+
+```json
+{
+  "id": "spark_anim",
+  "x": 140,
+  "y": 32,
+  "width": 16,
+  "height": 16,
+  "renderer": {
+    "type": "animatedTexture",
+    "ticksPerFrame": 3,
+    "frames": [
+      "yourmod:textures/gui/spark_0.png",
+      "yourmod:textures/gui/spark_1.png",
+      {
+        "texture": "yourmod:textures/gui/spark_2.png",
+        "u": 0,
+        "v": 0,
+        "textureWidth": 16,
+        "textureHeight": 16
+      }
+    ]
+  }
+}
+```
+
+Optional transforms:
+- `transform`: static `offsetX`, `offsetY`, `scale`, `scaleX`, `scaleY`, `rotation`, `alpha`, `pivotX`, `pivotY`, `pivotUnit`, and legacy `origin` (`topLeft`, `topCenter`, `topRight`, `centerLeft`, `center`, `centerRight`, `bottomLeft`, `bottomCenter`, `bottomRight`).
+- `transformByValue`: drive `offsetX`, `offsetY`, `scale`, `scaleX`, `scaleY`, `rotation`, `alpha`, `pivotX`, and `pivotY` from the normalized source value.
+- Dynamic `pivotX` / `pivotY` use the static `transform.pivotUnit` for their units. If `pivotUnit` is omitted, it defaults to `ratio`; use `ratio` for 0..1 relative coordinates, or `px` for absolute pixel coordinates.
+- each `transformByValue` channel accepts `{ "min": ..., "max": ... }` and may define its own independent `source`.
+
+Optional visibility / color overrides:
+- `visibleByValue`: conditional visibility driven by the normalized value. Supports `min`, `max`, `equals`, `invert`, and optional independent `source`.
+- `rendererSwitchByValue`: ordered rules that can switch the whole renderer definition by value. Each rule supports `min`, `max`, `equals`, optional independent `source`, and its own `renderer`.
+- `rendererByValue`: variable-driven color interpolation for color-capable renderers. Supported channels: `backgroundColor`, `fillColor`, `borderColor`, `color`, `lineColor`, `gridColor`.
+- each `rendererByValue` channel accepts `{ "fromColor": ..., "toColor": ... }` and may define its own independent `source`.
+- `rendererSwitchByValue` uses first-match order. If nothing matches, it falls back to the static `renderer`; if that is also omitted, the visual is skipped.
+- when `rendererByValue` is used, static renderer colors remain the fallback endpoints if `fromColor` or `toColor` is omitted.
+
+Example:
+
+```json
+"dynamicVisuals": [
+  {
+    "id": "heat_icon",
+    "x": 120,
+    "y": 30,
+    "width": 16,
+    "height": 16,
+    "priority": 20,
+    "page": "main",
+    "source": { "type": "customData", "key": "heat", "default": 0, "min": 0, "max": 100 },
+    "renderer": {
+      "type": "textureSwitch",
+      "frames": [
+        { "max": 30, "texture": "pack:textures/gui/heat_low.png" },
+        { "max": 70, "texture": "pack:textures/gui/heat_mid.png" },
+        { "texture": "pack:textures/gui/heat_high.png" }
+      ]
+    }
+  },
+  {
+    "id": "recipe_fill",
+    "x": 20,
+    "y": 90,
+    "width": 64,
+    "height": 8,
+    "source": { "type": "machine", "metric": "recipeProgress", "min": 0, "max": 1 },
+    "renderer": {
+      "type": "fill",
+      "backgroundTexture": "pack:textures/gui/bar_empty.png",
+      "fillTexture": "pack:textures/gui/bar_full.png",
+      "direction": "right"
+    }
+  },
+  {
+    "id": "hybrid_fill",
+    "x": 92,
+    "y": 90,
+    "width": 64,
+    "height": 8,
+    "source": {
+      "type": "combined",
+      "combine": "weightedSum",
+      "sources": [
+        { "type": "customData", "key": "heat", "default": 0, "weight": 0.0065 },
+        { "type": "customData", "key": "warning", "default": 0, "weight": 0.35 }
+      ],
+      "min": 0,
+      "max": 1,
+      "clamp": true
+    },
+    "renderer": {
+      "type": "fill",
+      "backgroundColor": "22000000",
+      "fillColor": "FF55CCFF",
+      "borderColor": "FFFFFFFF",
+      "direction": "right"
+    },
+    "rendererByValue": {
+      "fillColor": {
+        "fromColor": "FF55CCFF",
+        "toColor": "FFFF8844"
+      }
+    }
+  },
+  {
+    "id": "fan",
+    "x": 120,
+    "y": 30,
+    "width": 32,
+    "height": 32,
+    "source": { "type": "customData", "key": "speed", "default": 0, "min": 0, "max": 100 },
+    "transform": { "pivotX": 0.5, "pivotY": 0.5, "pivotUnit": "ratio", "alpha": 0.6 },
+    "transformByValue": {
+      "rotation": { "min": 0, "max": 360 },
+      "pivotX": { "min": 0.35, "max": 0.65 },
+      "pivotY": { "min": 0.35, "max": 0.65 },
+      "scale": { "min": 0.85, "max": 1.15 },
+      "alpha": {
+        "min": 0.4,
+        "max": 1.0,
+        "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 }
+      }
+    },
+    "renderer": {
+      "type": "textureSwitch",
+      "fallbackTexture": "pack:textures/gui/fan.png",
+      "frames": [
+        { "texture": "pack:textures/gui/fan.png" }
+      ]
+    }
+  },
+  {
+    "id": "warning_ring",
+    "x": 160,
+    "y": 28,
+    "width": 28,
+    "height": 28,
+    "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 },
+    "visibleByValue": { "min": 0.05 },
+    "renderer": {
+      "type": "pie",
+      "mode": "ring",
+      "innerRadius": 8,
+      "backgroundColor": "22000000",
+      "color": "FF44FF44"
+    },
+    "rendererByValue": {
+      "color": {
+        "fromColor": "FF44FF44",
+        "toColor": "FFFF4444"
+      }
+    }
+  },
+  {
+    "id": "mode_preview",
+    "x": 196,
+    "y": 28,
+    "width": 28,
+    "height": 28,
+    "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 },
+    "renderer": {
+      "type": "fill",
+      "backgroundColor": "22000000",
+      "fillColor": "FF44AAFF",
+      "borderColor": "FFFFFFFF",
+      "direction": "up"
+    },
+    "rendererSwitchByValue": [
+      {
+        "max": 0.34,
+        "renderer": {
+          "type": "fill",
+          "backgroundColor": "22000000",
+          "fillColor": "FF44AAFF",
+          "borderColor": "FFFFFFFF",
+          "direction": "up"
+        }
+      },
+      {
+        "min": 0.34,
+        "max": 0.67,
+        "renderer": {
+          "type": "pie",
+          "mode": "ring",
+          "innerRadius": 8,
+          "backgroundColor": "22000000",
+          "color": "FFFFCC44"
+        }
+      },
+      {
+        "min": 0.67,
+        "renderer": {
+          "type": "textureSwitch",
+          "fallbackTexture": "pack:textures/gui/fan.png",
+          "frames": [
+            { "texture": "pack:textures/gui/fan.png" }
+          ]
+        }
+      }
+    ]
+  }
+]
+```
+
+`combined` source rule / `combined` 数据源规则：
+- child sources are resolved as raw numbers first, then combined
+- child `weight` scales each raw child value before `weightedSum` / `weightedAverage`
+- parent `min` / `max` / `clamp` / `invert` runs after the combination result is produced
+- `divide` returns the parent/default fallback when a later divisor is near zero
+- mixed-scale child sources should be aligned explicitly before using `weightedSum`, `weightedAverage`, `min`, or `max`
+- `weightedSum` is useful when child sources intentionally contribute uneven raw magnitudes
+- `weightedAverage` is usually better when child sources already share the same 0..1 scale and you want a weighted blend without changing the overall range
+
+This example blends `heat` and `warning` into one shared fill bar, while `rendererByValue` tints the fill as the combined pressure rises.
+
+In the example above, the static `transform.pivotUnit` is `ratio`, so the dynamic `pivotX` / `pivotY` values are also interpreted as relative `0..1` coordinates.
+`warning_ring` can reuse the same weighted combined source and stay hidden until the mixed value crosses a threshold, then fade from green to red.
+`mode_preview` can also reuse that combined source to switch the entire renderer mode from fill -> ring -> texture.

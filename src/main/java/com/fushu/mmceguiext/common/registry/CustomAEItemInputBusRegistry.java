@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.common.registry;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -24,7 +26,6 @@ import java.util.stream.Stream;
 public final class CustomAEItemInputBusRegistry {
     private static final Logger LOGGER = LogManager.getLogger(MMCEGuiExt.MODID);
     private static final Path BUS_DIR = resolveBusDir();
-    private static final long MAX_CONFIG_BYTES = 1024L * 1024L;
     private static final int MAX_SLOT_POINTS = 4096;
     private static final List<Def> CACHE = new ArrayList<Def>();
     private static final Map<String, Def> REGISTERED = new LinkedHashMap<String, Def>();
@@ -39,17 +40,29 @@ public final class CustomAEItemInputBusRegistry {
             return Collections.emptyList();
         }
         try (Stream<Path> stream = Files.list(BUS_DIR)) {
-            stream.filter(p -> p.toString().endsWith(".json")).forEach(path -> {
+            stream.filter(p -> p.toString().endsWith(".json"))
+                .sorted()
+                .forEach(path -> {
                 Def def = load(path);
-                if (def != null && !REGISTERED.containsKey(normalizeId(def.id))) {
-                    CACHE.add(def);
-                    REGISTERED.put(normalizeId(def.id), def);
+                if (def != null) {
+                    String key = normalizeId(def.id);
+                    if (REGISTERED.containsKey(key)) {
+                        LOGGER.warn("Skipping duplicate custom AE item input bus id {} from {}.", def.id, path);
+                    } else {
+                        CACHE.add(def);
+                        REGISTERED.put(key, def);
+                    }
                 }
             });
         } catch (IOException ex) {
             LOGGER.warn("Failed to scan custom AE item input bus dir {}: {}", BUS_DIR, ex.getMessage());
         }
         return new ArrayList<Def>(CACHE);
+    }
+
+    public static void clear() {
+        CACHE.clear();
+        REGISTERED.clear();
     }
 
     public static List<Def> getCached() {
@@ -89,8 +102,10 @@ public final class CustomAEItemInputBusRegistry {
     @Nullable
     public static Def load(Path path) {
         try {
-            if (Files.size(path) > MAX_CONFIG_BYTES) {
-                LOGGER.warn("Skipping custom AE item input bus {} because it is larger than {} bytes.", path, MAX_CONFIG_BYTES);
+            long fileSize = Files.size(path);
+            long maxFileSize = MMCEGuiExtConfig.getMaxExtensionConfigFileBytes();
+            if (!MMCEGuiExtConfig.isExtensionConfigFileSizeAllowed(fileSize)) {
+                LOGGER.warn("Skipping custom AE item input bus {} because it is larger than {} bytes.", path, maxFileSize);
                 return null;
             }
             String text = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
@@ -142,6 +157,7 @@ public final class CustomAEItemInputBusRegistry {
         }
         for (int i = 0; i < limit; i++) {
             if (!array.get(i).isJsonObject()) {
+                out.add(null);
                 continue;
             }
             JsonObject obj = array.get(i).getAsJsonObject();
@@ -244,7 +260,15 @@ public final class CustomAEItemInputBusRegistry {
     }
 
     private static Path resolveBusDir() {
-        Path dir = Loader.instance().getConfigDir().toPath().resolve("mmceguiext").resolve("custom_ae_item_input_buses");
+        Path configDir;
+        try {
+            configDir = Loader.instance() != null && Loader.instance().getConfigDir() != null
+                ? Loader.instance().getConfigDir().toPath()
+                : Paths.get("config");
+        } catch (RuntimeException ex) {
+            configDir = Paths.get("config");
+        }
+        Path dir = configDir.resolve("mmceguiext").resolve("custom_ae_item_input_buses");
         try {
             Files.createDirectories(dir);
         } catch (IOException ignored) {

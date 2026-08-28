@@ -4,12 +4,23 @@ import net.minecraftforge.common.config.Config;
 
 @Config(modid = MMCEGuiExt.MODID, name = MMCEGuiExt.MODID + "/client")
 public class MMCEGuiExtConfig {
+    private static final String LEGACY_DEFAULT_SMART_INTERFACE_KEY = "mmcege_virtual_port";
+    private static final String LEGACY_SAMPLE_SMART_INTERFACE_KEY_A = "demo_default_port_a";
+    private static final String LEGACY_SAMPLE_SMART_INTERFACE_KEY_B = "demo_default_port_b";
+    private static final int MIN_GUI_CONFIG_FILE_SIZE_MIB = 1;
+    private static final int MAX_GUI_CONFIG_FILE_SIZE_MIB = 64;
+    private static final int DEFAULT_GUI_CONFIG_FILE_SIZE_MIB = 8;
+
     @Config.Comment("总开关：是否启用所有控制器 GUI 替换 / Master switch for all controller GUI replacements.")
     public static boolean enabled = true;
 
     @Config.Comment("信息区鼠标滚轮步长（像素） / Mouse wheel scroll step in pixels for info panels.")
     @Config.RangeInt(min = 2, max = 64)
     public static int wheelStep = 10;
+
+    @Config.Comment("MMCE More Extensions 全部 JSON 文件大小上限（MiB），包括 GUI、自定义仓口、自定义 AE 总线、容量卡和按钮策略 / Shared maximum size of all MMCE More Extensions JSON files, including GUI, custom hatches, custom AE buses, capacity cards, and button policies.")
+    @Config.RangeInt(min = MIN_GUI_CONFIG_FILE_SIZE_MIB, max = MAX_GUI_CONFIG_FILE_SIZE_MIB)
+    public static int maxGuiConfigFileSizeMiB = DEFAULT_GUI_CONFIG_FILE_SIZE_MIB;
 
     @Config.Comment("Nova Engineering Core 兼容模式：手动开启后预热并固定 MMCE GUI 样式缓存，避免首次打开 GUI 时扫描机器 JSON / NovaEngineering-Core compatibility mode: manually enable to preload and pin MMCE GUI style cache, avoiding machine JSON scans on first GUI open.")
     public static boolean novaEngCoreCompatibilityMode = false;
@@ -31,6 +42,12 @@ public class MMCEGuiExtConfig {
 
     @Config.Comment("AE2 仓室 GUI 设置 / Settings for AE2 bus GUIs.")
     public static AEBus aeBus = new AEBus();
+
+    @Config.Comment("自定义内容注册设置 / Settings for JSON-defined custom content registration.")
+    public static CustomContent customContent = new CustomContent();
+
+    @Config.Comment("实验性功能设置 / Experimental feature settings.")
+    public static Experimental experimental = new Experimental();
 
     @Config.Comment("自定义仓室 TOP 显示设置 / The One Probe display settings for custom hatches.")
     public static CustomHatchTop customHatchTop = new CustomHatchTop();
@@ -120,7 +137,7 @@ public class MMCEGuiExtConfig {
         public int backgroundCorner = 8;
 
         @Config.Comment("Enable Smart Interface editor in controller GUI.")
-        public boolean enableSmartInterfaceEditor = true;
+        public boolean enableSmartInterfaceEditor = false;
 
         @Config.Comment("Smart Interface editor X in GUI. -1 = auto place at right-bottom.")
         @Config.RangeInt(min = -1, max = 2048)
@@ -135,7 +152,83 @@ public class MMCEGuiExtConfig {
         public int smartInterfaceEditorInputWidth = 68;
 
         @Config.Comment("Virtual Smart Interface key when no DataPort is bound. Empty = disabled.")
-        public String smartInterfaceEditorVirtualKey = "mmcege_virtual_port";
+        public String smartInterfaceEditorVirtualKey = "";
+    }
+
+    public static boolean isLegacySmartInterfaceEditorFallback(String raw) {
+        if (raw == null) {
+            return false;
+        }
+        String[] split = raw.split("[,;\\r\\n，；]");
+        int keyCount = 0;
+        boolean hasDefaultKey = false;
+        boolean hasSampleA = false;
+        boolean hasSampleB = false;
+        for (String value : split) {
+            String key = normalizeSmartInterfaceKey(value);
+            if (key.isEmpty()) {
+                continue;
+            }
+            keyCount++;
+            if (LEGACY_DEFAULT_SMART_INTERFACE_KEY.equals(key)) {
+                hasDefaultKey = true;
+            } else if (LEGACY_SAMPLE_SMART_INTERFACE_KEY_A.equals(key)) {
+                hasSampleA = true;
+            } else if (LEGACY_SAMPLE_SMART_INTERFACE_KEY_B.equals(key)) {
+                hasSampleB = true;
+            } else {
+                return false;
+            }
+        }
+        return (keyCount == 1 && hasDefaultKey)
+            || (keyCount == 2 && hasSampleA && hasSampleB);
+    }
+
+    public static String sanitizeSmartInterfaceEditorVirtualKey(String raw) {
+        if (raw == null || isLegacySmartInterfaceEditorFallback(raw)) {
+            return "";
+        }
+        return raw;
+    }
+
+    /**
+     * Returns the shared byte limit for all MMCE More Extensions JSON files.
+     *
+     * The field name is retained for config compatibility with the original
+     * GUI-only limit introduced in 1.4.1.
+     */
+    public static long getMaxExtensionConfigFileBytes() {
+        int sizeMiB = maxGuiConfigFileSizeMiB;
+        if (sizeMiB < MIN_GUI_CONFIG_FILE_SIZE_MIB) {
+            sizeMiB = MIN_GUI_CONFIG_FILE_SIZE_MIB;
+        } else if (sizeMiB > MAX_GUI_CONFIG_FILE_SIZE_MIB) {
+            sizeMiB = MAX_GUI_CONFIG_FILE_SIZE_MIB;
+        }
+        return sizeMiB * 1024L * 1024L;
+    }
+
+    public static boolean isExtensionConfigFileSizeAllowed(long sizeBytes) {
+        return sizeBytes >= 0L && sizeBytes <= getMaxExtensionConfigFileBytes();
+    }
+
+    /**
+     * @deprecated use {@link #getMaxExtensionConfigFileBytes()}.
+     */
+    @Deprecated
+    public static long getMaxGuiConfigFileBytes() {
+        return getMaxExtensionConfigFileBytes();
+    }
+
+    /**
+     * @deprecated use {@link #isExtensionConfigFileSizeAllowed(long)}.
+     */
+    @Deprecated
+    public static boolean isGuiConfigFileSizeAllowed(long sizeBytes) {
+        return isExtensionConfigFileSizeAllowed(sizeBytes);
+    }
+
+    private static String normalizeSmartInterfaceKey(String raw) {
+        return raw == null ? "" : raw.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     public static class FactoryController {
@@ -233,13 +326,16 @@ public class MMCEGuiExtConfig {
         @Config.RangeInt(min = 0, max = 2048)
         public int threadQueueY = 8;
 
-        @Config.Comment("线程队列滚动条左侧 X / Thread queue scrollbar X.")
-        @Config.RangeInt(min = 0, max = 2048)
+        @Config.Comment("线程队列滚动条左侧 X，可为负数用于偏移 / Thread queue scrollbar X, negative values allowed for offsets.")
+        @Config.RangeInt(min = -2048, max = 2048)
         public int threadScrollbarX = 94;
 
-        @Config.Comment("线程队列滚动条顶部 Y / Thread queue scrollbar Y.")
-        @Config.RangeInt(min = 0, max = 2048)
+        @Config.Comment("线程队列滚动条顶部 Y，可为负数用于偏移 / Thread queue scrollbar Y, negative values allowed for offsets.")
+        @Config.RangeInt(min = -2048, max = 2048)
         public int threadScrollbarY = 8;
+
+        @Config.Comment("Custom factory thread scrollbar. New JSON styles should use factoryController.threadScrollbar.")
+        public ThreadScrollbar threadScrollbar = new ThreadScrollbar();
 
         @Config.Comment("Visible recipe queue rows on the left panel.")
         @Config.RangeInt(min = 1, max = 20)
@@ -254,7 +350,7 @@ public class MMCEGuiExtConfig {
         public int threadRowHeight = 32;
 
         @Config.Comment("Enable Smart Interface editor in factory GUI.")
-        public boolean enableSmartInterfaceEditor = true;
+        public boolean enableSmartInterfaceEditor = false;
 
         @Config.Comment("Smart Interface editor X in GUI. -1 = auto place at right-bottom.")
         @Config.RangeInt(min = -1, max = 2048)
@@ -269,7 +365,150 @@ public class MMCEGuiExtConfig {
         public int smartInterfaceEditorInputWidth = 68;
 
         @Config.Comment("Virtual Smart Interface key when no DataPort is bound. Empty = disabled.")
-        public String smartInterfaceEditorVirtualKey = "mmcege_virtual_port";
+        public String smartInterfaceEditorVirtualKey = "";
+
+        public static class ThreadScrollbar {
+            @Config.Comment("Whether to draw the factory thread scrollbar.")
+            public boolean visible = true;
+
+            @Config.Comment("Scrollbar X. -1 = use legacy threadScrollbarX; other negative values are valid offsets.")
+            @Config.RangeInt(min = -2048, max = 2048)
+            public int x = -1;
+
+            @Config.Comment("Scrollbar Y. -1 = use legacy threadScrollbarY; other negative values are valid offsets.")
+            @Config.RangeInt(min = -2048, max = 2048)
+            public int y = -1;
+
+            @Config.Comment("Scrollbar width.")
+            @Config.RangeInt(min = 1, max = 128)
+            public int width = 12;
+
+            @Config.Comment("Scrollbar height. -1 = auto by visible thread rows.")
+            @Config.RangeInt(min = -1, max = 2048)
+            public int height = -1;
+
+            @Config.Comment("Track texture. Empty = colored rectangle fallback.")
+            public String trackTexture = "";
+
+            @Config.Comment("Thumb texture. Empty = colored rectangle fallback.")
+            public String thumbTexture = "";
+
+            @Config.Comment("Track color fallback. Hex RGB/ARGB.")
+            public String trackColor = "66000000";
+
+            @Config.Comment("Thumb color fallback. Hex RGB/ARGB.")
+            public String thumbColor = "FFFFFFFF";
+
+            @Config.Comment("Track texture source width.")
+            @Config.RangeInt(min = 1, max = 4096)
+            public int textureWidth = 12;
+
+            @Config.Comment("Track texture source height.")
+            @Config.RangeInt(min = 1, max = 4096)
+            public int textureHeight = 16;
+
+            @Config.Comment("Thumb texture source width.")
+            @Config.RangeInt(min = 1, max = 4096)
+            public int thumbTextureWidth = 12;
+
+            @Config.Comment("Thumb texture source height.")
+            @Config.RangeInt(min = 1, max = 4096)
+            public int thumbTextureHeight = 15;
+
+            @Config.Comment("Minimum drawn thumb height.")
+            @Config.RangeInt(min = 1, max = 512)
+            public int thumbMinHeight = 15;
+        }
+    }
+
+    public static class CustomContent {
+        @Config.Comment({
+            "Enable JSON-defined custom hatch block registration.",
+            "Default is false so pack players do not see example/development hatches in JEI unless a pack explicitly opts in.",
+            "启用 JSON 自定义仓方块注册。默认 false，避免玩家在 JEI 里看到示例/开发用仓室并误认为是 bug。"
+        })
+        public boolean enableCustomHatches = false;
+
+        @Config.Comment({
+            "Enable JSON-defined custom AE bus block registration.",
+            "This covers custom_ae_item_input_buses, custom_ae_mixed_input_buses and custom_ae_mixed_output_buses.",
+            "Default is false so pack players do not see development/config sample AE buses in JEI unless a pack explicitly opts in.",
+            "启用 JSON 自定义 AE 总线注册。默认 false，避免玩家在 JEI 里看到示例/开发用 AE 仓室并误认为是 bug。"
+        })
+        public boolean enableCustomAEBuses = false;
+
+        @Config.Comment({
+            "When custom hatches are enabled, also register the generic fallback custom_hatch block.",
+            "Keep true for old worlds/configs that may reference mmceguiext:custom_hatch.",
+            "启用自定义仓时，同时注册通用 fallback 方块 custom_hatch。旧存档/旧配置可能需要保持 true。"
+        })
+        public boolean registerGenericCustomHatch = true;
+    }
+
+    public static boolean areCustomHatchesEnabled() {
+        return customContent != null && customContent.enableCustomHatches;
+    }
+
+    public static boolean areCustomAEBusesEnabled() {
+        return customContent != null && customContent.enableCustomAEBuses;
+    }
+
+    public static boolean shouldRegisterGenericCustomHatch() {
+        return areCustomHatchesEnabled()
+            && (customContent == null || customContent.registerGenericCustomHatch);
+    }
+
+    public static class Experimental {
+        @Config.Comment({
+            "EXPERIMENTAL: enable the MMCEME 1.4 long fluid/gas requirement types.",
+            "Default is false. When enabled, recipes may use mmceguiext:fluid_long and mmceguiext:gas_long.",
+            "The amount field accepts a JSON integer or a decimal string; strings are recommended for very large values.",
+            "A full game/server restart is required after changing this option.",
+            "实验性：启用 MMCEME 1.4 的 long 流体/气体需求类型。",
+            "默认关闭。开启后配方可使用 mmceguiext:fluid_long 与 mmceguiext:gas_long。",
+            "amount 可写 JSON 整数或十进制字符串；超大数值推荐使用字符串。",
+            "修改该选项后必须完整重启游戏或服务器。"
+        })
+        public boolean enableLongFluidGasRequirements = false;
+
+        @Config.Comment({
+            "EXPERIMENTAL: register additional static MMCE parallel-controller tiers.",
+            "The extra tiers are named mmceme_0, mmceme_1, ... and reuse MMCE's native block, tile, GUI and parallelism behavior.",
+            "Enable this option, restart the game, then edit parallel-controller.mmceme_* in modularmachinery.cfg if needed.",
+            "Do not enable this while another mod owns the same parallel-controller enum extension.",
+            "实验性：注册额外的静态 MMCE 并行控制器等级。",
+            "额外等级名称为 mmceme_0、mmceme_1……，复用 MMCE 原生方块、Tile、GUI 和并行逻辑。",
+            "启用后需要重启游戏；如需调整数值，请修改 modularmachinery.cfg 的 parallel-controller.mmceme_*。",
+            "如果其他模组已经扩展同一个并行控制器枚举，请不要同时开启。"
+        })
+        public boolean enableCustomParallelControllerTiers = false;
+
+        @Config.Comment({
+            "Number of additional static parallel-controller tiers to register.",
+            "Range: 1-16.",
+            "额外静态并行控制器等级数量，范围：1-16。"
+        })
+        @Config.RangeInt(min = 1, max = 16)
+        public int customParallelControllerTierCount = 1;
+
+        @Config.Comment({
+            "Default max parallelism for each new tier when MMCE first creates its config entry.",
+            "This value is only a default; edit parallel-controller.mmceme_* afterwards.",
+            "每个新等级首次生成配置项时使用的默认最大并行数；之后请直接修改 parallel-controller.mmceme_*。"
+        })
+        @Config.RangeInt(min = 1, max = Integer.MAX_VALUE)
+        public int customParallelControllerDefaultMaxParallelism = 32;
+
+        @Config.Comment({
+            "Optional per-tier max parallelism values in mmceme_0, mmceme_1, ... order.",
+            "Missing entries use customParallelControllerDefaultMaxParallelism.",
+            "可选：按 mmceme_0、mmceme_1……顺序设置每级最大并行数；缺少的档位使用统一默认值。"
+        })
+        public String[] customParallelControllerMaxParallelisms = new String[0];
+    }
+
+    public static boolean isLongFluidGasRequirementsEnabled() {
+        return experimental != null && experimental.enableLongFluidGasRequirements;
     }
 
     public static class ItemBus {
@@ -513,13 +752,13 @@ public class MMCEGuiExtConfig {
         @Config.Comment("是否显示物品输入/输出统计 / Show item input/output counts.")
         public boolean showItemInfo = false;
 
-        @Config.Comment("是否显示 MMCEGE 自己绘制的流体条。注意：TOP 可能仍会自动显示 Forge Fluid 能力条 / Show MMCEGE's own fluid bar. TOP may still auto-render Forge Fluid capability.")
+        @Config.Comment("是否显示 MMCEME 自己绘制的流体条。注意：TOP 可能仍会自动显示 Forge Fluid 能力条 / Show MMCEME's own fluid bar. TOP may still auto-render Forge Fluid capability.")
         public boolean showFluidInfo = true;
 
-        @Config.Comment("是否显示 MMCEGE 自己绘制的气体条 / Show MMCEGE's own gas bar.")
+        @Config.Comment("是否显示 MMCEME 自己绘制的气体条 / Show MMCEME's own gas bar.")
         public boolean showGasInfo = true;
 
-        @Config.Comment("是否显示 MMCEGE 自己绘制的能源条 / Show MMCEGE's own energy bar.")
+        @Config.Comment("是否显示 MMCEME 自己绘制的能源条 / Show MMCEME's own energy bar.")
         public boolean showEnergyInfo = true;
     }
 }

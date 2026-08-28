@@ -116,7 +116,7 @@ public class GuiUpgradeBusCustom extends GuiContainerBase<ContainerUpgradeBus> {
 
         TileUpgradeBus.UpgradeBusProvider component = upgradeBus.provideComponent();
         FontRenderer fr = this.fontRenderer;
-        fr.drawStringWithShadow(I18n.format("gui.upgradebus.title"), 7, 5, 0xFFFFFF);
+        GuiRenderUtils.drawString(fr, I18n.format("gui.upgradebus.title"), 7, 5, 0xFFFFFF, true, 0.0F);
 
         GlStateManager.scale(0.72F, 0.72F, 0.72F);
 
@@ -128,14 +128,14 @@ public class GuiUpgradeBusCustom extends GuiContainerBase<ContainerUpgradeBus> {
         collectUpgradeDescriptions(component, description, upgrades);
 
         List<String> wrappedDesc = description.stream()
-            .flatMap(s -> fr.listFormattedStringToWidth(s, (int) (MMCEGuiExtConfig.upgradeBus.textWidth / 0.72F)).stream())
+            .flatMap(s -> GuiRenderUtils.listFormattedStringToWidth(fr, s, (int) (MMCEGuiExtConfig.upgradeBus.textWidth / 0.72F), 0.0F).stream())
             .collect(Collectors.toList());
 
         updateScrollbar(Math.max(0, wrappedDesc.size() - MMCEGuiExtConfig.upgradeBus.maxDescLines));
 
         int offsetY = MMCEGuiExtConfig.upgradeBus.textY;
         for (int i = scrollbar.getCurrentScroll(); i < Math.min(wrappedDesc.size(), MMCEGuiExtConfig.upgradeBus.maxDescLines + scrollbar.getCurrentScroll()); i++) {
-            fr.drawStringWithShadow(wrappedDesc.get(i), MMCEGuiExtConfig.upgradeBus.textX, offsetY, 0xFFFFFF);
+            GuiRenderUtils.drawString(fr, wrappedDesc.get(i), MMCEGuiExtConfig.upgradeBus.textX, offsetY, 0xFFFFFF, true, 0.0F);
             offsetY += 10;
         }
 

@@ -2,6 +2,7 @@ package com.fushu.mmceguiext.client.config;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -24,6 +25,31 @@ public class MachineGuiStyleParserTest {
 
         assertNull(result.namespacedKey);
         assertTrue(containsWarning(result, "registryname is missing or empty"));
+    }
+
+    @Test
+    public void parseStandaloneStyleJsonCanUseNamespacedRegistryName() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "mmceguiext/styles/starter_controller.json",
+            "{\n" +
+                "  \"registryname\": \"mmceoneblock:starter_controller\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"guiWidth\": 240,\n" +
+                "      \"texts\": [{\"x\": 8, \"y\": 6, \"value\": \"One Block Smoke\"}]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertEquals("mmceoneblock:starter_controller", result.namespacedKey);
+        assertEquals("starter_controller", result.pathKey);
+        assertFalse(result.allowPathFallback);
+        assertTrue(result.machineNodePresent);
+        assertNotNull(result.machineStyle);
+        assertEquals(Integer.valueOf(240), result.machineStyle.guiWidth);
+        assertNotNull(result.machineStyle.texts);
+        assertEquals("One Block Smoke", result.machineStyle.texts.get(0).value);
     }
 
     @Test
@@ -203,6 +229,52 @@ public class MachineGuiStyleParserTest {
     }
 
     @Test
+    public void parseMachineJsonAcceptsAutomaticThreadScrollbarHeight() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "thread-scrollbar-auto-height.json",
+            "{\n" +
+                "  \"registryname\": \"demo:thread_scrollbar_auto\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"factoryController\": {\n" +
+                "      \"threadScrollbar\": {\n" +
+                "        \"height\": -1\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.factoryStyle);
+        assertNotNull(result.factoryStyle.threadScrollbar);
+        assertEquals(Integer.valueOf(-1), result.factoryStyle.threadScrollbar.height);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonRejectsInvalidAutomaticThreadScrollbarHeights() {
+        for (int invalidHeight : new int[] {0, -2}) {
+            MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+                "thread-scrollbar-invalid-auto-height-" + invalidHeight + ".json",
+                "{\n" +
+                    "  \"registryname\": \"demo:thread_scrollbar_invalid_auto\",\n" +
+                    "  \"mmce_gui_ext\": {\n" +
+                    "    \"factoryController\": {\n" +
+                    "      \"threadScrollbar\": {\n" +
+                    "        \"height\": " + invalidHeight + "\n" +
+                    "      }\n" +
+                    "    }\n" +
+                    "  }\n" +
+                    "}"
+            );
+
+            assertNotNull(result.factoryStyle);
+            assertNotNull(result.factoryStyle.threadScrollbar);
+            assertNull(result.factoryStyle.threadScrollbar.height);
+            assertTrue(containsWarning(result, "factoryController.threadScrollbar.height must be >= 1 or -1 for automatic height"));
+        }
+    }
+
+    @Test
     public void parseMachineJsonRejectsOutOfRangeThreadQueueSizes() {
         MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
             "thread-layout-invalid.json",
@@ -377,6 +449,328 @@ public class MachineGuiStyleParserTest {
         assertEquals("a", merged.progressBars.get(0).id);
         assertEquals("b", merged.progressBars.get(1).id);
         assertFalse(merged.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesAnimatedTextureSpriteSheetAndAliases() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "animated-sheet.json",
+            "{\n" +
+                "  \"registryname\": \"demo:animated_sheet_machine\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"dynamicVisuals\": [\n" +
+                "        {\n" +
+                "          \"id\": \"fan_anim\",\n" +
+                "          \"x\": 120,\n" +
+                "          \"y\": 32,\n" +
+                "          \"width\": 16,\n" +
+                "          \"height\": 16,\n" +
+                "          \"renderer\": {\n" +
+                "            \"type\": \"spriteSheet\",\n" +
+                "            \"texture\": \"demo:textures/gui/fan_sheet.png\",\n" +
+                "            \"frameWidth\": 16,\n" +
+                "            \"frameHeight\": 16,\n" +
+                "            \"frameCount\": 8,\n" +
+                "            \"columns\": 4,\n" +
+                "            \"textureWidth\": 64,\n" +
+                "            \"textureHeight\": 32,\n" +
+                "            \"ticksPerFrame\": 3,\n" +
+                "            \"startFrame\": 1,\n" +
+                "            \"loop\": false,\n" +
+                "            \"reverse\": true,\n" +
+                "            \"pingPong\": true,\n" +
+                "            \"u\": 2,\n" +
+                "            \"v\": 3\n" +
+                "          }\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.dynamicVisuals);
+        assertEquals(1, result.machineStyle.dynamicVisuals.size());
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer = result.machineStyle.dynamicVisuals.get(0).renderer;
+        assertNotNull(renderer);
+        assertEquals("animatedTexture", renderer.type);
+        assertEquals("demo:textures/gui/fan_sheet.png", renderer.texture);
+        assertEquals(Integer.valueOf(16), renderer.frameWidth);
+        assertEquals(Integer.valueOf(16), renderer.frameHeight);
+        assertEquals(Integer.valueOf(8), renderer.frameCount);
+        assertEquals(Integer.valueOf(4), renderer.columns);
+        assertEquals(Integer.valueOf(64), renderer.textureWidth);
+        assertEquals(Integer.valueOf(32), renderer.textureHeight);
+        assertEquals(Integer.valueOf(3), renderer.ticksPerFrame);
+        assertEquals(Integer.valueOf(1), renderer.startFrame);
+        assertEquals(Boolean.FALSE, renderer.loop);
+        assertEquals(Boolean.TRUE, renderer.reverse);
+        assertEquals(Boolean.TRUE, renderer.pingPong);
+        assertEquals(Integer.valueOf(2), renderer.u);
+        assertEquals(Integer.valueOf(3), renderer.v);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesCharacterSpacingDefaultsAndOverrides() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "char-spacing.json",
+            "{\n" +
+                "  \"registryname\": \"demo:char_spacing\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"defaultCharSpacing\": 1.5,\n" +
+                "      \"texts\": [\n" +
+                "        {\"x\": 1, \"y\": 2, \"value\": \"A\", \"charSpacing\": -2.0},\n" +
+                "        {\"x\": 3, \"y\": 4, \"value\": \"B\", \"letter_spacing\": 100000.0}\n" +
+                "      ],\n" +
+                "      \"buttons\": [\n" +
+                "        {\"x\": 5, \"y\": 6, \"label\": \"M\", \"action\": \"event\", \"buttonId\": \"evt\", \"characterSpacing\": 3.0},\n" +
+                "        {\"x\": 7, \"y\": 8, \"label\": \"C\", \"action\": \"cycle\", \"key\": \"mode\", \"states\": [\n" +
+                "          {\"label\": \"One\", \"letterSpacing\": 4.0}\n" +
+                "        ]}\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertEquals(Float.valueOf(1.5F), result.machineStyle.defaultCharSpacing);
+        assertNotNull(result.machineStyle.texts);
+        assertEquals(Float.valueOf(-2.0F), result.machineStyle.texts.get(0).charSpacing);
+        assertEquals(Float.valueOf(100000.0F), result.machineStyle.texts.get(1).charSpacing);
+        assertNotNull(result.machineStyle.buttons);
+        assertEquals(Float.valueOf(3.0F), result.machineStyle.buttons.get(0).charSpacing);
+        assertNotNull(result.machineStyle.buttons.get(1).cycleStates);
+        assertEquals(Float.valueOf(4.0F), result.machineStyle.buttons.get(1).cycleStates.get(0).charSpacing);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonRejectsNonFiniteCharacterSpacing() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "invalid-char-spacing.json",
+            "{\n" +
+                "  \"registryname\": \"demo:bad_spacing\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"defaultCharSpacing\": \"NaN\",\n" +
+                "      \"texts\": [\n" +
+                "        {\"x\": 1, \"y\": 2, \"value\": \"A\", \"charSpacing\": \"Infinity\"}\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNull(result.machineStyle.defaultCharSpacing);
+        assertNotNull(result.machineStyle.texts);
+        assertNull(result.machineStyle.texts.get(0).charSpacing);
+        assertTrue(containsWarning(result, "defaultCharSpacing must be a finite number"));
+        assertTrue(containsWarning(result, "charSpacing must be a finite number"));
+    }
+
+    @Test
+    public void parseMachineJsonParsesAnimatedTextureFileFrames() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "animated-frames.json",
+            "{\n" +
+                "  \"registryname\": \"demo:animated_frames_machine\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"dynamicVisuals\": [\n" +
+                "        {\n" +
+                "          \"id\": \"spark_anim\",\n" +
+                "          \"x\": 140,\n" +
+                "          \"y\": 32,\n" +
+                "          \"width\": 16,\n" +
+                "          \"height\": 16,\n" +
+                "          \"renderer\": {\n" +
+                "            \"type\": \"animated_texture\",\n" +
+                "            \"ticksPerFrame\": 4,\n" +
+                "            \"frames\": [\n" +
+                "              \"demo:textures/gui/spark_0.png\",\n" +
+                "              {\"texture\": \"demo:textures/gui/spark_1.png\", \"u\": 1, \"v\": 2, \"textureWidth\": 32, \"textureHeight\": 34}\n" +
+                "            ]\n" +
+                "          }\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.dynamicVisuals);
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer = result.machineStyle.dynamicVisuals.get(0).renderer;
+        assertNotNull(renderer);
+        assertEquals("animatedTexture", renderer.type);
+        assertEquals(Integer.valueOf(4), renderer.ticksPerFrame);
+        assertNotNull(renderer.frames);
+        assertEquals(2, renderer.frames.size());
+        assertEquals("demo:textures/gui/spark_0.png", renderer.frames.get(0).texture);
+        assertEquals("demo:textures/gui/spark_1.png", renderer.frames.get(1).texture);
+        assertEquals(Integer.valueOf(1), renderer.frames.get(1).u);
+        assertEquals(Integer.valueOf(2), renderer.frames.get(1).v);
+        assertEquals(Integer.valueOf(32), renderer.frames.get(1).textureWidth);
+        assertEquals(Integer.valueOf(34), renderer.frames.get(1).textureHeight);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonPreservesTextureSwitchFrameUvOverrides() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "texture-switch-frame-uv.json",
+            "{\n" +
+                "  \"registryname\": \"demo:texture_switch_frame_uv\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"dynamicVisuals\": [\n" +
+                "        {\n" +
+                "          \"id\": \"state\",\n" +
+                "          \"x\": 1,\n" +
+                "          \"y\": 2,\n" +
+                "          \"width\": 16,\n" +
+                "          \"height\": 16,\n" +
+                "          \"source\": {\"type\": \"customData\", \"key\": \"state\"},\n" +
+                "          \"renderer\": {\n" +
+                "            \"type\": \"textureSwitch\",\n" +
+                "            \"u\": 2,\n" +
+                "            \"v\": 3,\n" +
+                "            \"textureWidth\": 64,\n" +
+                "            \"textureHeight\": 64,\n" +
+                "            \"frames\": [\n" +
+                "              {\"equals\": 1, \"texture\": \"demo:textures/gui/one.png\", \"u\": 8, \"v\": 9, \"textureWidth\": 32, \"textureHeight\": 16}\n" +
+                "            ]\n" +
+                "          }\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer =
+            result.machineStyle.dynamicVisuals.get(0).renderer;
+        assertNotNull(renderer);
+        assertEquals("textureSwitch", renderer.type);
+        assertEquals(Integer.valueOf(2), renderer.u);
+        assertEquals(Integer.valueOf(3), renderer.v);
+        assertEquals(Integer.valueOf(64), renderer.textureWidth);
+        assertEquals(Integer.valueOf(64), renderer.textureHeight);
+        assertNotNull(renderer.frames);
+        assertEquals(Integer.valueOf(8), renderer.frames.get(0).u);
+        assertEquals(Integer.valueOf(9), renderer.frames.get(0).v);
+        assertEquals(Integer.valueOf(32), renderer.frames.get(0).textureWidth);
+        assertEquals(Integer.valueOf(16), renderer.frames.get(0).textureHeight);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonSkipsInvalidAnimatedTextureRenderer() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "animated-invalid.json",
+            "{\n" +
+                "  \"registryname\": \"demo:animated_invalid_machine\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"dynamicVisuals\": [\n" +
+                "        {\n" +
+                "          \"id\": \"bad_anim\",\n" +
+                "          \"x\": 1,\n" +
+                "          \"y\": 2,\n" +
+                "          \"width\": 16,\n" +
+                "          \"height\": 16,\n" +
+                "          \"renderer\": {\"type\": \"animatedTexture\", \"texture\": \"demo:textures/gui/partial.png\"}\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNull(result.machineStyle.dynamicVisuals);
+        assertTrue(containsWarning(result, "animatedTexture requires either texture, frameWidth, frameHeight and frameCount"));
+    }
+
+    @Test
+    public void controllerStyleCopiesAndMergesAnimatedDynamicVisualFields() {
+        MachineGuiStyleManager.ControllerStyle base = new MachineGuiStyleManager.ControllerStyle();
+        MachineGuiStyleManager.DynamicVisualStyle visualA = new MachineGuiStyleManager.DynamicVisualStyle();
+        visualA.id = "a";
+        visualA.x = 1;
+        visualA.y = 2;
+        visualA.width = 3;
+        visualA.height = 4;
+        visualA.renderer = new MachineGuiStyleManager.DynamicVisualRendererStyle();
+        visualA.renderer.type = "animatedTexture";
+        visualA.renderer.texture = "demo:textures/gui/a_sheet.png";
+        visualA.renderer.frameWidth = Integer.valueOf(8);
+        visualA.renderer.frameHeight = Integer.valueOf(9);
+        visualA.renderer.frameCount = Integer.valueOf(5);
+        visualA.renderer.ticksPerFrame = Integer.valueOf(2);
+        visualA.renderer.startFrame = Integer.valueOf(1);
+        visualA.renderer.columns = Integer.valueOf(3);
+        visualA.renderer.loop = Boolean.FALSE;
+        visualA.renderer.reverse = Boolean.TRUE;
+        visualA.renderer.pingPong = Boolean.TRUE;
+        MachineGuiStyleManager.DynamicVisualFrameStyle frame = new MachineGuiStyleManager.DynamicVisualFrameStyle();
+        frame.texture = "demo:textures/gui/a_0.png";
+        frame.u = Integer.valueOf(1);
+        frame.v = Integer.valueOf(2);
+        frame.textureWidth = Integer.valueOf(16);
+        frame.textureHeight = Integer.valueOf(17);
+        visualA.renderer.frames = java.util.Collections.singletonList(frame);
+        base.dynamicVisuals = java.util.Collections.singletonList(visualA);
+
+        MachineGuiStyleManager.ControllerStyle overlay = new MachineGuiStyleManager.ControllerStyle();
+        MachineGuiStyleManager.DynamicVisualStyle visualB = new MachineGuiStyleManager.DynamicVisualStyle();
+        visualB.id = "b";
+        visualB.x = 5;
+        visualB.y = 6;
+        visualB.width = 7;
+        visualB.height = 8;
+        visualB.renderer = new MachineGuiStyleManager.DynamicVisualRendererStyle();
+        visualB.renderer.type = "animatedTexture";
+        visualB.renderer.texture = "demo:textures/gui/b_sheet.png";
+        visualB.renderer.frameWidth = Integer.valueOf(10);
+        visualB.renderer.frameHeight = Integer.valueOf(11);
+        visualB.renderer.frameCount = Integer.valueOf(6);
+        overlay.dynamicVisuals = java.util.Collections.singletonList(visualB);
+
+        MachineGuiStyleManager.ControllerStyle copy = MachineGuiStyleManager.ControllerStyle.copyOf(base);
+        assertNotNull(copy.dynamicVisuals);
+        MachineGuiStyleManager.DynamicVisualRendererStyle copiedRenderer = copy.dynamicVisuals.get(0).renderer;
+        assertNotNull(copiedRenderer);
+        assertEquals("animatedTexture", copiedRenderer.type);
+        assertEquals("demo:textures/gui/a_sheet.png", copiedRenderer.texture);
+        assertEquals(Integer.valueOf(8), copiedRenderer.frameWidth);
+        assertEquals(Integer.valueOf(9), copiedRenderer.frameHeight);
+        assertEquals(Integer.valueOf(5), copiedRenderer.frameCount);
+        assertEquals(Integer.valueOf(2), copiedRenderer.ticksPerFrame);
+        assertEquals(Integer.valueOf(1), copiedRenderer.startFrame);
+        assertEquals(Integer.valueOf(3), copiedRenderer.columns);
+        assertEquals(Boolean.FALSE, copiedRenderer.loop);
+        assertEquals(Boolean.TRUE, copiedRenderer.reverse);
+        assertEquals(Boolean.TRUE, copiedRenderer.pingPong);
+        assertNotNull(copiedRenderer.frames);
+        assertEquals(Integer.valueOf(1), copiedRenderer.frames.get(0).u);
+        assertEquals(Integer.valueOf(2), copiedRenderer.frames.get(0).v);
+        assertEquals(Integer.valueOf(16), copiedRenderer.frames.get(0).textureWidth);
+        assertEquals(Integer.valueOf(17), copiedRenderer.frames.get(0).textureHeight);
+
+        MachineGuiStyleManager.ControllerStyle merged = MachineGuiStyleManager.ControllerStyle.copyOf(base).mergeFrom(overlay);
+        assertNotNull(merged.dynamicVisuals);
+        assertEquals(2, merged.dynamicVisuals.size());
+        assertEquals("a", merged.dynamicVisuals.get(0).id);
+        assertEquals("b", merged.dynamicVisuals.get(1).id);
+        assertEquals("demo:textures/gui/b_sheet.png", merged.dynamicVisuals.get(1).renderer.texture);
     }
 
     @Test
@@ -629,6 +1023,62 @@ public class MachineGuiStyleParserTest {
         assertEquals(2, result.machineStyle.buttons.get(2).hotkeys.size());
         assertEquals(Boolean.FALSE, result.machineStyle.buttons.get(2).consumeHotkey);
         assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonInfersSubGuiActionForButtonsAndGuiOnlyHotkeys() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "button-subgui-hotkeys.json",
+            "{\n" +
+                "  \"registryname\": \"demo:subgui_hotkey_machine\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"buttons\": [\n" +
+                "        {\"x\": 140, \"y\": 8, \"label\": \"Open\", \"targetSubGui\": \"crafting_popup\", \"openMode\": \"modal\"}\n" +
+                "      ],\n" +
+                "      \"hotkeys\": [\n" +
+                "        {\"key\": \"C\", \"targetSubGui\": \"crafting_popup\", \"openMode\": \"replace\"}\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.buttons);
+        assertEquals(2, result.machineStyle.buttons.size());
+        MachineGuiStyleManager.ButtonStyle visibleButton = result.machineStyle.buttons.get(0);
+        assertEquals("subgui", visibleButton.action);
+        assertEquals("crafting_popup", visibleButton.targetSubGui);
+        assertEquals("modal", visibleButton.openMode);
+        MachineGuiStyleManager.ButtonStyle hotkeyButton = result.machineStyle.buttons.get(1);
+        assertEquals("subgui", hotkeyButton.action);
+        assertEquals("crafting_popup", hotkeyButton.targetSubGui);
+        assertEquals("replace", hotkeyButton.openMode);
+        assertEquals("C", hotkeyButton.hotkeys.get(0));
+        assertEquals(Boolean.FALSE, hotkeyButton.visible);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonWarnsWhenSubGuiHotkeyHasNoTargetSubGui() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "invalid-subgui-hotkey.json",
+            "{\n" +
+                "  \"registryname\": \"demo:bad_subgui_hotkey\",\n" +
+                "  \"mmce_gui_ext\": {\n" +
+                "    \"machineController\": {\n" +
+                "      \"hotkeys\": [\n" +
+                "        {\"key\": \"C\", \"action\": \"subgui\"}\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNull(result.machineStyle.buttons);
+        assertTrue(containsWarning(result, "subgui action requires targetSubGui."));
     }
 
     @Test
@@ -1058,6 +1508,273 @@ public class MachineGuiStyleParserTest {
         assertEquals("close_subgui", subGui.style.buttons.get(0).action);
         assertTrue(base.warnings.isEmpty());
         assertTrue(sub.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesDynamicVisualBoundSources() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "dynamic-bounds.json",
+            "{\"registryname\":\"demo:dynamic_bounds\",\"mmce_gui_ext\":{\"machineController\":{" +
+                "\"dynamicVisuals\":[{" +
+                "\"id\":\"tank\",\"x\":0,\"y\":0,\"width\":16,\"height\":16," +
+                "\"source\":{\"type\":\"customData\",\"key\":\"amount\",\"min\":0," +
+                "\"maxSource\":{\"type\":\"customData\",\"key\":\"capacity\",\"default\":1}}," +
+                "\"renderer\":{\"type\":\"fill\"}}]}}}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.dynamicVisuals);
+        MachineGuiStyleManager.DynamicVisualSourceStyle source =
+            result.machineStyle.dynamicVisuals.get(0).source;
+        assertNotNull(source);
+        assertEquals("amount", source.key);
+        assertNotNull(source.maxSource);
+        assertEquals("customData", source.maxSource.type);
+        assertEquals("capacity", source.maxSource.key);
+        assertEquals(Float.valueOf(1.0F), source.maxSource.defaultValue);
+
+        MachineGuiStyleManager.DynamicVisualSourceStyle copy =
+            MachineGuiStyleManager.DynamicVisualSourceStyle.copyOf(source);
+        assertNotNull(copy.maxSource);
+        assertTrue(copy.maxSource != source.maxSource);
+        assertEquals("capacity", copy.maxSource.key);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesSlotGroups() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "slot-groups.json",
+            "{\"registryname\": \"demo:slot_group_machine\"," +
+            "  \"mmce_gui_ext\": {" +
+            "    \"machineController\": {" +
+            "      \"slotGroups\": [" +
+            "        {\"id\": \"input\", \"x\": 8, \"y\": 18, \"rows\": 2, \"cols\": 3}," +
+            "        {\"id\": \"output\", \"x\": 98, \"y\": 18, \"rows\": 2, \"cols\": 3," +
+            "         \"slotWidth\": 20, \"slotHeight\": 20," +
+            "         \"shiftTarget\": \"input\", \"enabled\": false}" +
+            "      ]" +
+            "    }" +
+            "  }" +
+            "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.slotGroups);
+        assertEquals(2, result.machineStyle.slotGroups.size());
+
+        MachineGuiStyleManager.SlotGroupStyle input = result.machineStyle.slotGroups.get(0);
+        assertEquals("input", input.id);
+        assertEquals(Integer.valueOf(8), input.x);
+        assertEquals(Integer.valueOf(18), input.y);
+        assertEquals(Integer.valueOf(2), input.rows);
+        assertEquals(Integer.valueOf(3), input.columns);
+        assertNull(input.spacingX);
+        assertNull(input.spacingY);
+        assertNull(input.shiftTarget);
+        assertNull(input.enabled);
+
+        MachineGuiStyleManager.SlotGroupStyle output = result.machineStyle.slotGroups.get(1);
+        assertEquals("output", output.id);
+        assertEquals(Integer.valueOf(20), output.spacingX);
+        assertEquals(Integer.valueOf(20), output.spacingY);
+        assertEquals("input", output.shiftTarget);
+        assertEquals(Boolean.FALSE, output.enabled);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesPlayerInventory() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "player-inventory.json",
+            "{\"registryname\": \"demo:player_inv_machine\"," +
+            "  \"mmce_gui_ext\": {" +
+            "    \"machineController\": {" +
+            "      \"playerInventory\": {" +
+            "        \"x\": 7, \"y\": 148," +
+            "        \"hotbarX\": 7, \"hotbarY\": 206," +
+            "        \"enabled\": true" +
+            "      }" +
+            "    }" +
+            "  }" +
+            "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.playerInventory);
+        assertEquals(Integer.valueOf(7), result.machineStyle.playerInventory.x);
+        assertEquals(Integer.valueOf(148), result.machineStyle.playerInventory.y);
+        assertEquals(Integer.valueOf(7), result.machineStyle.playerInventory.hotbarX);
+        assertEquals(Integer.valueOf(206), result.machineStyle.playerInventory.hotbarY);
+        assertEquals(Boolean.TRUE, result.machineStyle.playerInventory.enabled);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonKeepsOmittedPlayerInventoryFieldsUnsetForProviderMerge() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "player-inventory-defaults.json",
+            "{\"registryname\": \"demo:player_inv_defaults\"," +
+            "  \"mmce_gui_ext\": {" +
+            "    \"machineController\": {" +
+            "      \"playerInventory\": {" +
+            "        \"x\": 8, \"y\": 140" +
+            "      }" +
+            "    }" +
+            "  }" +
+            "}"
+        );
+
+        assertNotNull(result.machineStyle);
+        assertNotNull(result.machineStyle.playerInventory);
+        assertEquals(Integer.valueOf(8), result.machineStyle.playerInventory.x);
+        assertEquals(Integer.valueOf(140), result.machineStyle.playerInventory.y);
+        assertNull(result.machineStyle.playerInventory.hotbarX);
+        assertNull(result.machineStyle.playerInventory.hotbarY);
+        assertNull(result.machineStyle.playerInventory.mainStart);
+        assertNull(result.machineStyle.playerInventory.hotbarStart);
+        assertNull(result.machineStyle.playerInventory.enabled);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesThreadQueueModeAndTooltip() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "thread-queue-mode.json",
+            "{\"registryname\": \"demo:thread_queue_machine\"," +
+            "  \"mmce_gui_ext\": {" +
+            "    \"factoryController\": {" +
+            "      \"threadQueueMode\": \"compact\"," +
+            "      \"threadTooltip\": true" +
+            "    }" +
+            "  }" +
+            "}"
+        );
+
+        assertNotNull(result.factoryStyle);
+        assertEquals("compact", result.factoryStyle.threadQueueMode);
+        assertEquals(Boolean.TRUE, result.factoryStyle.threadTooltip);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void parseMachineJsonParsesSlotGroupsWithAliases() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "slot-groups-aliases.json",
+            "{\"registryname\": \"demo:slot_group_aliases\"," +
+            "  \"mmce_gui_ext\": {" +
+            "    \"factoryController\": {" +
+            "      \"slot_groups\": [" +
+            "        {\"id\": \"catalyst\", \"x\": 80, \"y\": 36, \"rows\": 1, \"cols\": 1}" +
+            "      ]" +
+            "    }" +
+            "  }" +
+            "}"
+        );
+
+        assertNotNull(result.factoryStyle);
+        assertNotNull(result.factoryStyle.slotGroups);
+        assertEquals(1, result.factoryStyle.slotGroups.size());
+        assertEquals("catalyst", result.factoryStyle.slotGroups.get(0).id);
+        assertEquals(Integer.valueOf(1), result.factoryStyle.slotGroups.get(0).rows);
+        assertEquals(Integer.valueOf(1), result.factoryStyle.slotGroups.get(0).columns);
+        assertTrue(result.warnings.isEmpty());
+    }
+
+    @Test
+    public void controllerStyleCopiesAndMergesSlotGroupsPlayerInventory() {
+        MachineGuiStyleManager.ControllerStyle base = new MachineGuiStyleManager.ControllerStyle();
+        base.slotGroups = new java.util.ArrayList<MachineGuiStyleManager.SlotGroupStyle>();
+        base.slotGroups.add(slotGroupStyle("a", 0, 0, 2, 3));
+
+        MachineGuiStyleManager.ControllerStyle overlay = new MachineGuiStyleManager.ControllerStyle();
+        overlay.slotGroups = new java.util.ArrayList<MachineGuiStyleManager.SlotGroupStyle>();
+        overlay.slotGroups.add(slotGroupStyle("b", 10, 10, 1, 1));
+        overlay.playerInventory = new MachineGuiStyleManager.PlayerInventoryStyle();
+        overlay.playerInventory.x = Integer.valueOf(7);
+        overlay.playerInventory.y = Integer.valueOf(140);
+        overlay.playerInventory.hotbarX = Integer.valueOf(7);
+        overlay.playerInventory.hotbarY = Integer.valueOf(198);
+        overlay.playerInventory.enabled = Boolean.FALSE;
+        overlay.threadQueueMode = "compact";
+        overlay.threadTooltip = Boolean.TRUE;
+
+        MachineGuiStyleManager.ControllerStyle copy = MachineGuiStyleManager.ControllerStyle.copyOf(base);
+        assertNotNull(copy.slotGroups);
+        assertEquals(1, copy.slotGroups.size());
+        assertEquals("a", copy.slotGroups.get(0).id);
+        assertNull(copy.playerInventory);
+        assertNull(copy.threadQueueMode);
+        assertNull(copy.threadTooltip);
+
+        MachineGuiStyleManager.ControllerStyle merged = MachineGuiStyleManager.ControllerStyle.copyOf(base).mergeFrom(overlay);
+        assertNotNull(merged.slotGroups);
+        assertEquals(2, merged.slotGroups.size());
+        assertEquals("a", merged.slotGroups.get(0).id);
+        assertEquals("b", merged.slotGroups.get(1).id);
+        assertNotNull(merged.playerInventory);
+        assertEquals(Integer.valueOf(7), merged.playerInventory.x);
+        assertEquals(Boolean.FALSE, merged.playerInventory.enabled);
+        assertEquals("compact", merged.threadQueueMode);
+        assertEquals(Boolean.TRUE, merged.threadTooltip);
+
+        assertNotNull(copy.slotGroups);
+        assertEquals("a", copy.slotGroups.get(0).id);
+        assertTrue(copy.slotGroups != merged.slotGroups);
+    }
+
+    @Test
+    public void controllerStyleSlotGroupDefensiveCopy() {
+        java.util.List<MachineGuiStyleManager.SlotGroupStyle> groups =
+            new java.util.ArrayList<MachineGuiStyleManager.SlotGroupStyle>();
+        MachineGuiStyleManager.SlotGroupStyle original = slotGroupStyle("orig", 0, 0, 1, 1);
+        original.slotIndices = new int[] {36, 39};
+        groups.add(original);
+        MachineGuiStyleManager.ControllerStyle style = new MachineGuiStyleManager.ControllerStyle();
+        style.slotGroups = groups;
+
+        MachineGuiStyleManager.ControllerStyle copy = MachineGuiStyleManager.ControllerStyle.copyOf(style);
+        assertEquals(1, copy.slotGroups.size());
+        assertEquals("orig", copy.slotGroups.get(0).id);
+
+        copy.slotGroups.get(0).id = "mutated";
+        copy.slotGroups.get(0).slotIndices[0] = 99;
+        assertEquals("orig", style.slotGroups.get(0).id);
+        assertArrayEquals(new int[] {36, 39}, style.slotGroups.get(0).slotIndices);
+    }
+
+    @Test
+    public void parseMachineJsonParsesExplicitAndSparseSlotMappings() {
+        MachineGuiStyleParser.MachineFileParseResult result = MachineGuiStyleParser.parseMachineJson(
+            "slot-index-mappings.json",
+            "{\"registryname\":\"demo:indexed\",\"mmce_gui_ext\":{\"machineController\":{" +
+                "\"slotGroups\":[" +
+                "{\"id\":\"continuous\",\"x\":4,\"y\":5,\"rows\":2,\"columns\":3," +
+                "\"first_slot\":40,\"slot_count\":5,\"spacing_x\":19,\"spacing_y\":20}," +
+                "{\"id\":\"sparse\",\"x\":70,\"y\":5,\"rows\":1,\"columns\":3," +
+                "\"slot_indices\":[52,48,60]}]}}}"
+        );
+
+        assertTrue(result.warnings.isEmpty());
+        MachineGuiStyleManager.SlotGroupStyle continuous = result.machineStyle.slotGroups.get(0);
+        assertEquals(Integer.valueOf(40), continuous.firstSlot);
+        assertEquals(Integer.valueOf(5), continuous.slotCount);
+        assertEquals(Integer.valueOf(19), continuous.spacingX);
+        assertEquals(Integer.valueOf(20), continuous.spacingY);
+        MachineGuiStyleManager.SlotGroupStyle sparse = result.machineStyle.slotGroups.get(1);
+        assertArrayEquals(new int[] {52, 48, 60}, sparse.slotIndices);
+    }
+
+    private static MachineGuiStyleManager.SlotGroupStyle slotGroupStyle(
+        String id, int x, int y, int rows, int columns
+    ) {
+        MachineGuiStyleManager.SlotGroupStyle style = new MachineGuiStyleManager.SlotGroupStyle();
+        style.id = id;
+        style.x = Integer.valueOf(x);
+        style.y = Integer.valueOf(y);
+        style.rows = Integer.valueOf(rows);
+        style.columns = Integer.valueOf(columns);
+        return style;
     }
 
     private static boolean containsWarning(MachineGuiStyleParser.MachineFileParseResult result, String fragment) {

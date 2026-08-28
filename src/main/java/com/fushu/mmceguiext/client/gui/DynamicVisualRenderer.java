@@ -1,0 +1,1333 @@
+package com.fushu.mmceguiext.client.gui;
+
+import com.fushu.mmceguiext.client.config.MachineGuiStyleManager;
+import com.fushu.mmceguiext.client.config.ProgressBarStyleSupport;
+import com.fushu.mmceguiext.common.util.ControllerCustomDataAccess;
+import hellfirepvp.modularmachinery.common.tiles.base.TileMultiblockMachineController;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.renderer.BufferBuilder;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.MathHelper;
+import org.lwjgl.opengl.GL11;
+
+import javax.annotation.Nullable;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+public class DynamicVisualRenderer {
+    public interface MetricProvider {
+        float getMachineMetric(String metric, float fallback);
+
+        default double getMachineMetricValue(String metric, double fallback) {
+            float value = getMachineMetric(metric, (float) fallback);
+            return Float.isFinite(value) ? value : fallback;
+        }
+    }
+
+    private static final float EPSILON = 1.0E-4F;
+    private final Map<String, HistoryState> histories = new HashMap<String, HistoryState>();
+
+    public void reset() {
+        this.histories.clear();
+    }
+
+    public void render(
+        @Nullable List<MachineGuiStyleManager.DynamicVisualStyle> visuals,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider,
+        int originX,
+        int originY,
+        boolean foreground,
+        @Nullable Integer priorityFilter,
+        PagePredicate pagePredicate,
+        int defaultPriority
+    ) {
+        if (visuals == null || visuals.isEmpty()) {
+            return;
+        }
+        for (MachineGuiStyleManager.DynamicVisualStyle visual : visuals) {
+            if (!shouldRender(visual, foreground, priorityFilter, pagePredicate, defaultPriority)) {
+                continue;
+            }
+            double rawNumber = resolveRawValueNumber(visual.source, controller, metricProvider);
+            float raw = toFloat(rawNumber);
+            float normalized = normalizeValue(rawNumber, visual.source, controller, metricProvider);
+            if (!resolveVisibilityByValue(visual.visibleByValue, normalized, controller, metricProvider)) {
+                continue;
+            }
+            updateHistoryIfNeeded(visual, normalized, controller);
+            MachineGuiStyleManager.DynamicVisualRendererStyle renderer = resolveRendererStyle(visual, normalized, controller, metricProvider);
+            if (renderer == null) {
+                continue;
+            }
+            renderVisual(visual, renderer, raw, normalized, controller, metricProvider, originX, originY);
+        }
+    }
+
+    public void collectForegroundPriorities(
+        @Nullable List<MachineGuiStyleManager.DynamicVisualStyle> visuals,
+        java.util.Set<Integer> out,
+        int defaultPriority
+    ) {
+        if (visuals == null || out == null) {
+            return;
+        }
+        for (MachineGuiStyleManager.DynamicVisualStyle visual : visuals) {
+            if (visual != null && (visual.foreground == null || visual.foreground.booleanValue())) {
+                out.add(Integer.valueOf(resolvePriority(visual, defaultPriority)));
+            }
+        }
+    }
+
+    private boolean shouldRender(
+        @Nullable MachineGuiStyleManager.DynamicVisualStyle visual,
+        boolean foreground,
+        @Nullable Integer priorityFilter,
+        PagePredicate pagePredicate,
+        int defaultPriority
+    ) {
+        if (visual == null) {
+            return false;
+        }
+        if (visual.renderer == null && (visual.rendererSwitch == null || visual.rendererSwitch.isEmpty())) {
+            return false;
+        }
+        if (visual.visible != null && !visual.visible.booleanValue()) {
+            return false;
+        }
+        boolean visualForeground = visual.foreground == null || visual.foreground.booleanValue();
+        if (visualForeground != foreground) {
+            return false;
+        }
+        if (priorityFilter != null && resolvePriority(visual, defaultPriority) != priorityFilter.intValue()) {
+            return false;
+        }
+        return pagePredicate == null || pagePredicate.isVisible(visual.page);
+    }
+
+    private int resolvePriority(MachineGuiStyleManager.DynamicVisualStyle visual, int defaultPriority) {
+        return visual.priority == null ? defaultPriority : visual.priority.intValue();
+    }
+
+    private double resolveRawValueNumber(
+        @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle source,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        double fallback = source == null || source.defaultValue == null ? 0.0D : source.defaultValue.doubleValue();
+        return resolveRawValueNumber(source, controller, metricProvider, fallback);
+    }
+
+    private double resolveRawValueNumber(
+        @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle source,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider,
+        double fallback
+    ) {
+        if (source == null) {
+            return fallback;
+        }
+        if (source.sources != null && !source.sources.isEmpty()) {
+            return combineSourceValuesNumber(source, controller, metricProvider, fallback);
+        }
+        String type = source.type == null ? "machine" : source.type;
+        if ("customData".equals(type)) {
+            if (source.key == null || source.key.trim().isEmpty()) {
+                return fallback;
+            }
+            Number value = ControllerCustomDataAccess.readNumberValue(controller, source.key.trim());
+            double resolved = value == null ? Double.NaN : value.doubleValue();
+            return Double.isFinite(resolved) ? resolved : fallback;
+        }
+        String metric = source.metric == null || source.metric.trim().isEmpty() ? "recipeProgress" : source.metric.trim();
+        if (metricProvider == null) {
+            return fallback;
+        }
+        double value = metricProvider.getMachineMetricValue(metric, fallback);
+        return Double.isFinite(value) ? value : fallback;
+    }
+
+    double combineSourceValuesNumber(
+        MachineGuiStyleManager.DynamicVisualSourceStyle source,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider,
+        double fallback
+    ) {
+        if (source.sources == null || source.sources.isEmpty()) {
+            return fallback;
+        }
+        String combine = source.combine == null ? "sum" : source.combine;
+        double result = 0.0D;
+        double totalWeight = 0.0D;
+        boolean found = false;
+        int count = 0;
+        if ("multiply".equals(combine)) {
+            result = 1.0D;
+        }
+        for (MachineGuiStyleManager.DynamicVisualSourceStyle child : source.sources) {
+            if (child == null) {
+                continue;
+            }
+            double childFallback = child.defaultValue == null ? fallback : child.defaultValue.doubleValue();
+            double value = resolveRawValueNumber(child, controller, metricProvider, childFallback);
+            if (!Double.isFinite(value)) {
+                value = childFallback;
+            }
+            if (!Double.isFinite(value)) {
+                continue;
+            }
+            double weight = child.weight == null ? 1.0D : child.weight.doubleValue();
+            if (!Double.isFinite(weight)) {
+                weight = 1.0D;
+            }
+            double weightedValue = value * weight;
+            if (!found) {
+                found = true;
+                if ("min".equals(combine) || "max".equals(combine) || "first".equals(combine) || "last".equals(combine)
+                    || "subtract".equals(combine) || "divide".equals(combine)) {
+                    result = value;
+                }
+            }
+            count++;
+            if ("sum".equals(combine) || "average".equals(combine)) {
+                result += value;
+            } else if ("weightedSum".equals(combine) || "weightedAverage".equals(combine)) {
+                result += weightedValue;
+                totalWeight += weight;
+            } else if ("min".equals(combine)) {
+                result = Math.min(result, value);
+            } else if ("max".equals(combine)) {
+                result = Math.max(result, value);
+            } else if ("multiply".equals(combine)) {
+                result *= value;
+            } else if ("subtract".equals(combine)) {
+                if (count == 1) {
+                    result = value;
+                } else {
+                    result -= value;
+                }
+            } else if ("divide".equals(combine)) {
+                if (count == 1) {
+                    result = value;
+                } else if (Math.abs(value) > EPSILON) {
+                    result /= value;
+                } else {
+                    return fallback;
+                }
+            } else if ("last".equals(combine)) {
+                result = value;
+            } else if ("first".equals(combine)) {
+                break;
+            } else {
+                result += value;
+            }
+        }
+        if (!found || count <= 0) {
+            return fallback;
+        }
+        if ("average".equals(combine)) {
+            double average = result / (double) count;
+            return Double.isFinite(average) ? average : fallback;
+        }
+        if ("weightedAverage".equals(combine)) {
+            double average = Math.abs(totalWeight) > EPSILON ? result / totalWeight : fallback;
+            return Double.isFinite(average) ? average : fallback;
+        }
+        return Double.isFinite(result) ? result : fallback;
+    }
+
+    private float normalizeValue(
+        double raw,
+        @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle source,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        double value = Double.isFinite(raw) ? raw : 0.0D;
+        double staticMin = source == null || source.min == null ? 0.0D : source.min.doubleValue();
+        double staticMax = source == null || source.max == null ? 1.0D : source.max.doubleValue();
+        double min = resolveDynamicBoundNumber(source == null ? null : source.minSource, staticMin, controller, metricProvider);
+        double max = resolveDynamicBoundNumber(source == null ? null : source.maxSource, staticMax, controller, metricProvider);
+        boolean clamp = source == null || source.clamp == null || source.clamp.booleanValue();
+        boolean invert = source != null && Boolean.TRUE.equals(source.invert);
+        return normalizeValueWithDoubleBounds(value, min, max, clamp, invert);
+    }
+
+    static float normalizeValueWithBounds(float raw,
+                                          float min,
+                                          float max,
+                                          boolean clamp,
+                                          boolean invert) {
+        return normalizeValueWithDoubleBounds(raw, min, max, clamp, invert);
+    }
+
+    static float normalizeValueWithDoubleBounds(
+        double raw,
+        double min,
+        double max,
+        boolean clamp,
+        boolean invert
+    ) {
+        if (!Double.isFinite(raw) || !Double.isFinite(min) || !Double.isFinite(max) || max <= min) {
+            return 0.0F;
+        }
+        double value = (raw - min) / (max - min);
+        if (clamp) {
+            value = clamp01(value);
+        }
+        if (invert) {
+            value = 1.0D - value;
+            if (clamp) {
+                value = clamp01(value);
+            }
+        }
+        return (float) value;
+    }
+
+    float resolveDynamicBound(
+        @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle boundSource,
+        float fallback,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        return toFloat(resolveDynamicBoundNumber(boundSource, fallback, controller, metricProvider));
+    }
+
+    double resolveDynamicBoundNumber(
+        @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle boundSource,
+        double fallback,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        if (boundSource == null) {
+            return Double.isFinite(fallback) ? fallback : 0.0D;
+        }
+        double boundFallback = boundSource.defaultValue == null
+            ? Double.NaN
+            : boundSource.defaultValue.doubleValue();
+        double resolved = resolveRawValueNumber(boundSource, controller, metricProvider, boundFallback);
+        return Double.isFinite(resolved) ? resolved : (Double.isFinite(fallback) ? fallback : 0.0D);
+    }
+
+    private void renderVisual(
+        MachineGuiStyleManager.DynamicVisualStyle visual,
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        float rawValue,
+        float normalized,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider,
+        int originX,
+        int originY
+    ) {
+        String type = renderer.type == null ? "fill" : renderer.type;
+        ResolvedTransform transform = resolveTransform(visual, normalized, controller, metricProvider);
+        if (transform.alpha <= EPSILON) {
+            return;
+        }
+        int x = originX + visual.x + Math.round(transform.offsetX);
+        int y = originY + visual.y + Math.round(transform.offsetY);
+        beginVisualRender(transform.alpha);
+        try {
+            if (transform.requiresMatrix()) {
+                float pivotX = transform.resolvePivotX(visual.width);
+                float pivotY = transform.resolvePivotY(visual.height);
+                GlStateManager.pushMatrix();
+                try {
+                    GlStateManager.translate(x + pivotX, y + pivotY, 0.0F);
+                    applyTransformMatrix(transform);
+                    drawResolvedVisual(
+                        type,
+                        visual,
+                        renderer,
+                        rawValue,
+                        normalized,
+                        controller,
+                        -Math.round(pivotX),
+                        -Math.round(pivotY),
+                        visual.width,
+                        visual.height,
+                        transform.alpha
+                    );
+                } finally {
+                    GlStateManager.popMatrix();
+                }
+            } else {
+                drawResolvedVisual(type, visual, renderer, rawValue, normalized, controller, x, y, visual.width, visual.height, transform.alpha);
+            }
+        } finally {
+            endVisualRender(transform.alpha);
+        }
+    }
+
+    private boolean resolveVisibilityByValue(
+        @Nullable MachineGuiStyleManager.DynamicVisualVisibilityByValueStyle visibility,
+        float fallbackNormalized,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        if (visibility == null) {
+            return true;
+        }
+        float value = resolveNormalizedInput(visibility.source, fallbackNormalized, controller, metricProvider);
+        boolean visible = true;
+        if (visibility.equals != null) {
+            visible = Math.abs(value - visibility.equals.floatValue()) <= EPSILON;
+        }
+        if (visibility.min != null && value < visibility.min.floatValue()) {
+            visible = false;
+        }
+        if (visibility.max != null && value > visibility.max.floatValue()) {
+            visible = false;
+        }
+        if (Boolean.TRUE.equals(visibility.invert)) {
+            visible = !visible;
+        }
+        return visible;
+    }
+
+    @Nullable
+    private MachineGuiStyleManager.DynamicVisualRendererStyle resolveRendererStyle(
+        MachineGuiStyleManager.DynamicVisualStyle visual,
+        float fallbackNormalized,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer = resolveRendererVariant(visual, fallbackNormalized, controller, metricProvider);
+        if (renderer == null) {
+            return null;
+        }
+        MachineGuiStyleManager.DynamicVisualRendererByValueStyle dynamic = visual.rendererByValue;
+        if (dynamic == null) {
+            return renderer;
+        }
+        renderer.backgroundColor = resolveDrivenColor(dynamic.backgroundColor, renderer.backgroundColor, fallbackNormalized, controller, metricProvider);
+        renderer.fillColor = resolveDrivenColor(dynamic.fillColor, renderer.fillColor, fallbackNormalized, controller, metricProvider);
+        renderer.borderColor = resolveDrivenColor(dynamic.borderColor, renderer.borderColor, fallbackNormalized, controller, metricProvider);
+        renderer.color = resolveDrivenColor(dynamic.color, renderer.color, fallbackNormalized, controller, metricProvider);
+        renderer.lineColor = resolveDrivenColor(dynamic.lineColor, renderer.lineColor, fallbackNormalized, controller, metricProvider);
+        renderer.gridColor = resolveDrivenColor(dynamic.gridColor, renderer.gridColor, fallbackNormalized, controller, metricProvider);
+        return renderer;
+    }
+
+    @Nullable
+    private MachineGuiStyleManager.DynamicVisualRendererStyle resolveRendererVariant(
+        MachineGuiStyleManager.DynamicVisualStyle visual,
+        float fallbackNormalized,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        if (visual.rendererSwitch != null) {
+            for (MachineGuiStyleManager.DynamicVisualRendererRuleStyle rule : visual.rendererSwitch) {
+                if (rule == null || rule.renderer == null) {
+                    continue;
+                }
+                float value = resolveNormalizedInput(rule.source, fallbackNormalized, controller, metricProvider);
+                if (matchesRendererRule(rule, value)) {
+                    return MachineGuiStyleManager.DynamicVisualRendererStyle.copyOf(rule.renderer);
+                }
+            }
+        }
+        return MachineGuiStyleManager.DynamicVisualRendererStyle.copyOf(visual.renderer);
+    }
+
+    private boolean matchesRendererRule(MachineGuiStyleManager.DynamicVisualRendererRuleStyle rule, float value) {
+        if (rule.equals != null && Math.abs(value - rule.equals.floatValue()) > EPSILON) {
+            return false;
+        }
+        if (rule.min != null && value < rule.min.floatValue()) {
+            return false;
+        }
+        if (rule.max != null && value > rule.max.floatValue()) {
+            return false;
+        }
+        return true;
+    }
+
+    private void drawResolvedVisual(
+        String type,
+        MachineGuiStyleManager.DynamicVisualStyle visual,
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        float rawValue,
+        float normalized,
+        @Nullable TileMultiblockMachineController controller,
+        int x,
+        int y,
+        int width,
+        int height,
+        float alpha
+    ) {
+        if ("textureSwitch".equals(type)) {
+            drawTextureSwitch(renderer, rawValue, x, y, width, height);
+        } else if ("animatedTexture".equals(type)) {
+            drawAnimatedTexture(renderer, controller, x, y, width, height);
+        } else if ("pie".equals(type)) {
+            drawPie(renderer, normalized, x, y, width, height, alpha);
+        } else if ("lineChart".equals(type)) {
+            drawLineChart(visual, renderer, normalized, x, y, width, height, alpha);
+        } else {
+            drawFill(renderer, normalized, x, y, width, height, alpha);
+        }
+    }
+
+    private ResolvedTransform resolveTransform(
+        MachineGuiStyleManager.DynamicVisualStyle visual,
+        float normalized,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        ResolvedTransform transform = new ResolvedTransform();
+        MachineGuiStyleManager.DynamicVisualTransformStyle base = visual.transform;
+        if (base != null) {
+            if (base.offsetX != null) {
+                transform.offsetX = base.offsetX.floatValue();
+            }
+            if (base.offsetY != null) {
+                transform.offsetY = base.offsetY.floatValue();
+            }
+            if (base.scale != null) {
+                float scale = normalizeRuntimeScale(base.scale.floatValue());
+                transform.scaleX = scale;
+                transform.scaleY = scale;
+            }
+            if (base.scaleX != null) {
+                transform.scaleX = normalizeRuntimeScale(base.scaleX.floatValue());
+            }
+            if (base.scaleY != null) {
+                transform.scaleY = normalizeRuntimeScale(base.scaleY.floatValue());
+            }
+            if (base.rotation != null) {
+                transform.rotation = base.rotation.floatValue();
+            }
+            if (base.alpha != null) {
+                transform.alpha = normalizeRuntimeAlpha(base.alpha.floatValue());
+            }
+            if (base.origin != null && !base.origin.trim().isEmpty()) {
+                transform.origin = base.origin;
+            }
+            if (base.pivotX != null) {
+                transform.pivotX = base.pivotX.floatValue();
+            }
+            if (base.pivotY != null) {
+                transform.pivotY = base.pivotY.floatValue();
+            }
+            if (base.pivotUnit != null && !base.pivotUnit.trim().isEmpty()) {
+                transform.pivotUnit = base.pivotUnit;
+            }
+        }
+
+        MachineGuiStyleManager.DynamicVisualTransformByValueStyle dynamic = visual.transformByValue;
+        if (dynamic != null) {
+            if (dynamic.offsetX != null) {
+                transform.offsetX += resolveDrivenValue(dynamic.offsetX, normalized, controller, metricProvider);
+            }
+            if (dynamic.offsetY != null) {
+                transform.offsetY += resolveDrivenValue(dynamic.offsetY, normalized, controller, metricProvider);
+            }
+            if (dynamic.scale != null) {
+                float scale = normalizeRuntimeScale(resolveDrivenValue(dynamic.scale, normalized, controller, metricProvider));
+                transform.scaleX *= scale;
+                transform.scaleY *= scale;
+            }
+            if (dynamic.scaleX != null) {
+                transform.scaleX *= normalizeRuntimeScale(resolveDrivenValue(dynamic.scaleX, normalized, controller, metricProvider));
+            }
+            if (dynamic.scaleY != null) {
+                transform.scaleY *= normalizeRuntimeScale(resolveDrivenValue(dynamic.scaleY, normalized, controller, metricProvider));
+            }
+            if (dynamic.rotation != null) {
+                transform.rotation += resolveDrivenValue(dynamic.rotation, normalized, controller, metricProvider);
+            }
+            if (dynamic.alpha != null) {
+                transform.alpha *= normalizeRuntimeAlpha(resolveDrivenValue(dynamic.alpha, normalized, controller, metricProvider));
+            }
+            if (dynamic.pivotX != null) {
+                transform.pivotX = Float.valueOf(resolveDrivenValue(dynamic.pivotX, normalized, controller, metricProvider));
+            }
+            if (dynamic.pivotY != null) {
+                transform.pivotY = Float.valueOf(resolveDrivenValue(dynamic.pivotY, normalized, controller, metricProvider));
+            }
+        }
+
+        transform.scaleX = normalizeRuntimeScale(transform.scaleX);
+        transform.scaleY = normalizeRuntimeScale(transform.scaleY);
+        transform.alpha = normalizeRuntimeAlpha(transform.alpha);
+        return transform;
+    }
+
+    private float resolveDrivenValue(
+        MachineGuiStyleManager.DynamicVisualDrivenValueStyle driven,
+        float fallbackNormalized,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        float input = resolveNormalizedInput(driven.source, fallbackNormalized, controller, metricProvider);
+        float min = driven.min == null ? 0.0F : driven.min.floatValue();
+        float max = driven.max == null ? 1.0F : driven.max.floatValue();
+        if (!Float.isFinite(input)) {
+            input = 0.0F;
+        }
+        if (Math.abs(max - min) <= EPSILON) {
+            return min;
+        }
+        return min + (max - min) * input;
+    }
+
+    float resolveNormalizedInput(
+        @Nullable MachineGuiStyleManager.DynamicVisualSourceStyle source,
+        float fallbackNormalized,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        float input = fallbackNormalized;
+        if (source != null) {
+            double raw = resolveRawValueNumber(source, controller, metricProvider);
+            input = normalizeValue(raw, source, controller, metricProvider);
+        }
+        return Float.isFinite(input) ? input : 0.0F;
+    }
+
+    @Nullable
+    private Integer resolveDrivenColor(
+        @Nullable MachineGuiStyleManager.DynamicVisualDrivenColorStyle driven,
+        @Nullable Integer baseColor,
+        float fallbackNormalized,
+        @Nullable TileMultiblockMachineController controller,
+        MetricProvider metricProvider
+    ) {
+        if (driven == null) {
+            return baseColor;
+        }
+        float input = ProgressBarStyleSupport.clamp01(resolveNormalizedInput(driven.source, fallbackNormalized, controller, metricProvider));
+        Integer fromColor = driven.fromColor != null ? driven.fromColor : (baseColor != null ? baseColor : driven.toColor);
+        Integer toColor = driven.toColor != null ? driven.toColor : (baseColor != null ? baseColor : driven.fromColor);
+        if (fromColor == null && toColor == null) {
+            return baseColor;
+        }
+        if (fromColor == null) {
+            fromColor = toColor;
+        }
+        if (toColor == null) {
+            toColor = fromColor;
+        }
+        return Integer.valueOf(interpolateColor(fromColor.intValue(), toColor.intValue(), input));
+    }
+
+    private int interpolateColor(int fromColor, int toColor, float progress) {
+        float clamped = ProgressBarStyleSupport.clamp01(progress);
+        int fromA = (fromColor >>> 24) & 0xFF;
+        int fromR = (fromColor >>> 16) & 0xFF;
+        int fromG = (fromColor >>> 8) & 0xFF;
+        int fromB = fromColor & 0xFF;
+        int toA = (toColor >>> 24) & 0xFF;
+        int toR = (toColor >>> 16) & 0xFF;
+        int toG = (toColor >>> 8) & 0xFF;
+        int toB = toColor & 0xFF;
+        int outA = MathHelper.clamp(Math.round(fromA + (toA - fromA) * clamped), 0, 255);
+        int outR = MathHelper.clamp(Math.round(fromR + (toR - fromR) * clamped), 0, 255);
+        int outG = MathHelper.clamp(Math.round(fromG + (toG - fromG) * clamped), 0, 255);
+        int outB = MathHelper.clamp(Math.round(fromB + (toB - fromB) * clamped), 0, 255);
+        return (outA << 24) | (outR << 16) | (outG << 8) | outB;
+    }
+
+    private static float toFloat(double value) {
+        if (Double.isNaN(value)) {
+            return 0.0F;
+        }
+        if (value >= Float.MAX_VALUE) {
+            return Float.MAX_VALUE;
+        }
+        if (value <= -Float.MAX_VALUE) {
+            return -Float.MAX_VALUE;
+        }
+        return (float) value;
+    }
+
+    private static double clamp01(double value) {
+        if (!Double.isFinite(value)) {
+            return 0.0D;
+        }
+        return Math.max(0.0D, Math.min(1.0D, value));
+    }
+
+    private void applyTransformMatrix(ResolvedTransform transform) {
+        if (Math.abs(transform.rotation) > EPSILON) {
+            GlStateManager.rotate(transform.rotation, 0.0F, 0.0F, 1.0F);
+        }
+        if (Math.abs(transform.scaleX - 1.0F) > EPSILON || Math.abs(transform.scaleY - 1.0F) > EPSILON) {
+            GlStateManager.scale(transform.scaleX, transform.scaleY, 1.0F);
+        }
+    }
+
+    private void beginVisualRender(float alpha) {
+        if (alpha < 1.0F - EPSILON) {
+            GlStateManager.enableBlend();
+            GlStateManager.tryBlendFuncSeparate(
+                GlStateManager.SourceFactor.SRC_ALPHA,
+                GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+                GlStateManager.SourceFactor.ONE,
+                GlStateManager.DestFactor.ZERO
+            );
+        }
+        GlStateManager.color(1.0F, 1.0F, 1.0F, normalizeRuntimeAlpha(alpha));
+    }
+
+    private void endVisualRender(float alpha) {
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        GlStateManager.enableTexture2D();
+        if (alpha < 1.0F - EPSILON) {
+            GlStateManager.disableBlend();
+        }
+    }
+
+    private void drawTextureSwitch(MachineGuiStyleManager.DynamicVisualRendererStyle renderer, float value, int x, int y, int width, int height) {
+        String texture = null;
+        MachineGuiStyleManager.DynamicVisualFrameStyle selectedFrame = null;
+        if (renderer.frames != null) {
+            for (MachineGuiStyleManager.DynamicVisualFrameStyle frame : renderer.frames) {
+                if (frame == null || frame.texture == null || frame.texture.trim().isEmpty()) {
+                    continue;
+                }
+                if (matchesFrame(frame, value)) {
+                    texture = frame.texture;
+                    selectedFrame = frame;
+                    break;
+                }
+            }
+        }
+        if (texture == null || texture.trim().isEmpty()) {
+            texture = renderer.fallbackTexture;
+        }
+        ResourceLocation resource = GuiRenderUtils.parseOptionalTexture(texture);
+        if (resource == null) {
+            return;
+        }
+        int[] drawSpec = resolveTextureSwitchDrawSpec(renderer, selectedFrame, width, height);
+        Minecraft.getMinecraft().getTextureManager().bindTexture(resource);
+        GuiRenderUtils.drawTexturedRect(x, y, drawSpec[0], drawSpec[1], width, height, drawSpec[2], drawSpec[3]);
+    }
+
+    static int[] resolveTextureSwitchDrawSpec(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        @Nullable MachineGuiStyleManager.DynamicVisualFrameStyle selectedFrame,
+        int width,
+        int height
+    ) {
+        int baseU = resolveNonNegative(renderer.u, 0);
+        int baseV = resolveNonNegative(renderer.v, 0);
+        int u = selectedFrame == null ? baseU : resolveNonNegative(selectedFrame.u, baseU);
+        int v = selectedFrame == null ? baseV : resolveNonNegative(selectedFrame.v, baseV);
+        int texW = selectedFrame != null && selectedFrame.textureWidth != null
+            ? Math.max(1, selectedFrame.textureWidth.intValue())
+            : renderer.textureWidth == null ? Math.max(1, width) : Math.max(1, renderer.textureWidth.intValue());
+        int texH = selectedFrame != null && selectedFrame.textureHeight != null
+            ? Math.max(1, selectedFrame.textureHeight.intValue())
+            : renderer.textureHeight == null ? Math.max(1, height) : Math.max(1, renderer.textureHeight.intValue());
+        return new int[] {u, v, texW, texH};
+    }
+
+    private boolean matchesFrame(MachineGuiStyleManager.DynamicVisualFrameStyle frame, float value) {
+        if (frame.equals != null && Math.abs(value - frame.equals.floatValue()) > EPSILON) {
+            return false;
+        }
+        if (frame.min != null && value < frame.min.floatValue()) {
+            return false;
+        }
+        if (frame.max != null && value > frame.max.floatValue()) {
+            return false;
+        }
+        return true;
+    }
+
+    private void drawAnimatedTexture(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        @Nullable TileMultiblockMachineController controller,
+        int x,
+        int y,
+        int width,
+        int height
+    ) {
+        long tick = getWorldTime(controller);
+        int ticksPerFrame = renderer.ticksPerFrame == null ? 2 : renderer.ticksPerFrame.intValue();
+        int startFrame = renderer.startFrame == null ? 0 : renderer.startFrame.intValue();
+        boolean loop = renderer.loop == null || renderer.loop.booleanValue();
+        boolean reverse = renderer.reverse != null && renderer.reverse.booleanValue();
+        boolean pingPong = renderer.pingPong != null && renderer.pingPong.booleanValue();
+        if (renderer.frames != null && !renderer.frames.isEmpty()) {
+            int frameIndex = computeAnimatedFrameIndex(tick, renderer.frames.size(), ticksPerFrame, startFrame, loop, reverse, pingPong);
+            drawAnimatedFrame(renderer, renderer.frames.get(frameIndex), x, y, width, height);
+            return;
+        }
+        drawAnimatedSpriteSheet(renderer, tick, ticksPerFrame, startFrame, loop, reverse, pingPong, x, y, width, height);
+    }
+
+    private void drawAnimatedFrame(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        @Nullable MachineGuiStyleManager.DynamicVisualFrameStyle frame,
+        int x,
+        int y,
+        int width,
+        int height
+    ) {
+        if (frame == null || frame.texture == null || frame.texture.trim().isEmpty()) {
+            return;
+        }
+        ResourceLocation resource = GuiRenderUtils.parseOptionalTexture(frame.texture);
+        if (resource == null) {
+            return;
+        }
+        int u = frame.u == null ? resolveNonNegative(renderer.u, 0) : Math.max(0, frame.u.intValue());
+        int v = frame.v == null ? resolveNonNegative(renderer.v, 0) : Math.max(0, frame.v.intValue());
+        int sourceWidth = resolvePositive(renderer.frameWidth, width);
+        int sourceHeight = resolvePositive(renderer.frameHeight, height);
+        int textureWidth = frame.textureWidth == null ? resolvePositive(renderer.textureWidth, sourceWidth + u) : Math.max(1, frame.textureWidth.intValue());
+        int textureHeight = frame.textureHeight == null ? resolvePositive(renderer.textureHeight, sourceHeight + v) : Math.max(1, frame.textureHeight.intValue());
+        Minecraft.getMinecraft().getTextureManager().bindTexture(resource);
+        GuiRenderUtils.drawScaledTexturedRect(x, y, width, height, u, v, sourceWidth, sourceHeight, textureWidth, textureHeight);
+    }
+
+    private void drawAnimatedSpriteSheet(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        long tick,
+        int ticksPerFrame,
+        int startFrame,
+        boolean loop,
+        boolean reverse,
+        boolean pingPong,
+        int x,
+        int y,
+        int width,
+        int height
+    ) {
+        ResourceLocation resource = GuiRenderUtils.parseOptionalTexture(renderer.texture);
+        if (resource == null || renderer.frameWidth == null || renderer.frameHeight == null || renderer.frameCount == null) {
+            return;
+        }
+        int frameWidth = Math.max(1, renderer.frameWidth.intValue());
+        int frameHeight = Math.max(1, renderer.frameHeight.intValue());
+        int frameCount = Math.max(1, renderer.frameCount.intValue());
+        int baseU = resolveNonNegative(renderer.u, 0);
+        int baseV = resolveNonNegative(renderer.v, 0);
+        int columns = resolveAnimatedSheetColumns(renderer, baseU, frameWidth, frameCount);
+        frameCount = resolveRenderableSheetFrameCount(
+            renderer, baseU, baseV, frameWidth, frameHeight, columns, frameCount
+        );
+        int frameIndex = computeAnimatedFrameIndex(tick, frameCount, ticksPerFrame, startFrame, loop, reverse, pingPong);
+        int[] uv = computeSpriteSheetFrameUv(
+            frameIndex,
+            baseU,
+            baseV,
+            frameWidth,
+            frameHeight,
+            columns
+        );
+        int rows = Math.max(1, (frameCount + columns - 1) / columns);
+        int textureWidth = resolvePositive(renderer.textureWidth, baseU + frameWidth * columns);
+        int textureHeight = resolvePositive(renderer.textureHeight, baseV + frameHeight * rows);
+        Minecraft.getMinecraft().getTextureManager().bindTexture(resource);
+        GuiRenderUtils.drawScaledTexturedRect(x, y, width, height, uv[0], uv[1], frameWidth, frameHeight, textureWidth, textureHeight);
+    }
+
+    private int resolveAnimatedSheetColumns(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        int baseU,
+        int frameWidth,
+        int frameCount
+    ) {
+        if (renderer.columns != null) {
+            int configured = Math.max(1, renderer.columns.intValue());
+            if (renderer.textureWidth != null) {
+                int available = (renderer.textureWidth.intValue() - baseU) / Math.max(1, frameWidth);
+                if (available > 0) {
+                    return Math.min(configured, available);
+                }
+            }
+            return configured;
+        }
+        if (renderer.textureWidth != null && frameWidth > 0) {
+            int inferred = (renderer.textureWidth.intValue() - baseU) / frameWidth;
+            if (inferred > 0) {
+                return inferred;
+            }
+        }
+        return Math.max(1, frameCount);
+    }
+
+    private int resolveRenderableSheetFrameCount(
+        MachineGuiStyleManager.DynamicVisualRendererStyle renderer,
+        int baseU,
+        int baseV,
+        int frameWidth,
+        int frameHeight,
+        int columns,
+        int frameCount
+    ) {
+        int safeCount = Math.max(1, frameCount);
+        if (renderer.textureWidth != null && renderer.textureHeight != null) {
+            int availableColumns = (renderer.textureWidth.intValue() - baseU) / Math.max(1, frameWidth);
+            int availableRows = (renderer.textureHeight.intValue() - baseV) / Math.max(1, frameHeight);
+            if (availableColumns > 0 && availableRows > 0) {
+                safeCount = Math.min(
+                    safeCount,
+                    Math.min(columns, availableColumns) * availableRows
+                );
+            }
+        }
+        return Math.max(1, safeCount);
+    }
+
+    private int resolvePositive(@Nullable Integer value, int fallback) {
+        if (value != null && value.intValue() > 0) {
+            return value.intValue();
+        }
+        return Math.max(1, fallback);
+    }
+
+    private static int resolveNonNegative(@Nullable Integer value, int fallback) {
+        if (value != null && value.intValue() >= 0) {
+            return value.intValue();
+        }
+        return Math.max(0, fallback);
+    }
+
+    static int computeAnimatedFrameIndex(
+        long tick,
+        int frameCount,
+        int ticksPerFrame,
+        int startFrame,
+        boolean loop,
+        boolean reverse,
+        boolean pingPong
+    ) {
+        int count = Math.max(1, frameCount);
+        int frameTicks = Math.max(1, ticksPerFrame);
+        int start = MathHelper.clamp(startFrame, 0, count - 1);
+        long step = Math.max(0L, tick) / (long) frameTicks;
+        int index;
+        if (pingPong && count > 1) {
+            int period = count * 2 - 2;
+            int phase = loop
+                ? (int) ((step % (long) period + (long) start) % (long) period)
+                : saturatingPingPongPhase(step, start, period);
+            index = phase < count ? phase : period - phase;
+        } else {
+            if (loop) {
+                index = (int) ((step % (long) count + (long) start) % (long) count);
+            } else {
+                index = (int) Math.min((long) count - 1L, saturatingAdd(step, start));
+            }
+        }
+        return reverse ? count - 1 - index : index;
+    }
+
+    private static int saturatingPingPongPhase(long step, int start, int period) {
+        long position = saturatingAdd(step, start);
+        return (int) Math.min(position, (long) period);
+    }
+
+    private static long saturatingAdd(long left, long right) {
+        if (right > 0L && left > Long.MAX_VALUE - right) {
+            return Long.MAX_VALUE;
+        }
+        return left + right;
+    }
+
+    static int[] computeSpriteSheetFrameUv(int frameIndex, int baseU, int baseV, int frameWidth, int frameHeight, int columns) {
+        int safeColumns = Math.max(1, columns);
+        int safeFrame = Math.max(0, frameIndex);
+        int safeFrameWidth = Math.max(1, frameWidth);
+        int safeFrameHeight = Math.max(1, frameHeight);
+        int u = Math.max(0, baseU) + safeFrame % safeColumns * safeFrameWidth;
+        int v = Math.max(0, baseV) + safeFrame / safeColumns * safeFrameHeight;
+        return new int[] {u, v};
+    }
+
+    private void drawFill(MachineGuiStyleManager.DynamicVisualRendererStyle renderer, float progress, int x, int y, int width, int height, float alpha) {
+        int textureWidth = renderer.textureWidth == null ? width : Math.max(1, renderer.textureWidth.intValue());
+        int textureHeight = renderer.textureHeight == null ? height : Math.max(1, renderer.textureHeight.intValue());
+        ResourceLocation background = GuiRenderUtils.parseOptionalTexture(renderer.backgroundTexture);
+        if (background != null) {
+            Minecraft.getMinecraft().getTextureManager().bindTexture(background);
+            GuiRenderUtils.drawTexturedRect(x, y, 0, 0, width, height, textureWidth, textureHeight);
+        } else if (renderer.backgroundColor != null) {
+            Gui.drawRect(x, y, x + width, y + height, multiplyColorAlpha(renderer.backgroundColor.intValue(), alpha));
+        }
+        if (renderer.borderColor != null) {
+            drawBorder(x, y, width, height, multiplyColorAlpha(renderer.borderColor.intValue(), alpha));
+        }
+        int[] bounds = computeFillBounds(x, y, width, height, renderer.direction, progress);
+        if (bounds[2] <= 0 || bounds[3] <= 0) {
+            return;
+        }
+        ResourceLocation fill = GuiRenderUtils.parseOptionalTexture(renderer.fillTexture);
+        if (fill != null) {
+            int[] uv = computeFillTextureBounds(textureWidth, textureHeight, renderer.direction, progress);
+            Minecraft.getMinecraft().getTextureManager().bindTexture(fill);
+            GuiRenderUtils.drawScaledTexturedRect(bounds[0], bounds[1], bounds[2], bounds[3], uv[0], uv[1], uv[2], uv[3], textureWidth, textureHeight);
+        } else {
+            int fillColor = renderer.fillColor == null ? 0xFF55CC66 : renderer.fillColor.intValue();
+            Gui.drawRect(bounds[0], bounds[1], bounds[0] + bounds[2], bounds[1] + bounds[3], multiplyColorAlpha(fillColor, alpha));
+        }
+    }
+
+    private int[] computeFillBounds(int x, int y, int width, int height, @Nullable String direction, float progress) {
+        float clamped = ProgressBarStyleSupport.clamp01(progress);
+        int fillWidth = Math.max(0, Math.min(width, (int) Math.floor(width * clamped)));
+        int fillHeight = Math.max(0, Math.min(height, (int) Math.floor(height * clamped)));
+        if ("left".equals(direction)) {
+            return new int[] {x + width - fillWidth, y, fillWidth, height};
+        }
+        if ("down".equals(direction)) {
+            return new int[] {x, y, width, fillHeight};
+        }
+        if ("up".equals(direction)) {
+            return new int[] {x, y + height - fillHeight, width, fillHeight};
+        }
+        return new int[] {x, y, fillWidth, height};
+    }
+
+    private int[] computeFillTextureBounds(int textureWidth, int textureHeight, @Nullable String direction, float progress) {
+        int safeW = Math.max(1, textureWidth);
+        int safeH = Math.max(1, textureHeight);
+        float clamped = ProgressBarStyleSupport.clamp01(progress);
+        int fillW = Math.max(0, Math.min(safeW, (int) Math.floor(safeW * clamped)));
+        int fillH = Math.max(0, Math.min(safeH, (int) Math.floor(safeH * clamped)));
+        if ("left".equals(direction)) {
+            return new int[] {safeW - fillW, 0, fillW, safeH};
+        }
+        if ("down".equals(direction)) {
+            return new int[] {0, 0, safeW, fillH};
+        }
+        if ("up".equals(direction)) {
+            return new int[] {0, safeH - fillH, safeW, fillH};
+        }
+        return new int[] {0, 0, fillW, safeH};
+    }
+
+    private void drawPie(MachineGuiStyleManager.DynamicVisualRendererStyle renderer, float progress, int x, int y, int width, int height, float alpha) {
+        int bg = renderer.backgroundColor == null ? 0x33000000 : multiplyColorAlpha(renderer.backgroundColor.intValue(), alpha);
+        int color = renderer.color == null ? multiplyColorAlpha(0xFFFFAA00, alpha) : multiplyColorAlpha(renderer.color.intValue(), alpha);
+        int segments = renderer.segments == null ? 64 : MathHelper.clamp(renderer.segments.intValue(), 3, 360);
+        float startAngle = renderer.startAngle == null ? -90.0F : renderer.startAngle.floatValue();
+        boolean ring = "ring".equals(renderer.mode);
+        float cx = x + width * 0.5F;
+        float cy = y + height * 0.5F;
+        float radius = Math.max(1.0F, Math.min(width, height) * 0.5F);
+        float inner = ring ? MathHelper.clamp(renderer.innerRadius == null ? radius * 0.55F : renderer.innerRadius.floatValue(), 0.0F, radius - 1.0F) : 0.0F;
+        drawArc(cx, cy, radius, inner, startAngle, 360.0F, segments, bg);
+        float sweep = 360.0F * ProgressBarStyleSupport.clamp01(progress);
+        if (sweep > 0.0F) {
+            drawArc(cx, cy, radius, inner, startAngle, sweep, Math.max(1, (int) Math.ceil(segments * sweep / 360.0F)), color);
+        }
+    }
+
+    private void drawArc(float cx, float cy, float radius, float innerRadius, float startAngle, float sweepAngle, int segments, int color) {
+        if (sweepAngle <= 0.0F || radius <= 0.0F) {
+            return;
+        }
+        GlStateManager.disableTexture2D();
+        GlStateManager.enableBlend();
+        GuiRenderUtils.applyColorARGB(color);
+        Tessellator tessellator = Tessellator.getInstance();
+        BufferBuilder buffer = tessellator.getBuffer();
+        if (innerRadius <= 0.0F) {
+            buffer.begin(GL11.GL_TRIANGLE_FAN, DefaultVertexFormats.POSITION);
+            buffer.pos(cx, cy, 0.0D).endVertex();
+            for (int i = 0; i <= segments; i++) {
+                double angle = Math.toRadians(startAngle + sweepAngle * i / (double) segments);
+                buffer.pos(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, 0.0D).endVertex();
+            }
+        } else {
+            buffer.begin(GL11.GL_TRIANGLE_STRIP, DefaultVertexFormats.POSITION);
+            for (int i = 0; i <= segments; i++) {
+                double angle = Math.toRadians(startAngle + sweepAngle * i / (double) segments);
+                double cos = Math.cos(angle);
+                double sin = Math.sin(angle);
+                buffer.pos(cx + cos * radius, cy + sin * radius, 0.0D).endVertex();
+                buffer.pos(cx + cos * innerRadius, cy + sin * innerRadius, 0.0D).endVertex();
+            }
+        }
+        tessellator.draw();
+        GlStateManager.disableBlend();
+        GlStateManager.enableTexture2D();
+    }
+
+    private void drawLineChart(MachineGuiStyleManager.DynamicVisualStyle visual, MachineGuiStyleManager.DynamicVisualRendererStyle renderer, float current, int x, int y, int width, int height, float alpha) {
+        List<Float> values = getHistoryValues(visual, current);
+        if (renderer.backgroundColor != null) {
+            Gui.drawRect(x, y, x + width, y + height, multiplyColorAlpha(renderer.backgroundColor.intValue(), alpha));
+        }
+        if (renderer.showGrid == null || renderer.showGrid.booleanValue()) {
+            int grid = renderer.gridColor == null ? multiplyColorAlpha(0x22000000, alpha) : multiplyColorAlpha(renderer.gridColor.intValue(), alpha);
+            for (int i = 1; i < 4; i++) {
+                int gx = x + width * i / 4;
+                int gy = y + height * i / 4;
+                Gui.drawRect(gx, y, gx + 1, y + height, grid);
+                Gui.drawRect(x, gy, x + width, gy + 1, grid);
+            }
+        }
+        if (values.isEmpty()) {
+            return;
+        }
+        int fillColor = renderer.fillColor == null ? 0 : multiplyColorAlpha(renderer.fillColor.intValue(), alpha);
+        int lineColor = renderer.lineColor == null ? multiplyColorAlpha(0xFF55CCFF, alpha) : multiplyColorAlpha(renderer.lineColor.intValue(), alpha);
+        int lineWidth = renderer.lineWidth == null ? 1 : Math.max(1, renderer.lineWidth.intValue());
+        int lastX = x;
+        int lastY = valueToY(values.get(0).floatValue(), y, height);
+        if ((fillColor >>> 24) != 0) {
+            for (int i = 0; i < values.size(); i++) {
+                int px = x + Math.round((width - 1) * (values.size() == 1 ? 0.0F : (float) i / (float) (values.size() - 1)));
+                int py = valueToY(values.get(i).floatValue(), y, height);
+                Gui.drawRect(px, py, px + 1, y + height, fillColor);
+            }
+        }
+        for (int i = 1; i < values.size(); i++) {
+            int px = x + Math.round((width - 1) * (float) i / (float) (values.size() - 1));
+            int py = valueToY(values.get(i).floatValue(), y, height);
+            drawLine(lastX, lastY, px, py, lineWidth, lineColor);
+            lastX = px;
+            lastY = py;
+        }
+        if (values.size() == 1) {
+            Gui.drawRect(x, lastY, x + width, lastY + lineWidth, lineColor);
+        }
+        if (renderer.borderColor != null) {
+            drawBorder(x, y, width, height, multiplyColorAlpha(renderer.borderColor.intValue(), alpha));
+        }
+    }
+
+    private int valueToY(float value, int y, int height) {
+        return y + height - 1 - Math.round((height - 1) * ProgressBarStyleSupport.clamp01(value));
+    }
+
+    private void drawLine(int x0, int y0, int x1, int y1, int width, int color) {
+        GlStateManager.disableTexture2D();
+        GlStateManager.enableBlend();
+        GuiRenderUtils.applyColorARGB(color);
+        GL11.glLineWidth((float) Math.max(1, width));
+        Tessellator tessellator = Tessellator.getInstance();
+        BufferBuilder buffer = tessellator.getBuffer();
+        buffer.begin(GL11.GL_LINES, DefaultVertexFormats.POSITION);
+        buffer.pos(x0, y0, 0.0D).endVertex();
+        buffer.pos(x1, y1, 0.0D).endVertex();
+        tessellator.draw();
+        GL11.glLineWidth(1.0F);
+        GlStateManager.disableBlend();
+        GlStateManager.enableTexture2D();
+    }
+
+    private void drawBorder(int x, int y, int width, int height, int color) {
+        Gui.drawRect(x, y, x + width, y + 1, color);
+        Gui.drawRect(x, y + height - 1, x + width, y + height, color);
+        Gui.drawRect(x, y, x + 1, y + height, color);
+        Gui.drawRect(x + width - 1, y, x + width, y + height, color);
+    }
+
+    private int multiplyColorAlpha(int color, float alpha) {
+        float normalized = normalizeRuntimeAlpha(alpha);
+        if (normalized >= 1.0F - EPSILON) {
+            return color;
+        }
+        int baseAlpha = (color >>> 24) & 0xFF;
+        int outAlpha = MathHelper.clamp(Math.round(baseAlpha * normalized), 0, 255);
+        return (color & 0x00FFFFFF) | (outAlpha << 24);
+    }
+
+    private float normalizeRuntimeScale(float value) {
+        if (!Float.isFinite(value)) {
+            return 1.0F;
+        }
+        return Math.max(0.01F, value);
+    }
+
+    private float normalizeRuntimeAlpha(float value) {
+        if (!Float.isFinite(value)) {
+            return 1.0F;
+        }
+        float alpha = value;
+        if (alpha > 1.0F) {
+            alpha = alpha / 255.0F;
+        }
+        return ProgressBarStyleSupport.clamp01(alpha);
+    }
+
+    private void updateHistoryIfNeeded(MachineGuiStyleManager.DynamicVisualStyle visual, float normalized, @Nullable TileMultiblockMachineController controller) {
+        if (!isHistoryEnabled(visual)) {
+            return;
+        }
+        int samples = visual.history == null || visual.history.samples == null ? 60 : Math.max(2, visual.history.samples.intValue());
+        int interval = visual.history == null || visual.history.intervalTicks == null ? 5 : Math.max(1, visual.history.intervalTicks.intValue());
+        HistoryState state = histories.get(historyKey(visual));
+        if (state == null || state.capacity != samples) {
+            state = new HistoryState(samples);
+            histories.put(historyKey(visual), state);
+        }
+        long tick = getWorldTime(controller);
+        Object world = getWorldIdentity(controller);
+        if (state.world != world || tick < state.lastTick) {
+            state.values.clear();
+            state.lastTick = Long.MIN_VALUE;
+            state.world = world;
+        }
+        if (shouldSampleHistory(state.lastTick, tick, interval, state.values.isEmpty())) {
+            state.add(Float.valueOf(ProgressBarStyleSupport.clamp01(normalized)));
+            state.lastTick = tick;
+        }
+    }
+
+    static boolean shouldSampleHistory(long lastTick, long tick, int interval, boolean empty) {
+        if (empty || tick < lastTick) {
+            return true;
+        }
+        return tick - lastTick >= Math.max(1, interval);
+    }
+
+    private List<Float> getHistoryValues(MachineGuiStyleManager.DynamicVisualStyle visual, float current) {
+        if (!isHistoryEnabled(visual)) {
+            List<Float> singleton = new ArrayList<Float>(1);
+            singleton.add(Float.valueOf(ProgressBarStyleSupport.clamp01(current)));
+            return singleton;
+        }
+        HistoryState state = histories.get(historyKey(visual));
+        if (state == null || state.values.isEmpty()) {
+            List<Float> singleton = new ArrayList<Float>(1);
+            singleton.add(Float.valueOf(ProgressBarStyleSupport.clamp01(current)));
+            return singleton;
+        }
+        return new ArrayList<Float>(state.values);
+    }
+
+    private boolean isHistoryEnabled(MachineGuiStyleManager.DynamicVisualStyle visual) {
+        return visual.history != null && (visual.history.enabled == null || visual.history.enabled.booleanValue());
+    }
+
+    private String historyKey(MachineGuiStyleManager.DynamicVisualStyle visual) {
+        if (visual.id != null && !visual.id.trim().isEmpty()) {
+            return visual.id.trim();
+        }
+        return visual.x + ":" + visual.y + ":" + visual.width + ":" + visual.height;
+    }
+
+    private long getWorldTime(@Nullable TileMultiblockMachineController controller) {
+        if (controller != null && controller.getWorld() != null) {
+            return controller.getWorld().getTotalWorldTime();
+        }
+        return Minecraft.getMinecraft().world == null ? 0L : Minecraft.getMinecraft().world.getTotalWorldTime();
+    }
+
+    @Nullable
+    private Object getWorldIdentity(@Nullable TileMultiblockMachineController controller) {
+        if (controller != null && controller.getWorld() != null) {
+            return controller.getWorld();
+        }
+        return Minecraft.getMinecraft().world;
+    }
+
+    public static float reflectMetric(Object target, float fallback, String... names) {
+        if (target == null) {
+            return fallback;
+        }
+        for (String name : names) {
+            try {
+                Method method = target.getClass().getMethod(name);
+                Object value = method.invoke(target);
+                if (value instanceof Number) {
+                    return ((Number) value).floatValue();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return fallback;
+    }
+
+    public interface PagePredicate {
+        boolean isVisible(@Nullable String page);
+    }
+
+    private static final class ResolvedTransform {
+        private float offsetX = 0.0F;
+        private float offsetY = 0.0F;
+        private float scaleX = 1.0F;
+        private float scaleY = 1.0F;
+        private float rotation = 0.0F;
+        private float alpha = 1.0F;
+        private String origin = "topLeft";
+        @Nullable
+        private Float pivotX;
+        @Nullable
+        private Float pivotY;
+        private String pivotUnit = "ratio";
+
+        private float resolvePivotX(int width) {
+            if (this.pivotX != null) {
+                return resolveExplicitPivot(this.pivotX.floatValue(), width);
+            }
+            if ("center".equals(this.origin)
+                || "topCenter".equals(this.origin)
+                || "bottomCenter".equals(this.origin)) {
+                return width * 0.5F;
+            }
+            if ("topRight".equals(this.origin)
+                || "centerRight".equals(this.origin)
+                || "bottomRight".equals(this.origin)) {
+                return (float) width;
+            }
+            return 0.0F;
+        }
+
+        private float resolvePivotY(int height) {
+            if (this.pivotY != null) {
+                return resolveExplicitPivot(this.pivotY.floatValue(), height);
+            }
+            if ("center".equals(this.origin)
+                || "centerLeft".equals(this.origin)
+                || "centerRight".equals(this.origin)) {
+                return height * 0.5F;
+            }
+            if ("bottomLeft".equals(this.origin)
+                || "bottomCenter".equals(this.origin)
+                || "bottomRight".equals(this.origin)) {
+                return (float) height;
+            }
+            return 0.0F;
+        }
+
+        private float resolveExplicitPivot(float value, int size) {
+            if ("px".equals(this.pivotUnit)) {
+                return value;
+            }
+            return value * size;
+        }
+
+        private boolean requiresMatrix() {
+            return Math.abs(this.scaleX - 1.0F) > EPSILON
+                || Math.abs(this.scaleY - 1.0F) > EPSILON
+                || Math.abs(this.rotation) > EPSILON;
+        }
+    }
+
+    private static final class HistoryState {
+        private final int capacity;
+        private long lastTick = Long.MIN_VALUE;
+        @Nullable
+        private Object world;
+        private final List<Float> values = new ArrayList<Float>();
+
+        private HistoryState(int capacity) {
+            this.capacity = capacity;
+        }
+
+        private void add(Float value) {
+            while (values.size() >= capacity) {
+                values.remove(0);
+            }
+            values.add(value);
+        }
+    }
+}

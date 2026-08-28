@@ -2,9 +2,9 @@
 
 [首页](Home) · [English](Custom-AE-Buses-EN)
 
-> ⚠️ **实验性功能。** JSON 结构与仓口系统同构，但功能较新，未来字段可能调整。能力依赖 **AE2 + Mekanism Energistics** 同时在场。升级模组版本后请验证存档与配方。
+> ⚠️ **实验性功能，默认不注册。** 使用前需在 `config/mmceguiext/client.cfg` 开启 `customContent.enableCustomAEBuses=true`。JSON 结构与仓口系统同构，但功能较新，未来字段可能调整。当前自定义 AE 总线注册依赖传统 **AE2（`appliedenergistics2`）+ Mekanism Energistics** 同时在场。AE2S（`ae2`）可用于模组启动，但原生 AE2S 自定义总线尚未实现。升级模组版本后请验证存档与配方。
 
-三种总线，各自一个目录，每个 `.json` 定义一个总线，**游戏启动时**注册为方块 + tile，通过 `AENetworkProxy` 接入 AE2 ME 网络（需要频道、消耗网络能量）。单文件上限均为 1 MB。
+三种总线，各自一个目录，每个 `.json` 定义一个总线，开启后在**游戏启动时**注册为方块 + tile，通过 `AENetworkProxy` 接入 AE2 ME 网络（需要频道、消耗网络能量）。单文件上限使用 `config/mmceguiext/client.cfg` 中的共享配置 `maxGuiConfigFileSizeMiB`，默认 `8 MiB`，范围 `1-64 MiB`。
 
 | 总线 | 目录 | 方向 | 物品 | 流体 | 气体 | config 槽 |
 |---|---|---|:--:|:--:|:--:|:--:|
@@ -19,6 +19,14 @@ GUI 有两种写法：
 - **旧式**：扁平的 `configSlots`/`storageSlots`/`fluid*`/`gas*` 字段。模组会通过 `buildLegacyGui` 自动转换为新式。
 
 各总线支持情况：ME 物品输入 = 仅旧式；混合输入 = 两者皆可（新式优先）；混合输出 = 仅新式。
+
+### 稀疏索引与重复索引
+
+支持稀疏布局。使用新式 `gui.components[]` 时，如果物品槽、流体罐、气体罐或其他逻辑组件中间存在空洞，请显式填写 `index`。`slotIndices[]` 属于独立的控制器槽位组布局 API，不是自定义 AE 总线 `gui.components[]` 的字段。缺少的索引会保持未使用，加载器不会自动压缩到其他槽位。
+
+同一逻辑组件组内的索引必须唯一，并且必须处于文档规定范围内。重复索引或越界索引会输出 warning，并跳过冲突映射。GUI 坐标与逻辑存储索引是两个概念，移动组件不会自动重新编号存储。
+
+这与多个 JSON 文件使用重复定义 ID 不同。定义会按确定的文件顺序加载；同一 ID 的首个定义生效，后续重复 ID 会输出 warning 并跳过。请为每个总线定义使用唯一的 `id`。
 
 ---
 
@@ -211,7 +219,7 @@ mods.mmceguiext.MMCEGEEvents.registerCapacityCardWithFlat("appliedenergistics2:m
 
 | 常量 | 值 | 适用 |
 |---|---|---|
-| 单文件上限 | 1 MB | 全部 |
+| 单文件上限 | `maxGuiConfigFileSizeMiB` MiB（默认 `8`，范围 `1-64`） | 全部 |
 | `MAX_SLOT_POINTS` | 4096 | 物品输入总线 |
 | `MAX_GUI_COMPONENTS` | 2048 | 混合输入/输出 |
 | `MAX_COMPONENT_INDEX` | 4095 | 混合输入/输出 |

@@ -4,9 +4,10 @@
 
 用一个 JSON 文件定义一个全新的仓口方块（含**方块 + 物品 + tile**），作为 MMCE 多方块的输入/输出组件参与配方。容量使用 **long**，可远超原版 `int`（约 21 亿）上限——配合 [Long 容量配方需求](Long-Capacity-Requirements-ZH) 使用。
 
+- 默认状态：不注册；需在 `config/mmceguiext/client.cfg` 开启 `customContent.enableCustomHatches=true`
 - 放置目录：`config/mmceguiext/custom_hatches/*.json`
-- 扫描时机：**游戏启动时**（修改后需重启，`/ct reload` 无效）
-- 单文件上限：1 MB
+- 扫描时机：开启后在**游戏启动时**扫描（修改后需重启，`/ct reload` 无效）
+- 单文件上限：使用 `config/mmceguiext/client.cfg` 中的 `maxGuiConfigFileSizeMiB`，默认 `8 MiB`，范围 `1-64 MiB`
 - 注册结果：方块注册为 `mmceguiext:<id>`
 
 真实可参考示例：
@@ -38,6 +39,7 @@
 | `inputSlot` / `outputSlot` | — | `{x,y}` | `{0,0}` | 旧式槽位坐标（无 `gui.components` 时用） |
 | `tank` | — | object | 见 §3.3 | 旧式储罐渲染参数（无 gui tank 组件时用） |
 | `texts` | — | array | `[]` | 旧式静态文本列表（被 gui text 组件覆盖） |
+| `defaultCharSpacing` | `defaultCharacterSpacing`,`defaultLetterSpacing`,`default_char_spacing`,`default_letter_spacing`,`textCharSpacing`,`text_char_spacing` | float | null | 本仓口 MMCEME 自绘文本默认字符间距；`0` 保持原版文本绘制路径 |
 
 ### 1.1 `componentType` 取值
 
@@ -132,6 +134,7 @@
 | `coordinateWidth` | int | `-1`（不启用） | 逻辑坐标系宽度（启用坐标缩放映射） |
 | `coordinateHeight` | int | `-1`（不启用） | 逻辑坐标系高度 |
 | `components` | array | `[]` | GUI 组件，见 §4.1，最多 4096（展开后） |
+| `defaultCharSpacing` | float | 继承顶层 | `gui.components` 文本条目的默认字符间距；别名同顶层 |
 
 ### 4.1 `gui.components[]`
 
@@ -147,9 +150,39 @@
 - `rows`（`rowCount`/`yCount`，默认 1，≤256）、`columns`（`cols`/`columnCount`/`xCount`，默认 1，≤256）
 - `spacingX`（`xSpacing`/`gapX`，默认 2）、`spacingY`（`ySpacing`/`gapY`，默认 2）
 - `slotSize`（`size`，默认 16）
-- `visibleRows`/`visibleColumns`（默认 0=全部可见，用于滚动）、`scrollMode`、`scrollbar`
-- 滚动条系列：`scrollbarX/Y/Width/Height`、`scrollbarThumbHeight`、`scrollbarTexture`（含 hover/pressed/disabled）、`scrollbarTextureWidth/Height`、`scrollbarU/V`（含 hover/pressed/disabled 变体）——均支持 snake_case
+- `visibleRows`/`visibleColumns`（默认 0=全部可见，用于滚动）、`scrollAxis`（`horizontal`/`vertical`）、`scrollMode`（`row`/`page`）、`scrollbar`
+- 未写 `scrollAxis` 时：只有列溢出且行不溢出时自动横向；其他情况保持旧的纵向默认。
+- `scrollMode = "page"` 时，横向一次滚动 `visibleColumns` 列，纵向一次滚动 `visibleRows` 行；默认每次滚动 1 行/列。
+- 滚动条系列：`scrollbarX/Y/Width/Height`、`scrollbarLength`、`scrollbarThumbHeight`、`scrollbarThumbWidth`、`scrollbarTexture`（含 hover/pressed/disabled）、`scrollbarTextureWidth/Height`、`scrollbarU/V`（含 hover/pressed/disabled 变体）——均支持 snake_case
 - 物品覆盖层：`itemOverlay`、`itemOverlayTexture`、`itemOverlayTextureWidth/Height`、`itemOverlayU/V`
+
+横向滚动 quick-start：
+
+```json
+{
+  "type": "slot_grid",
+  "role": "input",
+  "x": 16,
+  "y": 28,
+  "rows": 3,
+  "columns": 9,
+  "visibleRows": 3,
+  "visibleColumns": 4,
+  "scrollAxis": "horizontal",
+  "scrollMode": "page",
+  "scrollbar": true,
+  "scrollbarX": 16,
+  "scrollbarY": 86,
+  "scrollbarLength": 70,
+  "scrollbarHeight": 6,
+  "scrollbarThumbWidth": 18,
+  "scrollbarTexture": "yourmod:textures/gui/slot_scroll_thumb.png",
+  "scrollbarTextureWidth": 18,
+  "scrollbarTextureHeight": 6
+}
+```
+
+纵向滚动仍可只写 `visibleRows`；例如 6 行网格只显示 3 行时，`scrollAxis` 省略也会按旧语义使用纵向滚动。
 
 **`tank`** — 储罐区域
 - `content`：`fluid` / `gas` / `fluid_gas` / `energy`（`power`/`fe`）
@@ -163,6 +196,7 @@
 - `color`：ARGB 十六进制（默认白 `0xFFFFFF`）
 - `scale`：缩放（默认 1.0）
 - `align`（`alignment`/`textAlign`/`text_align`）：`left`/`center`/`right`（含别名 `start`/`middle`/`end`）
+- `charSpacing`（`characterSpacing`/`letterSpacing`/`char_spacing`/`letter_spacing`）：单条文本字符间距覆盖。允许负数/大值；非有限值会被忽略。
 - `content`：决定占位符数据源
 
 **`player_inventory`** — 玩家背包

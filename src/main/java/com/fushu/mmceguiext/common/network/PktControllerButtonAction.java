@@ -13,8 +13,13 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.fushu.mmceguiext.MMCEGuiExt;
 
 public class PktControllerButtonAction implements IMessage, IMessageHandler<PktControllerButtonAction, IMessage> {
+    private static final Logger LOGGER = LogManager.getLogger(MMCEGuiExt.MODID);
     private static final int MAX_KEY_LENGTH = 128;
     private static final int MAX_BUTTON_ID_LENGTH = 128;
     private static final int MAX_VALUE_LENGTH = 1024;
@@ -123,25 +128,66 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
     public IMessage onMessage(PktControllerButtonAction message, MessageContext ctx) {
         EntityPlayerMP player = ctx.getServerHandler().player;
         if (player == null) {
+            LOGGER.debug("Rejected controller button action packet because the server player was null.");
             return null;
         }
-        player.getServerWorld().addScheduledTask(() -> handle(message, player));
+        LOGGER.debug(
+            "Received controller button action packet for {} key={} kind={} on thread={}.",
+            message == null ? null : message.controllerPos,
+            message == null ? null : message.key,
+            message == null ? null : message.kind,
+            Thread.currentThread().getName()
+        );
+        player.getServerWorld().addScheduledTask(() -> {
+            LOGGER.debug(
+                "Handling controller button action packet for {} on thread={}.",
+                message == null ? null : message.controllerPos,
+                Thread.currentThread().getName()
+            );
+            try {
+                handle(message, player);
+            } catch (Throwable error) {
+                LOGGER.error(
+                    "Controller button action at {} failed on the server thread.",
+                    message == null ? null : message.controllerPos,
+                    error
+                );
+            }
+        });
         return null;
     }
 
     private static void handle(PktControllerButtonAction message, EntityPlayerMP player) {
         if (message == null) {
+            LOGGER.debug("Rejected controller button action because the decoded message was null.");
             return;
         }
         if (player == null || player.world == null || !player.world.isBlockLoaded(message.controllerPos)) {
+            LOGGER.debug(
+                "Rejected controller button action at {} because player/world/chunk state was invalid. player={} world={} loaded={}.",
+                message.controllerPos,
+                player == null ? "null" : player.getName(),
+                player == null || player.world == null ? "null" : player.world.provider.getDimension(),
+                player != null && player.world != null && player.world.isBlockLoaded(message.controllerPos)
+            );
             return;
         }
         if (!isPlayerEditingThisController(player, message.controllerPos)) {
+            LOGGER.debug(
+                "Rejected controller button action at {} because the player is not editing that controller. openContainer={}",
+                message.controllerPos,
+                player.openContainer == null ? "null" : player.openContainer.getClass().getName()
+            );
             return;
         }
 
         TileEntity tile = player.world.getTileEntity(message.controllerPos);
         if (!(tile instanceof TileMultiblockMachineController)) {
+            LOGGER.debug(
+                "Rejected controller button action at {} because the server tile was {}.",
+                message.controllerPos,
+                tile == null ? "null" : tile.getClass().getName()
+            );
             return;
         }
         TileMultiblockMachineController controller = (TileMultiblockMachineController) tile;
@@ -149,6 +195,8 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
         if (message.kind == KIND_EVENT) {
             String buttonId = normalizeBounded(message.buttonId, MAX_BUTTON_ID_LENGTH);
             if (buttonId == null || ControllerButtonPolicyManager.matchEvent(controller, buttonId) == null) {
+                LOGGER.debug("Rejected controller event at {} because no matching server policy exists for buttonId={}.",
+                    message.controllerPos, buttonId);
                 return;
             }
             MMCEGEEvents.postControllerButtonClick(controller, buttonId);
@@ -158,6 +206,7 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
 
         String key = normalizeBounded(message.key, MAX_KEY_LENGTH);
         if (key == null) {
+            LOGGER.debug("Rejected controller smart action at {} because the key was invalid.", message.controllerPos);
             return;
         }
         if (message.stringValue) {
@@ -167,6 +216,8 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
             ControllerButtonPolicyManager.ButtonPolicy stringPolicy =
                 ControllerButtonPolicyManager.matchSmart(controller, message.kind, key, message.textValue);
             if (stringPolicy == null) {
+                LOGGER.debug("Rejected string smart action at {} because no matching server policy exists for key={}.",
+                    message.controllerPos, key);
                 return;
             }
             if (PktControllerSmartInterfaceUpdate.applySmartInterfaceUpdate(controller, message.controllerPos, key, message.textValue)) {
@@ -180,6 +231,14 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
         ControllerButtonPolicyManager.ButtonPolicy policy =
             ControllerButtonPolicyManager.matchSmart(controller, message.kind, key, message.value);
         if (policy == null) {
+            LOGGER.debug(
+                "Rejected numeric smart action at {} because no matching server policy exists for key={} value={} foundMachine={} styleProvider={}.",
+                message.controllerPos,
+                key,
+                message.value,
+                controller.getFoundMachine() == null ? "null" : controller.getFoundMachine().getRegistryName(),
+                describeStyleProvider(controller)
+            );
             return;
         }
 
@@ -194,6 +253,11 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
         } else if (controller.getSmartInterfaceData(key) == null
             && !ControllerButtonPolicyManager.isConfiguredSmartKey(controller, key)
             && !PktControllerSmartInterfaceUpdate.hasControllerCustomData(controller, key)) {
+            LOGGER.debug(
+                "Rejected numeric smart action at {} because key={} had no Smart Interface data, configured editor, or custom data.",
+                message.controllerPos,
+                key
+            );
             return;
         }
         if (!Float.isFinite(resolved)) {
@@ -217,6 +281,28 @@ public class PktControllerButtonAction implements IMessage, IMessageHandler<PktC
         }
         if (PktControllerSmartInterfaceUpdate.applySmartInterfaceUpdate(controller, message.controllerPos, key, resolved)) {
             PktControllerSmartInterfaceUpdate.syncCustomDataToPlayer(controller, player);
+        } else {
+            LOGGER.debug(
+                "Server policy matched numeric smart action at {} but applying it failed. key={} value={} foundMachine={} smartData={}.",
+                message.controllerPos,
+                key,
+                resolved,
+                controller.getFoundMachine() == null ? "null" : controller.getFoundMachine().getRegistryName(),
+                controller.getSmartInterfaceData(key)
+            );
+        }
+    }
+
+    private static String describeStyleProvider(TileMultiblockMachineController controller) {
+        if (!(controller instanceof com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider)) {
+            return "none";
+        }
+        try {
+            net.minecraft.util.ResourceLocation style =
+                ((com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider) controller).getMachineControllerGuiStyle();
+            return style == null ? "null" : style.toString();
+        } catch (RuntimeException ignored) {
+            return "error";
         }
     }
 

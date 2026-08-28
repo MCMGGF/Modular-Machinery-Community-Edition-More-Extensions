@@ -1,0 +1,97 @@
+{
+  "registryname": "demo:animated_texture_controller",
+  "localizedname": "Animated Texture Demo",
+  "parts": [],
+  "mmce_gui_ext": {
+    "machineController": {
+      "backgroundTexture": "demo:textures/gui/animated_texture_controller.png",
+      "guiWidth": 320,
+      "guiHeight": 213,
+      "defaultPageId": "main",
+      "customPanels": [
+        "main,180,8,124,96,main"
+      ],
+      "texts": [
+        {
+          "x": 186,
+          "y": 14,
+          "value": "Animated PNG frames",
+          "scale": 0.8,
+          "page": "main"
+        }
+      ],
+      "dynamicVisuals": [
+        {
+          "id": "fan_anim_sheet",
+          "x": 192,
+          "y": 36,
+          "width": 16,
+          "height": 16,
+          "priority": 20,
+          "foreground": true,
+          "page": "main",
+          "renderer": {
+            "type": "animatedTexture",
+            "texture": "demo:textures/gui/fan_sheet.png",
+            "frameWidth": 16,
+            "frameHeight": 16,
+            "frameCount": 8,
+            "columns": 4,
+            "textureWidth": 64,
+            "textureHeight": 32,
+            "ticksPerFrame": 2,
+            "loop": true
+          }
+        },
+        {
+          "id": "spark_anim_files",
+          "x": 224,
+          "y": 36,
+          "width": 16,
+          "height": 16,
+          "priority": 20,
+          "foreground": true,
+          "page": "main",
+          "renderer": {
+            "type": "animatedTexture",
+            "ticksPerFrame": 3,
+            "loop": true,
+            "frames": [
+              "demo:textures/gui/spark_0.png",
+              "demo:textures/gui/spark_1.png",
+              "demo:textures/gui/spark_2.png",
+              {
+                "texture": "demo:textures/gui/spark_3.png",
+                "u": 0,
+                "v": 0,
+                "textureWidth": 16,
+                "textureHeight": 16
+              }
+            ]
+          }
+        },
+        {
+          "id": "warning_ping_pong",
+          "x": 256,
+          "y": 36,
+          "width": 16,
+          "height": 16,
+          "priority": 20,
+          "foreground": true,
+          "page": "main",
+          "renderer": {
+            "type": "animatedTexture",
+            "texture": "demo:textures/gui/warning_sheet.png",
+            "frameWidth": 16,
+            "frameHeight": 16,
+            "frameCount": 5,
+            "textureWidth": 80,
+            "textureHeight": 16,
+            "ticksPerFrame": 4,
+            "pingPong": true
+          }
+        }
+      ]
+    }
+  }
+}
