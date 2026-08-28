@@ -1,10 +1,12 @@
 package com.fushu.mmceguiext.client.registry;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.client.model.CustomAEBusBakedModel;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedInputBus;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedOutputBus;
 import com.fushu.mmceguiext.common.block.BlockCustomMEItemInputBus;
+import com.fushu.mmceguiext.common.integration.ae.AEIntegrationState;
 import com.fushu.mmceguiext.common.registry.CustomAEMixedInputBusGameRegistry;
 import com.fushu.mmceguiext.common.registry.CustomAEMixedInputBusRegistry;
 import com.fushu.mmceguiext.common.registry.CustomAEMixedOutputBusGameRegistry;
@@ -21,14 +23,11 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.ModelBakeEvent;
 import net.minecraftforge.client.event.ModelRegistryEvent;
 import net.minecraftforge.client.model.ModelLoader;
-import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.relauncher.Side;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Mod.EventBusSubscriber(modid = MMCEGuiExt.MODID, value = Side.CLIENT)
 public final class CustomAEBusClientRegistry {
     private static final ResourceLocation ITEM_INPUT_BLOCKSTATE_MODEL = new ResourceLocation("modularmachinery", "blockmeiteminputbus");
     private static final ResourceLocation ITEM_INPUT_BAKED_MODEL = new ResourceLocation("modularmachinery", "block/blockmeiteminputbus");
@@ -42,6 +41,9 @@ public final class CustomAEBusClientRegistry {
     @SubscribeEvent
     public static void onModelRegister(ModelRegistryEvent event) {
         WRAP_TARGETS.clear();
+        if (!isCustomAEBusRegistrationEnabled()) {
+            return;
+        }
         registerItemInputBuses();
         registerMixedInputBuses();
         registerMixedOutputBuses();
@@ -49,6 +51,10 @@ public final class CustomAEBusClientRegistry {
 
     @SubscribeEvent
     public static void onModelBake(ModelBakeEvent event) {
+        if (!isCustomAEBusRegistrationEnabled()) {
+            WRAP_TARGETS.clear();
+            return;
+        }
         for (Map.Entry<ModelResourceLocation, ResourceLocation> entry : WRAP_TARGETS.entrySet()) {
             wrapModel(event, entry.getKey(), entry.getValue());
         }
@@ -110,5 +116,9 @@ public final class CustomAEBusClientRegistry {
     private static ResourceLocation resolveBakedModelLocation(ModelResourceLocation location) {
         String path = location.getPath();
         return new ResourceLocation(location.getNamespace(), path.startsWith("block/") ? path : "block/" + path);
+    }
+
+    private static boolean isCustomAEBusRegistrationEnabled() {
+        return MMCEGuiExtConfig.areCustomAEBusesEnabled() && AEIntegrationState.isClassicAEBusEnabled();
     }
 }

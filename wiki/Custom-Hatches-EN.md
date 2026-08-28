@@ -4,9 +4,10 @@
 
 Define a brand-new hatch from one JSON file (a **block + item + tile**), acting as an MMCE multiblock input/output component in recipes. Capacities use **long**, far beyond the vanilla `int` limit (~2.1 billion) — pair it with [Long-Capacity Requirements](Long-Capacity-Requirements-EN).
 
+- Default state: not registered; set `customContent.enableCustomHatches=true` in `config/mmceguiext/client.cfg`
 - Directory: `config/mmceguiext/custom_hatches/*.json`
-- Scanned: **at game start** (edits need a restart, not `/ct reload`)
-- Max file size: 1 MB
+- Scanned: **at game start** after enabling (edits need a restart, not `/ct reload`)
+- Max file size: `maxGuiConfigFileSizeMiB` MiB (default `8`, range `1-64`) from `config/mmceguiext/client.cfg`
 - Registers the block as `mmceguiext:<id>`
 
 Working examples:
@@ -38,6 +39,7 @@ Working examples:
 | `inputSlot` / `outputSlot` | — | `{x,y}` | `{0,0}` | Legacy slot coords (used without `gui.components`) |
 | `tank` | — | object | see §3.3 | Legacy tank render params (used without a gui tank component) |
 | `texts` | — | array | `[]` | Legacy static text list (overridden by gui text components) |
+| `defaultCharSpacing` | `defaultCharacterSpacing`,`defaultLetterSpacing`,`default_char_spacing`,`default_letter_spacing`,`textCharSpacing`,`text_char_spacing` | float | null | Default character spacing for this hatch's MMCEME-rendered text; `0` keeps vanilla text rendering |
 
 ### 1.1 `componentType` values
 
@@ -132,6 +134,7 @@ Each item can be an object, or a plain texture string (then `minFillRatio` is sp
 | `coordinateWidth` | int | `-1` (off) | Logical coordinate width (enables coordinate scaling) |
 | `coordinateHeight` | int | `-1` (off) | Logical coordinate height |
 | `components` | array | `[]` | GUI components, see §4.1, max 4096 (after expansion) |
+| `defaultCharSpacing` | float | inherit top-level | Default character spacing for `gui.components` text entries; aliases are the same as top-level |
 
 ### 4.1 `gui.components[]`
 
@@ -147,9 +150,39 @@ Shared fields: `type` (required), `role`, `x`, `y`, `width`, `height`, `priority
 - `rows` (`rowCount`/`yCount`, default 1, ≤256), `columns` (`cols`/`columnCount`/`xCount`, default 1, ≤256)
 - `spacingX` (`xSpacing`/`gapX`, default 2), `spacingY` (`ySpacing`/`gapY`, default 2)
 - `slotSize` (`size`, default 16)
-- `visibleRows`/`visibleColumns` (default 0=all visible, for scrolling), `scrollMode`, `scrollbar`
-- Scrollbar set: `scrollbarX/Y/Width/Height`, `scrollbarThumbHeight`, `scrollbarTexture` (+ hover/pressed/disabled), `scrollbarTextureWidth/Height`, `scrollbarU/V` (+ hover/pressed/disabled variants) — all support snake_case
+- `visibleRows`/`visibleColumns` (default 0=all visible, for scrolling), `scrollAxis` (`horizontal`/`vertical`), `scrollMode` (`row`/`page`), `scrollbar`
+- When `scrollAxis` is omitted: MMCEME auto-selects horizontal only when columns overflow and rows do not; all other old configs keep the vertical default.
+- With `scrollMode = "page"`, horizontal grids scroll by `visibleColumns` columns and vertical grids scroll by `visibleRows` rows. The default step is 1 row/column.
+- Scrollbar set: `scrollbarX/Y/Width/Height`, `scrollbarLength`, `scrollbarThumbHeight`, `scrollbarThumbWidth`, `scrollbarTexture` (+ hover/pressed/disabled), `scrollbarTextureWidth/Height`, `scrollbarU/V` (+ hover/pressed/disabled variants) — all support snake_case
 - Item overlay: `itemOverlay`, `itemOverlayTexture`, `itemOverlayTextureWidth/Height`, `itemOverlayU/V`
+
+Horizontal scrolling quick-start:
+
+```json
+{
+  "type": "slot_grid",
+  "role": "input",
+  "x": 16,
+  "y": 28,
+  "rows": 3,
+  "columns": 9,
+  "visibleRows": 3,
+  "visibleColumns": 4,
+  "scrollAxis": "horizontal",
+  "scrollMode": "page",
+  "scrollbar": true,
+  "scrollbarX": 16,
+  "scrollbarY": 86,
+  "scrollbarLength": 70,
+  "scrollbarHeight": 6,
+  "scrollbarThumbWidth": 18,
+  "scrollbarTexture": "yourmod:textures/gui/slot_scroll_thumb.png",
+  "scrollbarTextureWidth": 18,
+  "scrollbarTextureHeight": 6
+}
+```
+
+Vertical scrolling remains unchanged: for example, a 6-row grid with `visibleRows: 3` can omit `scrollAxis` and still uses the legacy vertical behavior.
 
 **`tank`** — tank region
 - `content`: `fluid` / `gas` / `fluid_gas` / `energy` (`power`/`fe`)
@@ -163,6 +196,7 @@ Shared fields: `type` (required), `role`, `x`, `y`, `width`, `height`, `priority
 - `color`: ARGB hex (default white `0xFFFFFF`)
 - `scale`: scale (default 1.0)
 - `align` (`alignment`/`textAlign`/`text_align`): `left`/`center`/`right` (aliases `start`/`middle`/`end`)
+- `charSpacing` (`characterSpacing`/`letterSpacing`/`char_spacing`/`letter_spacing`): per-text character spacing override. Negative/large values are allowed; invalid non-finite values are ignored.
 - `content`: chooses the placeholder data source
 
 **`player_inventory`** — player inventory

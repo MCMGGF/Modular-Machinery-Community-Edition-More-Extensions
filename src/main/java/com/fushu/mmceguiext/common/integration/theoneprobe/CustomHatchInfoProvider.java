@@ -1,9 +1,8 @@
 package com.fushu.mmceguiext.common.integration.theoneprobe;
 
 import com.fushu.mmceguiext.common.registry.CustomHatchRegistry;
-import com.fushu.mmceguiext.common.tile.TileCustomAEMixedInputBus;
-import com.fushu.mmceguiext.common.tile.TileCustomAEMixedOutputBus;
 import com.fushu.mmceguiext.common.tile.TileCustomHatch;
+import com.fushu.mmceguiext.common.util.EnergyAccessHelper;
 import com.fushu.mmceguiext.common.util.UnitFormat;
 import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import mcjty.theoneprobe.api.IProbeHitData;
@@ -20,6 +19,8 @@ import net.minecraft.world.World;
 import net.minecraftforge.fluids.FluidStack;
 
 public class CustomHatchInfoProvider implements IProbeInfoProvider {
+    private static final String MIXED_INPUT_BUS_CLASS = "com.fushu.mmceguiext.common.tile.TileCustomAEMixedInputBus";
+    private static final String MIXED_OUTPUT_BUS_CLASS = "com.fushu.mmceguiext.common.tile.TileCustomAEMixedOutputBus";
     private static final int BAR_FILLED = 0xFF3F8DFF;
     private static final int BAR_GAS_FILLED = 0xFF7BE6FF;
     private static final int BAR_ENERGY_FILLED = 0xFF3DDC84;
@@ -34,10 +35,7 @@ public class CustomHatchInfoProvider implements IProbeInfoProvider {
     @Override
     public void addProbeInfo(ProbeMode mode, IProbeInfo probeInfo, EntityPlayer player, World world, IBlockState blockState, IProbeHitData data) {
         TileEntity tile = world.getTileEntity(data.getPos());
-        if (tile instanceof TileCustomAEMixedInputBus) {
-            return;
-        }
-        if (tile instanceof TileCustomAEMixedOutputBus) {
+        if (isClassicAEBus(tile)) {
             return;
         }
         if (!(tile instanceof TileCustomHatch)) {
@@ -71,6 +69,14 @@ public class CustomHatchInfoProvider implements IProbeInfoProvider {
         if (cfg.showEnergyInfo && displayTypes.energy) {
             addEnergyInfo(box, hatch);
         }
+    }
+
+    private static boolean isClassicAEBus(TileEntity tile) {
+        if (tile == null) {
+            return false;
+        }
+        String name = tile.getClass().getName();
+        return MIXED_INPUT_BUS_CLASS.equals(name) || MIXED_OUTPUT_BUS_CLASS.equals(name);
     }
 
     private static DisplayTypes resolveDisplayTypes(CustomHatchRegistry.CustomHatchDef def) {
@@ -273,8 +279,8 @@ public class CustomHatchInfoProvider implements IProbeInfoProvider {
     }
 
     private static void addEnergyInfo(IProbeInfo box, TileCustomHatch hatch) {
-        long stored = hatch.getEnergyStoredLong();
-        long capacity = Math.max(1L, hatch.getEnergyCapacity());
+        long stored = EnergyAccessHelper.getStored(hatch);
+        long capacity = EnergyAccessHelper.getCapacity(hatch);
 
         box.text(TextFormatting.WHITE + "能量:" + TextFormatting.GREEN + UnitFormat.amountWithUnit(stored, "FE"));
         box.progress(

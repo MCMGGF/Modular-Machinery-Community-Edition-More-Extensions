@@ -2,6 +2,7 @@ package com.fushu.mmceguiext.client.gui;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
 import com.fushu.mmceguiext.MMCEGuiExtConfig;
+import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.fushu.mmceguiext.client.config.MachineGuiStyleManager;
 import com.fushu.mmceguiext.client.config.ProgressBarStyleSupport;
 import com.fushu.mmceguiext.common.network.PktControllerButtonAction;
@@ -73,6 +74,10 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     private static final int SCROLLBAR_TOP = 8;
     private static final int SCROLLBAR_LEFT = 94;
     private static final int SCROLLBAR_HEIGHT = 197;
+    private static final int SCROLLBAR_WIDTH = 12;
+    private static final int SCROLLBAR_THUMB_HEIGHT = 15;
+    private static final int DEFAULT_SCROLLBAR_TRACK_COLOR = 0x66000000;
+    private static final int DEFAULT_SCROLLBAR_THUMB_COLOR = 0xFFFFFFFF;
     private static final int MAX_PAGE_ELEMENTS = 6;
     private static final int FACTORY_ELEMENT_WIDTH = 86;
     private static final int FACTORY_ELEMENT_HEIGHT = 32;
@@ -156,6 +161,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     private List<CustomSlider> customSliders = new ArrayList<CustomSlider>();
     private List<TextureLayerDef> backgroundTextureLayers = new ArrayList<TextureLayerDef>();
     private List<TextureLayerDef> foregroundTextureLayers = new ArrayList<TextureLayerDef>();
+    private final DynamicVisualRenderer dynamicVisualRenderer = new DynamicVisualRenderer();
     private Map<String, LayerRuntimeState> layerRuntimeStates = new HashMap<String, LayerRuntimeState>();
     private Set<String> textureLayerIds = new HashSet<String>();
     private String activePageId = "main";
@@ -175,11 +181,12 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
     @Override
     public void initGui() {
-        this.styleOverride = MachineGuiStyleManager.resolveFactoryController(resolveMachine());
+        this.styleOverride = resolveBaseControllerStyle();
         this.customBackgroundTexture = resolveCustomTexture();
         this.specialThreadBgColor = resolveSpecialThreadBgColor();
         resolveGuiScaleConfig();
         super.initGui();
+        applySlotLayout();
         applyPlayerInventoryVisibility(MMCEGuiExtConfig.factoryController);
         initTextureLayers(MMCEGuiExtConfig.factoryController);
         this.activePageId = resolveInitialPageId(MMCEGuiExtConfig.factoryController, this.activePageId);
@@ -201,6 +208,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         rebuildSubGuiIndex();
         this.baseRuntimeState = captureCurrentRuntimeState();
         this.activeSubGui = null;
+        this.dynamicVisualRenderer.reset();
     }
 
     @Override
@@ -338,6 +346,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         if (!this.guiScaleMode) {
             super.drawScreen(mouseX, mouseY, partialTicks);
             renderModalSubGui(mouseX, mouseY, partialTicks);
+            drawThreadQueueTooltip(mouseX, mouseY);
             return;
         }
         int logicalMouseX = toLogicalMouseX(mouseX);
@@ -354,6 +363,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         GlStateManager.popMatrix();
         super.renderHoveredToolTip(mouseX, mouseY);
         renderModalSubGui(mouseX, mouseY, partialTicks);
+        drawThreadQueueTooltip(mouseX, mouseY);
     }
 
     @Override
@@ -391,6 +401,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 }
             }
             drawProgressBars(Integer.valueOf(priority));
+            drawDynamicVisuals(true, Integer.valueOf(priority));
             drawCustomSliders(Integer.valueOf(priority));
             drawConfiguredTexts(Integer.valueOf(priority));
             if (priority >= 0) {
@@ -421,9 +432,10 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             if (priority.intValue() >= 0) {
                 continue;
             }
-            drawProgressBars(priority);
-            drawCustomSliders(priority);
-            drawConfiguredTextureLayers(true, cfg, priority);
+            drawProgressBars(priority, true);
+            drawDynamicVisuals(true, priority, true);
+            drawNegativeForegroundSliders(priority);
+            drawConfiguredTextureLayers(true, cfg, priority, true);
         }
     }
 
@@ -439,10 +451,11 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             }
             drawConfiguredTextureLayers(false, cfg);
             drawBackgroundProgressBars();
+            drawDynamicVisuals(false, null);
             drawBackgroundSliders();
             drawNegativeForegroundTextureLayers(cfg);
             updateRecipeScrollbar(this.guiLeft, this.guiTop);
-            recipeScrollbar.draw(this, mc);
+            drawRecipeScrollbar();
             return;
         }
 
@@ -497,11 +510,12 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         // Users should draw panel areas directly in their custom GUI textures.
         drawConfiguredTextureLayers(false, cfg);
         drawBackgroundProgressBars();
+        drawDynamicVisuals(false, null);
         drawBackgroundSliders();
         drawNegativeForegroundTextureLayers(cfg);
 
         updateRecipeScrollbar(this.guiLeft, this.guiTop);
-        recipeScrollbar.draw(this, mc);
+        drawRecipeScrollbar();
     }
 
     @Override
@@ -657,7 +671,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             return;
         }
         if (isUsingDefaultBackground(MMCEGuiExtConfig.factoryController)) {
-            recipeScrollbar.click(mouseX, mouseY);
+            clickRecipeScrollbarIfVisible(mouseX, mouseY);
             super.mouseClicked(mouseX, mouseY, mouseButton);
             return;
         }
@@ -675,7 +689,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             }
         }
 
-        recipeScrollbar.click(mouseX, mouseY);
+        clickRecipeScrollbarIfVisible(mouseX, mouseY);
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
 
@@ -703,14 +717,12 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             mouseX = toLogicalMouseX(mouseX);
             mouseY = toLogicalMouseY(mouseY);
         }
-        if (isUsingDefaultBackground(MMCEGuiExtConfig.factoryController)) {
-            recipeScrollbar.click(mouseX, mouseY);
-            super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
+        if (handleActiveSliderMouseDrag(mouseX, mouseY, clickedMouseButton)) {
             return;
         }
-
-        if (clickedMouseButton == 0 && this.draggingSlider != null) {
-            updateSliderFromMouse(this.draggingSlider, mouseX, mouseY, false);
+        if (isUsingDefaultBackground(MMCEGuiExtConfig.factoryController)) {
+            clickRecipeScrollbarIfVisible(mouseX, mouseY);
+            super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
             return;
         }
 
@@ -721,7 +733,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 updatePanelScrollFromMouse(panel.id, panel.rect, localY);
             }
         } else {
-            recipeScrollbar.click(mouseX, mouseY);
+            clickRecipeScrollbarIfVisible(mouseX, mouseY);
         }
         super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
     }
@@ -755,7 +767,68 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         super.mouseReleased(mouseX, mouseY, state);
     }
 
+    private float resolveDefaultCharSpacing() {
+        return GuiRenderUtils.sanitizeCharSpacing(this.styleOverride.defaultCharSpacing);
+    }
+
+    private float resolveCharSpacing(@Nullable Float charSpacing) {
+        return GuiRenderUtils.resolveCharSpacing(charSpacing, resolveDefaultCharSpacing());
+    }
+
+    private MachineGuiStyleManager.ButtonStyle applyDefaultButtonCharSpacing(MachineGuiStyleManager.ButtonStyle style) {
+        if (style != null && style.charSpacing == null) {
+            float spacing = resolveDefaultCharSpacing();
+            if (spacing != 0.0F) {
+                style.charSpacing = Float.valueOf(spacing);
+            }
+        }
+        return style;
+    }
+
+    private GuiButton createGuiButton(int id, int x, int y, int width, int height, String label) {
+        float spacing = resolveDefaultCharSpacing();
+        if (spacing == 0.0F) {
+            return new GuiButton(id, x, y, width, height, label);
+        }
+        return GuiTexturedButton.builder(id, x, y, width, height, label)
+            .charSpacing(spacing)
+            .build();
+    }
+
+    private List<String> wrapFormattedStringToWidth(String text, int width) {
+        return GuiRenderUtils.listFormattedStringToWidth(this.fontRenderer, text, width, resolveDefaultCharSpacing());
+    }
+
+    private int getTextWidth(String text) {
+        return Math.round(GuiRenderUtils.getStringWidth(this.fontRenderer, text, resolveDefaultCharSpacing()));
+    }
+
+    private int getTextWidth(String text, float charSpacing) {
+        return Math.round(GuiRenderUtils.getStringWidth(this.fontRenderer, text, charSpacing));
+    }
+
+    private int drawStringWithShadow(String text, float x, float y, int color) {
+        return GuiRenderUtils.drawString(this.fontRenderer, text, x, y, color, true, resolveDefaultCharSpacing());
+    }
+
+    private int drawString(String text, float x, float y, int color) {
+        return GuiRenderUtils.drawString(this.fontRenderer, text, x, y, color, false, resolveDefaultCharSpacing());
+    }
+
+    private int drawStringWithSpacing(String text, float x, float y, int color, boolean shadow, float charSpacing) {
+        return GuiRenderUtils.drawString(this.fontRenderer, text, x, y, color, shadow, charSpacing);
+    }
+
     private void drawRecipeQueue() {
+        if (this.styleOverride != null) {
+            String queueMode = this.styleOverride.threadQueueMode;
+            if (queueMode != null) {
+                String mode = queueMode.trim().toLowerCase(java.util.Locale.ROOT);
+                if ("hidden".equals(mode)) {
+                    return;
+                }
+            }
+        }
         int offsetX = getThreadQueueX();
         int offsetY = getThreadQueueY();
         int currentScroll = recipeScrollbar.getCurrentScroll();
@@ -764,11 +837,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
         Collection<FactoryRecipeThread> coreThreadList = factory.getCoreRecipeThreads().values();
         List<FactoryRecipeThread> threadList = factory.getFactoryRecipeThreadList();
-        List<FactoryRecipeThread> recipeThreadList = new ArrayList<FactoryRecipeThread>(
-            (int) ((coreThreadList.size() + threadList.size()) * 1.5D)
-        );
-        recipeThreadList.addAll(coreThreadList);
-        recipeThreadList.addAll(threadList);
+        List<FactoryRecipeThread> recipeThreadList = collectFactoryThreads(coreThreadList, threadList);
 
         int visibleRows = getVisibleQueueRows();
         int drawableSize = Math.min(visibleRows, Math.max(0, recipeThreadList.size() - currentScroll));
@@ -780,6 +849,19 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private void drawRecipeInfo(FactoryRecipeThread thread, int id, int offsetX, int offsetY, int rowWidth, int rowHeight) {
+        boolean isTooltipMode = isThreadTooltipMode();
+        if (isTooltipMode) {
+            // Tooltip mode: draw backgrounds only, skip text and progress overlay
+            this.mc.getTextureManager().bindTexture(TEXTURES_FACTORY_ELEMENTS);
+            if (thread.isCoreThread()) {
+                GuiRenderUtils.applyColorARGB(this.specialThreadBgColor);
+            } else {
+                GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            }
+            drawTexturedModalRect(offsetX, offsetY, 0, 0, rowWidth, rowHeight);
+            // Hover tooltip will be handled by drawScreen tooltip logic
+            return;
+        }
         CraftingStatus status = thread.getStatus();
         ActiveMachineRecipe activeRecipe = thread.getActiveRecipe();
 
@@ -834,29 +916,29 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         }
 
         if (parallelism > 1) {
-            this.fontRenderer.drawString(
+            drawString(
                 threadName + " (" + I18n.format("gui.controller.parallelism", parallelism) + ")",
                 offsetX,
                 offsetY,
                 0x222222
             );
         } else {
-            this.fontRenderer.drawString(threadName, offsetX, offsetY, 0x222222);
+            drawString(threadName, offsetX, offsetY, 0x222222);
         }
         offsetY += 12;
 
-        List<String> out = this.fontRenderer.listFormattedStringToWidth(
+        List<String> out = wrapFormattedStringToWidth(
             I18n.format(status.getUnlocMessage()),
             Math.max(24, (int) ((rowWidth - 6) / FONT_SCALE))
         );
         for (String draw : out) {
-            this.fontRenderer.drawString(draw, offsetX, offsetY, 0x222222);
+            drawString(draw, offsetX, offsetY, 0x222222);
             offsetY += 10;
         }
 
         if (activeRecipe != null && activeRecipe.getTotalTick() > 0) {
             int progress = (activeRecipe.getTick() * 100) / activeRecipe.getTotalTick();
-            this.fontRenderer.drawString(
+            drawString(
                 I18n.format("gui.controller.status.crafting.progress", progress + "%"),
                 offsetX,
                 offsetY,
@@ -879,12 +961,12 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
         int redstone = factory.getWorld().getStrongPower(factory.getPos());
         if (redstone > 0) {
-            List<String> out = this.fontRenderer.listFormattedStringToWidth(
+            List<String> out = wrapFormattedStringToWidth(
                 I18n.format("gui.controller.status.redstone_stopped"),
                 MathHelper.floor(135 * (1.0D / FONT_SCALE))
             );
             for (String draw : out) {
-                this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
                 offsetY += 10;
             }
             GlStateManager.popMatrix();
@@ -930,7 +1012,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             int usedTimeCache = TileMultiblockMachineController.usedTimeCache;
             float searchUsedTimeCache = TileMultiblockMachineController.searchUsedTimeCache;
             String workMode = TileMultiblockMachineController.workModeCache.getDisplayName();
-            this.fontRenderer.drawStringWithShadow(
+            drawStringWithShadow(
                 String.format(
                     "Avg: %dus/t (Search: %sms), WorkMode: %s",
                     usedTimeCache,
@@ -949,18 +1031,18 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     private int drawDefaultBlueprintInfo(int offsetX, int y, @Nullable DynamicMachine machine, boolean formed) {
         int offsetY = y;
         if (machine != null) {
-            this.fontRenderer.drawStringWithShadow(I18n.format("gui.controller.blueprint", ""), offsetX, offsetY, 0xFFFFFF);
-            List<String> out = this.fontRenderer.listFormattedStringToWidth(
+            drawStringWithShadow(I18n.format("gui.controller.blueprint", ""), offsetX, offsetY, 0xFFFFFF);
+            List<String> out = wrapFormattedStringToWidth(
                 machine.getLocalizedName(),
                 MathHelper.floor(135 * (1.0D / FONT_SCALE))
             );
             for (String draw : out) {
                 offsetY += 10;
-                this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
             }
             offsetY += 15;
         } else if (!formed) {
-            this.fontRenderer.drawStringWithShadow(
+            drawStringWithShadow(
                 I18n.format("gui.controller.blueprint", I18n.format("gui.controller.blueprint.none")),
                 offsetX,
                 offsetY,
@@ -974,18 +1056,18 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     private int drawDefaultStructureInfo(int offsetX, int y, @Nullable DynamicMachine found) {
         int offsetY = y;
         if (found != null) {
-            this.fontRenderer.drawStringWithShadow(I18n.format("gui.controller.structure", ""), offsetX, offsetY, 0xFFFFFF);
-            List<String> out = this.fontRenderer.listFormattedStringToWidth(
+            drawStringWithShadow(I18n.format("gui.controller.structure", ""), offsetX, offsetY, 0xFFFFFF);
+            List<String> out = wrapFormattedStringToWidth(
                 found.getLocalizedName(),
                 MathHelper.floor(135 * (1.0D / FONT_SCALE))
             );
             for (String draw : out) {
                 offsetY += 10;
-                this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
             }
             offsetY = drawDefaultExtraInfo(offsetX, offsetY);
         } else {
-            this.fontRenderer.drawStringWithShadow(
+            drawStringWithShadow(
                 I18n.format("gui.controller.structure", I18n.format("gui.controller.structure.none")),
                 offsetX,
                 offsetY,
@@ -1010,7 +1092,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 }
                 RoutedText routed = parseRoutedText(s, "main");
                 waitForDraw.addAll(
-                    this.fontRenderer.listFormattedStringToWidth(
+                    wrapFormattedStringToWidth(
                         routed.text,
                         MathHelper.floor(135 * (1.0D / FONT_SCALE))
                     )
@@ -1019,7 +1101,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             offsetY += 5;
             for (String s : waitForDraw) {
                 offsetY += 10;
-                this.fontRenderer.drawStringWithShadow(s, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(s, offsetX, offsetY, 0xFFFFFF);
             }
         }
         return offsetY;
@@ -1031,14 +1113,14 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         }
         int offsetY = y;
 
-        this.fontRenderer.drawStringWithShadow(I18n.format("gui.controller.status"), offsetX, offsetY, 0xFFFFFF);
-        List<String> out = this.fontRenderer.listFormattedStringToWidth(
+        drawStringWithShadow(I18n.format("gui.controller.status"), offsetX, offsetY, 0xFFFFFF);
+        List<String> out = wrapFormattedStringToWidth(
             I18n.format(factory.getControllerStatus().getUnlocMessage()),
             MathHelper.floor(135 * (1.0D / FONT_SCALE))
         );
         for (String draw : out) {
             offsetY += 10;
-            this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+            drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
         }
         return offsetY + 15;
     }
@@ -1047,7 +1129,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         if (factory.getMaxThreads() <= 0) {
             return offsetY;
         }
-        this.fontRenderer.drawStringWithShadow(
+        drawStringWithShadow(
             I18n.format("gui.factory.threads", factory.getFactoryRecipeThreadList().size(), factory.getMaxThreads()),
             offsetX,
             offsetY,
@@ -1082,9 +1164,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             return offsetY;
         }
 
-        this.fontRenderer.drawStringWithShadow(I18n.format("gui.controller.parallelism", parallelism), offsetX, offsetY, 0xFFFFFF);
+        drawStringWithShadow(I18n.format("gui.controller.parallelism", parallelism), offsetX, offsetY, 0xFFFFFF);
         offsetY += 10;
-        this.fontRenderer.drawStringWithShadow(
+        drawStringWithShadow(
             I18n.format("gui.controller.max_parallelism", maxParallelism),
             offsetX,
             offsetY,
@@ -1128,7 +1210,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             GlStateManager.pushMatrix();
             GlStateManager.scale((float) FONT_SCALE, (float) FONT_SCALE, 1.0F);
             for (String line : lines) {
-                this.fontRenderer.drawStringWithShadow(line, textX, textY, 0xFFFFFF);
+                drawStringWithShadow(line, textX, textY, 0xFFFFFF);
                 textY += this.fontRenderer.FONT_HEIGHT + 2;
             }
             GlStateManager.popMatrix();
@@ -1278,6 +1360,108 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     private int resolveLayerPriority(TextureLayerDef layer) {
         LayerRuntimeState runtime = this.layerRuntimeStates.get(layer.id);
         return runtime != null && runtime.priority != null ? runtime.priority.intValue() : layer.priority;
+    }
+
+    private void applySlotLayout() {
+        if (this.inventorySlots == null || this.inventorySlots.inventorySlots == null) {
+            return;
+        }
+        ControllerSlotLayoutEngine.apply(
+            this.inventorySlots.inventorySlots,
+            getSlotLayoutProvider(),
+            this.styleOverride == null ? null : this.styleOverride.slotGroups,
+            this.styleOverride == null ? null : this.styleOverride.playerInventory
+        );
+    }
+
+    private void drawThreadQueueTooltip(int mouseX, int mouseY) {
+        if (!isThreadTooltipMode()) {
+            return;
+        }
+        int logicalMouseX = this.guiScaleMode ? toLogicalMouseX(mouseX) : mouseX;
+        int logicalMouseY = this.guiScaleMode ? toLogicalMouseY(mouseY) : mouseY;
+        int localX = logicalMouseX - this.guiLeft;
+        int localY = logicalMouseY - this.guiTop;
+        int queueX = getThreadQueueX();
+        int queueY = getThreadQueueY();
+        int queueWidth = getThreadRowWidth();
+        int visibleRows = getVisibleQueueRows();
+        int rowHeight = getThreadRowHeight();
+        int queueHeight = visibleRows * rowHeight + Math.max(0, visibleRows - 1);
+        if (localX < queueX || localX >= queueX + queueWidth || localY < queueY || localY >= queueY + queueHeight) {
+            return;
+        }
+
+        List<FactoryRecipeThread> threads = collectFactoryThreads(
+            this.factory.getCoreRecipeThreads().values(),
+            this.factory.getFactoryRecipeThreadList()
+        );
+        if (threads.isEmpty()) {
+            return;
+        }
+        int currentScroll = recipeScrollbar == null ? 0 : recipeScrollbar.getCurrentScroll();
+        int max = Math.min(threads.size(), currentScroll + visibleRows);
+        List<String> tooltip = new ArrayList<String>();
+        tooltip.add(I18n.format("gui.factory.threads", this.factory.getFactoryRecipeThreadList().size(), this.factory.getMaxThreads()));
+        for (int i = currentScroll; i < max; i++) {
+            tooltip.add(formatThreadTooltipLine(threads.get(i), i));
+        }
+        drawHoveringText(tooltip, mouseX, mouseY, this.fontRenderer);
+    }
+
+    private boolean isThreadTooltipMode() {
+        if (this.styleOverride == null) {
+            return false;
+        }
+        if (Boolean.TRUE.equals(this.styleOverride.threadTooltip)) {
+            return true;
+        }
+        return this.styleOverride.threadQueueMode != null
+            && "tooltip".equals(this.styleOverride.threadQueueMode.trim().toLowerCase(Locale.ROOT));
+    }
+
+    private static List<FactoryRecipeThread> collectFactoryThreads(Collection<FactoryRecipeThread> coreThreadList,
+                                                                   List<FactoryRecipeThread> threadList) {
+        List<FactoryRecipeThread> recipeThreadList = new ArrayList<FactoryRecipeThread>(
+            (int) ((coreThreadList.size() + threadList.size()) * 1.5D)
+        );
+        recipeThreadList.addAll(coreThreadList);
+        recipeThreadList.addAll(threadList);
+        return recipeThreadList;
+    }
+
+    private String formatThreadTooltipLine(FactoryRecipeThread thread, int id) {
+        ActiveMachineRecipe activeRecipe = thread.getActiveRecipe();
+        CraftingStatus status = thread.getStatus();
+        int parallelism = activeRecipe == null ? 1 : activeRecipe.getParallelism();
+        String threadName;
+        if (thread.isCoreThread()) {
+            String name = thread.getThreadName();
+            threadName = I18n.hasKey(name) ? I18n.format(name) : name;
+        } else {
+            threadName = I18n.format("gui.factory.thread", id);
+        }
+        StringBuilder builder = new StringBuilder(threadName);
+        if (parallelism > 1) {
+            builder.append(" (").append(I18n.format("gui.controller.parallelism", parallelism)).append(')');
+        }
+        builder.append(": ").append(I18n.format(status.getUnlocMessage()));
+        if (activeRecipe != null && activeRecipe.getTotalTick() > 0) {
+            int progress = (activeRecipe.getTick() * 100) / activeRecipe.getTotalTick();
+            builder.append(" ").append(I18n.format("gui.controller.status.crafting.progress", progress + "%"));
+        }
+        return builder.toString();
+    }
+
+    @Nullable
+    private com.fushu.mmceguiext.api.gui.SlotLayoutProvider getSlotLayoutProvider() {
+        if (this.inventorySlots instanceof com.fushu.mmceguiext.api.gui.SlotLayoutProvider) {
+            return (com.fushu.mmceguiext.api.gui.SlotLayoutProvider) this.inventorySlots;
+        }
+        if (this.factory instanceof com.fushu.mmceguiext.api.gui.SlotLayoutProvider) {
+            return (com.fushu.mmceguiext.api.gui.SlotLayoutProvider) this.factory;
+        }
+        return null;
     }
 
     private void applyPlayerInventoryVisibility(MMCEGuiExtConfig.FactoryController cfg) {
@@ -1441,12 +1625,14 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         String statusPanel = resolveInfoSectionPanel(defaultPanelId, "status", "status_info");
         String parallelismPanel = resolveInfoSectionPanel(defaultPanelId, "parallelism", "parallelism_info", "threads", "thread_info");
         String performancePanel = resolveInfoSectionPanel(defaultPanelId, "performance", "performance_info", "perf");
+        DynamicMachine found = factory.getFoundMachine();
 
         int redstone = factory.getWorld().getStrongPower(factory.getPos());
         if (redstone > 0) {
             if (getShowStatusInfo(cfg)) {
                 addWrapped(linesByPanel, panelMap, statusPanel, I18n.format("gui.controller.status.redstone_stopped"), defaultPanelId);
             }
+            addControllerExtraInfo(linesByPanel, panelMap, defaultPanelId, structurePanel);
             return linesByPanel;
         }
 
@@ -1466,21 +1652,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             addBlank(linesByPanel, blueprintPanel);
         }
 
-        DynamicMachine found = factory.getFoundMachine();
         if (getShowStructureInfo(cfg) && found != null) {
             addWrapped(linesByPanel, panelMap, structurePanel, I18n.format("gui.controller.structure", ""), defaultPanelId);
             addWrapped(linesByPanel, panelMap, structurePanel, found.getLocalizedName(), defaultPanelId);
-
-            ControllerGUIRenderEvent event = new ControllerGUIRenderEvent(factory);
-            event.postEvent();
-            for (String extra : event.getExtraInfo()) {
-                if (consumeGuiDirective(extra)) {
-                    continue;
-                }
-                RoutedText routed = parseRoutedText(extra, defaultPanelId);
-                String targetPanel = panelMap.containsKey(routed.panelId) ? routed.panelId : structurePanel;
-                addWrapped(linesByPanel, panelMap, targetPanel, routed.text, defaultPanelId);
-            }
         } else if (getShowStructureInfo(cfg)) {
             addWrapped(
                 linesByPanel,
@@ -1490,13 +1664,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 defaultPanelId
             );
             addBlank(linesByPanel, structurePanel);
-        } else if (found != null) {
-            ControllerGUIRenderEvent event = new ControllerGUIRenderEvent(factory);
-            event.postEvent();
-            for (String extra : event.getExtraInfo()) {
-                consumeGuiDirective(extra);
-            }
         }
+
+        addControllerExtraInfo(linesByPanel, panelMap, defaultPanelId, structurePanel);
 
         if (!factory.isStructureFormed()) {
             return linesByPanel;
@@ -1568,6 +1738,24 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         return linesByPanel;
     }
 
+    private void addControllerExtraInfo(
+        Map<String, List<String>> linesByPanel,
+        Map<String, PanelDef> panelMap,
+        String defaultPanelId,
+        String fallbackPanel
+    ) {
+        ControllerGUIRenderEvent event = new ControllerGUIRenderEvent(factory);
+        event.postEvent();
+        for (String extra : event.getExtraInfo()) {
+            if (consumeGuiDirective(extra)) {
+                continue;
+            }
+            RoutedText routed = parseRoutedText(extra, defaultPanelId);
+            String targetPanel = panelMap.containsKey(routed.panelId) ? routed.panelId : fallbackPanel;
+            addWrapped(linesByPanel, panelMap, targetPanel, routed.text, defaultPanelId);
+        }
+    }
+
     private void addWrapped(
         Map<String, List<String>> linesByPanel,
         Map<String, PanelDef> panelMap,
@@ -1593,7 +1781,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             return;
         }
         int wrapWidth = Math.max(24, MathHelper.floor((float) ((panel.rect.width - 8) / FONT_SCALE)));
-        target.addAll(this.fontRenderer.listFormattedStringToWidth(text, wrapWidth));
+        target.addAll(wrapFormattedStringToWidth(text, wrapWidth));
     }
 
     private void addBlank(Map<String, List<String>> linesByPanel, String panelId) {
@@ -1605,15 +1793,108 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
     private void updateRecipeScrollbar(int displayX, int displayY) {
         int visibleRows = getVisibleQueueRows();
-        int scrollbarHeight = Math.max(getThreadRowHeight(), visibleRows * (getThreadRowHeight() + 1) - 1);
+        int autoHeight = Math.max(getThreadRowHeight(), visibleRows * (getThreadRowHeight() + 1) - 1);
         recipeScrollbar
             .setLeft(getThreadScrollbarX() + displayX)
             .setTop(getThreadScrollbarY() + displayY)
-            .setHeight(scrollbarHeight);
+            .setWidth(getThreadScrollbarWidth())
+            .setHeight(getThreadScrollbarHeight(autoHeight));
 
         Map<String, FactoryRecipeThread> coreThreads = factory.getCoreRecipeThreads();
         List<FactoryRecipeThread> threadList = factory.getFactoryRecipeThreadList();
-        recipeScrollbar.setRange(0, Math.max(0, coreThreads.size() + threadList.size() - visibleRows), 1);
+        recipeScrollbar.setRange(0, getThreadScrollbarRange(coreThreads.size() + threadList.size(), visibleRows), 1);
+    }
+
+    private void drawRecipeScrollbar() {
+        if (!isThreadScrollbarVisible()) {
+            return;
+        }
+        if (!hasCustomThreadScrollbarVisual()) {
+            recipeScrollbar.draw(this, mc);
+            return;
+        }
+
+        int x = recipeScrollbar.getLeft();
+        int y = recipeScrollbar.getTop();
+        int width = recipeScrollbar.getWidth();
+        int height = recipeScrollbar.getHeight();
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        ResourceLocation trackTexture = getThreadScrollbarTrackTexture();
+        if (trackTexture != null) {
+            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            this.mc.getTextureManager().bindTexture(trackTexture);
+            GuiRenderUtils.drawScaledTexturedRect(
+                x,
+                y,
+                width,
+                height,
+                0,
+                0,
+                getThreadScrollbarTextureWidth(),
+                getThreadScrollbarTextureHeight(),
+                getThreadScrollbarTextureWidth(),
+                getThreadScrollbarTextureHeight()
+            );
+        } else {
+            drawRect(x, y, x + width, y + height, getThreadScrollbarTrackColor());
+        }
+
+        int range = getThreadScrollbarRange(getTotalThreadCount(), getVisibleQueueRows());
+        int thumbHeight = getThreadScrollbarThumbHeight(height, range);
+        int thumbY = y;
+        if (range > 0 && height > thumbHeight) {
+            thumbY += MathHelper.clamp(recipeScrollbar.getCurrentScroll(), 0, range) * (height - thumbHeight) / range;
+        }
+
+        ResourceLocation thumbTexture = getThreadScrollbarThumbTexture();
+        if (thumbTexture != null) {
+            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            this.mc.getTextureManager().bindTexture(thumbTexture);
+            GuiRenderUtils.drawScaledTexturedRect(
+                x,
+                thumbY,
+                width,
+                thumbHeight,
+                0,
+                0,
+                getThreadScrollbarThumbTextureWidth(),
+                getThreadScrollbarThumbTextureHeight(),
+                getThreadScrollbarThumbTextureWidth(),
+                getThreadScrollbarThumbTextureHeight()
+            );
+        } else {
+            drawRect(x, thumbY, x + width, thumbY + thumbHeight, getThreadScrollbarThumbColor());
+        }
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+    }
+
+    private void clickRecipeScrollbarIfVisible(int mouseX, int mouseY) {
+        if (isThreadScrollbarVisible()) {
+            recipeScrollbar.click(mouseX, mouseY);
+        }
+    }
+
+    private int getThreadScrollbarRange(int totalThreads, int visibleRows) {
+        return Math.max(0, totalThreads - Math.max(1, visibleRows));
+    }
+
+    private int getTotalThreadCount() {
+        Map<String, FactoryRecipeThread> coreThreads = factory.getCoreRecipeThreads();
+        List<FactoryRecipeThread> threadList = factory.getFactoryRecipeThreadList();
+        return coreThreads.size() + threadList.size();
+    }
+
+    private int getThreadScrollbarThumbHeight(int scrollbarHeight, int range) {
+        int minHeight = MathHelper.clamp(getThreadScrollbarThumbMinHeight(), 1, Math.max(1, scrollbarHeight));
+        if (range <= 0) {
+            return scrollbarHeight;
+        }
+        int total = Math.max(1, getTotalThreadCount());
+        int proportional = MathHelper.floor((float) scrollbarHeight * (float) getVisibleQueueRows() / (float) total);
+        return MathHelper.clamp(proportional, minHeight, scrollbarHeight);
     }
 
     private int getVisibleQueueRows() {
@@ -1639,28 +1920,184 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         if (styleOverride.threadQueueX != null) {
             return Math.max(0, styleOverride.threadQueueX.intValue());
         }
-        return RECIPE_QUEUE_OFFSET_X;
+        return Math.max(0, MMCEGuiExtConfig.factoryController.threadQueueX);
     }
 
     private int getThreadQueueY() {
         if (styleOverride.threadQueueY != null) {
             return Math.max(0, styleOverride.threadQueueY.intValue());
         }
-        return RECIPE_QUEUE_OFFSET_Y;
+        return Math.max(0, MMCEGuiExtConfig.factoryController.threadQueueY);
+    }
+
+    @Nullable
+    private MachineGuiStyleManager.ThreadScrollbarStyle getThreadScrollbarStyle() {
+        return styleOverride.threadScrollbar;
     }
 
     private int getThreadScrollbarX() {
-        if (styleOverride.threadScrollbarX != null) {
-            return Math.max(0, styleOverride.threadScrollbarX.intValue());
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.x != null) {
+            return scrollbar.x.intValue();
         }
-        return SCROLLBAR_LEFT;
+        if (styleOverride.threadScrollbarX != null) {
+            return styleOverride.threadScrollbarX.intValue();
+        }
+        MMCEGuiExtConfig.FactoryController.ThreadScrollbar cfg = MMCEGuiExtConfig.factoryController.threadScrollbar;
+        if (cfg.x != -1) {
+            return cfg.x;
+        }
+        return MMCEGuiExtConfig.factoryController.threadScrollbarX;
     }
 
     private int getThreadScrollbarY() {
-        if (styleOverride.threadScrollbarY != null) {
-            return Math.max(0, styleOverride.threadScrollbarY.intValue());
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.y != null) {
+            return scrollbar.y.intValue();
         }
-        return SCROLLBAR_TOP;
+        if (styleOverride.threadScrollbarY != null) {
+            return styleOverride.threadScrollbarY.intValue();
+        }
+        MMCEGuiExtConfig.FactoryController.ThreadScrollbar cfg = MMCEGuiExtConfig.factoryController.threadScrollbar;
+        if (cfg.y != -1) {
+            return cfg.y;
+        }
+        return MMCEGuiExtConfig.factoryController.threadScrollbarY;
+    }
+
+    private int getThreadScrollbarWidth() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.width != null) {
+            return Math.max(1, scrollbar.width.intValue());
+        }
+        return Math.max(1, MMCEGuiExtConfig.factoryController.threadScrollbar.width);
+    }
+
+    private int getThreadScrollbarHeight(int autoHeight) {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.height != null) {
+            int configured = scrollbar.height.intValue();
+            return configured > 0 ? configured : Math.max(1, autoHeight);
+        }
+        int configured = MMCEGuiExtConfig.factoryController.threadScrollbar.height;
+        return configured > 0 ? configured : Math.max(1, autoHeight);
+    }
+
+    private boolean isThreadScrollbarVisible() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.visible != null) {
+            return scrollbar.visible.booleanValue();
+        }
+        return MMCEGuiExtConfig.factoryController.threadScrollbar.visible;
+    }
+
+    private boolean hasCustomThreadScrollbarVisual() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null) {
+            if (hasText(scrollbar.trackTexture) || hasText(scrollbar.thumbTexture)) {
+                return true;
+            }
+            if (scrollbar.trackColor != null || scrollbar.thumbColor != null) {
+                return true;
+            }
+            if (scrollbar.textureWidth != null || scrollbar.textureHeight != null
+                || scrollbar.thumbTextureWidth != null || scrollbar.thumbTextureHeight != null
+                || scrollbar.thumbMinHeight != null) {
+                return true;
+            }
+        }
+        MMCEGuiExtConfig.FactoryController.ThreadScrollbar cfg = MMCEGuiExtConfig.factoryController.threadScrollbar;
+        return hasText(cfg.trackTexture)
+            || hasText(cfg.thumbTexture)
+            || GuiRenderUtils.parseColorARGBOrDefault(cfg.trackColor, DEFAULT_SCROLLBAR_TRACK_COLOR) != DEFAULT_SCROLLBAR_TRACK_COLOR
+            || GuiRenderUtils.parseColorARGBOrDefault(cfg.thumbColor, DEFAULT_SCROLLBAR_THUMB_COLOR) != DEFAULT_SCROLLBAR_THUMB_COLOR
+            || cfg.textureWidth != SCROLLBAR_WIDTH
+            || cfg.textureHeight != 16
+            || cfg.thumbTextureWidth != SCROLLBAR_WIDTH
+            || cfg.thumbTextureHeight != SCROLLBAR_THUMB_HEIGHT
+            || cfg.thumbMinHeight != SCROLLBAR_THUMB_HEIGHT;
+    }
+
+    private ResourceLocation getThreadScrollbarTrackTexture() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && hasText(scrollbar.trackTexture)) {
+            return GuiRenderUtils.parseOptionalTexture(scrollbar.trackTexture);
+        }
+        return GuiRenderUtils.parseOptionalTexture(MMCEGuiExtConfig.factoryController.threadScrollbar.trackTexture);
+    }
+
+    private ResourceLocation getThreadScrollbarThumbTexture() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && hasText(scrollbar.thumbTexture)) {
+            return GuiRenderUtils.parseOptionalTexture(scrollbar.thumbTexture);
+        }
+        return GuiRenderUtils.parseOptionalTexture(MMCEGuiExtConfig.factoryController.threadScrollbar.thumbTexture);
+    }
+
+    private int getThreadScrollbarTrackColor() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.trackColor != null) {
+            return scrollbar.trackColor.intValue();
+        }
+        return GuiRenderUtils.parseColorARGBOrDefault(
+            MMCEGuiExtConfig.factoryController.threadScrollbar.trackColor,
+            DEFAULT_SCROLLBAR_TRACK_COLOR
+        );
+    }
+
+    private int getThreadScrollbarThumbColor() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.thumbColor != null) {
+            return scrollbar.thumbColor.intValue();
+        }
+        return GuiRenderUtils.parseColorARGBOrDefault(
+            MMCEGuiExtConfig.factoryController.threadScrollbar.thumbColor,
+            DEFAULT_SCROLLBAR_THUMB_COLOR
+        );
+    }
+
+    private int getThreadScrollbarTextureWidth() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.textureWidth != null) {
+            return Math.max(1, scrollbar.textureWidth.intValue());
+        }
+        return Math.max(1, MMCEGuiExtConfig.factoryController.threadScrollbar.textureWidth);
+    }
+
+    private int getThreadScrollbarTextureHeight() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.textureHeight != null) {
+            return Math.max(1, scrollbar.textureHeight.intValue());
+        }
+        return Math.max(1, MMCEGuiExtConfig.factoryController.threadScrollbar.textureHeight);
+    }
+
+    private int getThreadScrollbarThumbTextureWidth() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.thumbTextureWidth != null) {
+            return Math.max(1, scrollbar.thumbTextureWidth.intValue());
+        }
+        return Math.max(1, MMCEGuiExtConfig.factoryController.threadScrollbar.thumbTextureWidth);
+    }
+
+    private int getThreadScrollbarThumbTextureHeight() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.thumbTextureHeight != null) {
+            return Math.max(1, scrollbar.thumbTextureHeight.intValue());
+        }
+        return Math.max(1, MMCEGuiExtConfig.factoryController.threadScrollbar.thumbTextureHeight);
+    }
+
+    private int getThreadScrollbarThumbMinHeight() {
+        MachineGuiStyleManager.ThreadScrollbarStyle scrollbar = getThreadScrollbarStyle();
+        if (scrollbar != null && scrollbar.thumbMinHeight != null) {
+            return Math.max(1, scrollbar.thumbMinHeight.intValue());
+        }
+        return Math.max(1, MMCEGuiExtConfig.factoryController.threadScrollbar.thumbMinHeight);
+    }
+
+    private boolean hasText(@Nullable String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     private int getThreadRowWidth() {
@@ -2030,6 +2467,13 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         GuiRuntimeState restore = captureCurrentRuntimeState();
         applyRuntimeState(this.activeSubGui.runtimeState);
         try {
+            if (handleCustomButtonMouseClicked(mouseX, mouseY, mouseButton)
+                || handleCustomSliderMouseClicked(mouseX, mouseY, mouseButton)
+                || handleCustomSmartInterfaceMouseClicked(mouseX, mouseY, mouseButton)
+                || handleSmartInterfaceMouseClicked(mouseX, mouseY, mouseButton)) {
+                saveActiveSubGuiRuntimeState();
+                return true;
+            }
             if (mouseButton == 0) {
                 int localX = mouseX - this.guiLeft;
                 int localY = mouseY - this.guiTop;
@@ -2042,12 +2486,6 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                     }
                 }
             }
-            if (handleCustomButtonMouseClicked(mouseX, mouseY, mouseButton)
-                || handleCustomSmartInterfaceMouseClicked(mouseX, mouseY, mouseButton)
-                || handleSmartInterfaceMouseClicked(mouseX, mouseY, mouseButton)) {
-                saveActiveSubGuiRuntimeState();
-                return true;
-            }
             if (mouseButton == 0 && isModalSubGuiDragEnabled() && isMouseInModalSubGuiDragHandle(mouseX, mouseY)) {
                 this.draggingModalSubGui = true;
                 this.modalSubGuiDragOffsetX = mouseX - this.guiLeft;
@@ -2056,7 +2494,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 saveActiveSubGuiRuntimeState();
                 return true;
             }
-            recipeScrollbar.click(mouseX, mouseY);
+            clickRecipeScrollbarIfVisible(mouseX, mouseY);
             saveActiveSubGuiRuntimeState();
             return true;
         } finally {
@@ -2072,11 +2510,16 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         applyRuntimeState(this.activeSubGui.runtimeState);
         try {
             Rectangle bounds = this.activeSubGui.runtimeState.getBounds();
-            if (!bounds.contains(mouseX, mouseY) && this.draggingPanelId == null && !this.draggingModalSubGui) {
+            if (!bounds.contains(mouseX, mouseY)
+                && this.draggingPanelId == null
+                && this.draggingSlider == null
+                && !this.draggingModalSubGui) {
                 return false;
             }
             if (clickedMouseButton == 0 && this.draggingModalSubGui) {
                 updateModalSubGuiDragPosition(mouseX, mouseY);
+            } else if (handleActiveSliderMouseDrag(mouseX, mouseY, clickedMouseButton)) {
+                // Slider drag owns this mouse move.
             } else if (clickedMouseButton == 0 && this.draggingPanelId != null) {
                 PanelDef panel = findPanelById(this.draggingPanelId, getActivePanels(MMCEGuiExtConfig.factoryController));
                 if (panel != null) {
@@ -2084,7 +2527,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                     updatePanelScrollFromMouse(panel.id, panel.rect, localY);
                 }
             } else {
-                recipeScrollbar.click(mouseX, mouseY);
+                clickRecipeScrollbarIfVisible(mouseX, mouseY);
             }
             saveActiveSubGuiRuntimeState();
             return true;
@@ -2100,11 +2543,15 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         GuiRuntimeState restore = captureCurrentRuntimeState();
         applyRuntimeState(this.activeSubGui.runtimeState);
         try {
-            if (!this.activeSubGui.runtimeState.getBounds().contains(mouseX, mouseY) && this.draggingPanelId == null && !this.draggingModalSubGui) {
+            if (!this.activeSubGui.runtimeState.getBounds().contains(mouseX, mouseY)
+                && this.draggingPanelId == null
+                && this.draggingSlider == null
+                && !this.draggingModalSubGui) {
                 return false;
             }
             this.draggingModalSubGui = false;
             this.draggingPanelId = null;
+            this.draggingSlider = null;
             saveActiveSubGuiRuntimeState();
             return true;
         } finally {
@@ -2123,12 +2570,13 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         GuiRuntimeState restore = captureCurrentRuntimeState();
         applyRuntimeState(this.activeSubGui.runtimeState);
         try {
-            if (!hasFocusedSubGuiEditor()) {
-                return false;
+            if (handleCustomButtonKeyTyped(typedChar, keyCode)
+                || handleCustomSmartInterfaceKeyTyped(typedChar, keyCode)
+                || handleSmartInterfaceKeyTyped(typedChar, keyCode)) {
+                saveActiveSubGuiRuntimeState();
+                return true;
             }
-            keyTypedWithinCurrentState(typedChar, keyCode);
-            saveActiveSubGuiRuntimeState();
-            return true;
+            return false;
         } finally {
             applyRuntimeState(restore);
         }
@@ -2409,6 +2857,35 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         return factory.getBlueprintMachine();
     }
 
+    private MachineGuiStyleManager.ControllerStyle resolveBaseControllerStyle() {
+        MachineGuiStyleManager.ControllerStyle baseStyle = MachineGuiStyleManager.resolveFactoryController(resolveMachine());
+        IMachineGuiStyleProvider styleProvider = factory instanceof IMachineGuiStyleProvider
+            ? (IMachineGuiStyleProvider) factory
+            : null;
+        return mergeProvidedFactoryStyle(baseStyle, styleProvider);
+    }
+
+    private static MachineGuiStyleManager.ControllerStyle mergeProvidedFactoryStyle(
+        final MachineGuiStyleManager.ControllerStyle baseStyle,
+        @Nullable final IMachineGuiStyleProvider styleProvider
+    ) {
+        ResourceLocation styleKey = styleProvider == null
+            ? null
+            : styleProvider.getMachineControllerGuiStyle();
+        if (styleKey == null) {
+            return baseStyle;
+        }
+
+        MachineGuiStyleManager.ControllerStyle keyedStyle = MachineGuiStyleManager.resolveFactoryController(styleKey);
+        if (keyedStyle == MachineGuiStyleManager.ControllerStyle.EMPTY || keyedStyle.isEmpty()) {
+            return baseStyle;
+        }
+        if (baseStyle == MachineGuiStyleManager.ControllerStyle.EMPTY || baseStyle.isEmpty()) {
+            return keyedStyle;
+        }
+        return MachineGuiStyleManager.ControllerStyle.copyOf(baseStyle).mergeFrom(keyedStyle);
+    }
+
     @Nullable
     private ResourceLocation resolveCustomTexture() {
         String overrideTexture = styleOverride.backgroundTexture;
@@ -2630,26 +3107,99 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             int color = text.color == null ? 0xFFFFFF : text.color.intValue();
             float scale = text.scale == null ? 1.0F : Math.max(0.05F, text.scale.floatValue());
             boolean shadow = text.shadow == null || text.shadow.booleanValue();
-            int alignedX = GuiRenderUtils.resolveAlignedTextX(text.x, Math.round(this.fontRenderer.getStringWidth(value) * scale), text.align);
+            float charSpacing = resolveCharSpacing(text.charSpacing);
+            int alignedX = GuiRenderUtils.resolveAlignedTextX(text.x, Math.round(getTextWidth(value, charSpacing) * scale), text.align);
             GlStateManager.pushMatrix();
             GlStateManager.scale(scale, scale, 1.0F);
             int drawX = MathHelper.floor((float) (alignedX / scale));
             int drawY = MathHelper.floor((float) (text.y / scale));
-            if (shadow) {
-                this.fontRenderer.drawStringWithShadow(value, drawX, drawY, color);
-            } else {
-                this.fontRenderer.drawString(value, drawX, drawY, color);
-            }
+            drawStringWithSpacing(value, drawX, drawY, color, shadow, charSpacing);
             GlStateManager.popMatrix();
         }
     }
 
+    private void drawDynamicVisuals(boolean foreground, @Nullable Integer priorityFilter) {
+        drawDynamicVisuals(foreground, priorityFilter, !foreground);
+    }
+
+    private void drawDynamicVisuals(boolean foreground, @Nullable Integer priorityFilter, boolean screenCoordinates) {
+        this.dynamicVisualRenderer.render(
+            this.styleOverride.dynamicVisuals,
+            this.factory,
+            this::resolveDynamicVisualMetric,
+            screenCoordinates ? this.guiLeft : 0,
+            screenCoordinates ? this.guiTop : 0,
+            foreground,
+            priorityFilter,
+            this::isPageVisible,
+            resolveForegroundContentPriority()
+        );
+    }
+
+    private float resolveDynamicVisualMetric(String metric, float fallback) {
+        String key = metric == null ? "recipeProgress" : metric;
+        ActiveMachineRecipe first = getFirstFactoryRecipe();
+        if ("recipeProgress".equals(key)) {
+            return ProgressBarStyleSupport.recipeProgress(first);
+        }
+        if ("recipeMaxProgress".equals(key)) {
+            return first == null ? fallback : (float) first.getTotalTick();
+        }
+        if ("parallelism".equals(key)) {
+            return (float) getCurrentParallelism();
+        }
+        if ("threadCount".equals(key) || "factoryThreadCount".equals(key)) {
+            return (float) getFactoryThreadCount();
+        }
+        if ("activeThreadCount".equals(key) || "factoryActiveThreadCount".equals(key)) {
+            return (float) getFactoryActiveThreadCount();
+        }
+        if ("idleThreadCount".equals(key) || "factoryIdleThreadCount".equals(key)) {
+            return Math.max(0.0F, (float) (getFactoryThreadCount() - getFactoryActiveThreadCount()));
+        }
+        if ("energyStored".equals(key)) {
+            return DynamicVisualRenderer.reflectMetric(this.factory, fallback, "getEnergyStored", "getEnergy", "getCurrentEnergy");
+        }
+        if ("energyCapacity".equals(key)) {
+            return DynamicVisualRenderer.reflectMetric(this.factory, fallback, "getMaxEnergyStored", "getEnergyCapacity", "getMaxEnergy");
+        }
+        if ("energyRatio".equals(key)) {
+            float stored = DynamicVisualRenderer.reflectMetric(this.factory, fallback, "getEnergyStored", "getEnergy", "getCurrentEnergy");
+            float capacity = DynamicVisualRenderer.reflectMetric(this.factory, 0.0F, "getMaxEnergyStored", "getEnergyCapacity", "getMaxEnergy");
+            return capacity <= 0.0F ? fallback : stored / capacity;
+        }
+        return fallback;
+    }
+
+    private int getFactoryThreadCount() {
+        return this.factory.getCoreRecipeThreads().size() + this.factory.getFactoryRecipeThreadList().size();
+    }
+
+    private int getFactoryActiveThreadCount() {
+        int count = 0;
+        for (FactoryRecipeThread thread : this.factory.getCoreRecipeThreads().values()) {
+            if (thread.getActiveRecipe() != null) {
+                count++;
+            }
+        }
+        for (FactoryRecipeThread thread : this.factory.getFactoryRecipeThreadList()) {
+            if (thread.getActiveRecipe() != null) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private void drawProgressBars(@Nullable Integer priorityFilter) {
+        drawProgressBars(priorityFilter, false);
+    }
+
+    private void drawProgressBars(@Nullable Integer priorityFilter, boolean screenCoordinates) {
         if (styleOverride.progressBars == null || styleOverride.progressBars.isEmpty()) {
             return;
         }
         for (MachineGuiStyleManager.ProgressBarStyle bar : styleOverride.progressBars) {
-            if (bar == null) {
+            if (bar == null || Boolean.FALSE.equals(bar.foreground)) {
                 continue;
             }
             if (bar.visible != null && !bar.visible.booleanValue()) {
@@ -2662,7 +3212,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             if (priorityFilter != null && priority != priorityFilter.intValue()) {
                 continue;
             }
-            drawProgressBar(bar, resolveProgressBarValue(bar));
+            drawProgressBar(bar, resolveProgressBarValue(bar), screenCoordinates);
         }
     }
 
@@ -2680,7 +3230,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             if (!isPageVisible(bar.page)) {
                 continue;
             }
-            drawProgressBar(bar, resolveProgressBarValue(bar));
+            drawProgressBar(bar, resolveProgressBarValue(bar), true);
         }
     }
 
@@ -2763,18 +3313,29 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         return null;
     }
 
-    private void drawProgressBar(MachineGuiStyleManager.ProgressBarStyle bar, float progress) {
-        drawProgressBarBody(bar, progress);
+    private void drawProgressBar(
+        MachineGuiStyleManager.ProgressBarStyle bar,
+        float progress,
+        boolean screenCoordinates
+    ) {
+        int drawX = GuiRenderUtils.resolveGuiCoordinate(bar.x, this.guiLeft, screenCoordinates);
+        int drawY = GuiRenderUtils.resolveGuiCoordinate(bar.y, this.guiTop, screenCoordinates);
+        drawProgressBarBody(bar, progress, drawX, drawY);
         if (Boolean.TRUE.equals(bar.showText)) {
             String text = Math.round(progress * 100.0F) + "%";
             int color = bar.textColor == null ? 0xFFFFFFFF : bar.textColor.intValue();
-            int textX = bar.x + Math.max(0, (bar.width - this.fontRenderer.getStringWidth(text)) / 2);
-            int textY = bar.y + Math.max(0, (bar.height - this.fontRenderer.FONT_HEIGHT) / 2);
-            this.fontRenderer.drawStringWithShadow(text, textX, textY, color);
+            int textX = drawX + Math.max(0, (bar.width - getTextWidth(text)) / 2);
+            int textY = drawY + Math.max(0, (bar.height - this.fontRenderer.FONT_HEIGHT) / 2);
+            drawStringWithShadow(text, textX, textY, color);
         }
     }
 
-    private void drawProgressBarBody(MachineGuiStyleManager.ProgressBarStyle bar, float progress) {
+    private void drawProgressBarBody(
+        MachineGuiStyleManager.ProgressBarStyle bar,
+        float progress,
+        int drawX,
+        int drawY
+    ) {
         int bg = bar.backgroundColor == null ? 0x66000000 : bar.backgroundColor.intValue();
         int fill = bar.fillColor == null ? 0xFF55CC66 : bar.fillColor.intValue();
         int textureWidth = bar.textureWidth == null ? bar.width : Math.max(1, bar.textureWidth.intValue());
@@ -2783,20 +3344,44 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
         if (backgroundTexture != null) {
             this.mc.getTextureManager().bindTexture(backgroundTexture);
-            Gui.drawModalRectWithCustomSizedTexture(bar.x, bar.y, 0, 0, bar.width, bar.height, textureWidth, textureHeight);
+            GuiRenderUtils.drawTexturedRect(drawX, drawY, 0, 0, bar.width, bar.height, textureWidth, textureHeight);
         } else {
-            drawRect(bar.x, bar.y, bar.x + bar.width, bar.y + bar.height, bg);
+            drawRect(drawX, drawY, drawX + bar.width, drawY + bar.height, bg);
         }
         if (bar.borderColor != null) {
-            drawProgressBorder(bar.x, bar.y, bar.width, bar.height, bar.borderColor.intValue());
+            drawProgressBorder(drawX, drawY, bar.width, bar.height, bar.borderColor.intValue());
         }
 
-        int[] fillBounds = ProgressBarStyleSupport.computeFillBounds(bar.x, bar.y, bar.width, bar.height, bar.direction, progress);
+        int[] fillBounds = ProgressBarStyleSupport.computeFillBounds(
+            drawX,
+            drawY,
+            bar.width,
+            bar.height,
+            bar.direction,
+            progress
+        );
         if (fillBounds[2] > 0 && fillBounds[3] > 0) {
             ResourceLocation fillTexture = resolveProgressBarTexture(bar, true);
             if (fillTexture != null) {
+                int[] textureBounds = ProgressBarStyleSupport.computeFillTextureBounds(
+                    textureWidth,
+                    textureHeight,
+                    bar.direction,
+                    progress
+                );
                 this.mc.getTextureManager().bindTexture(fillTexture);
-                Gui.drawModalRectWithCustomSizedTexture(fillBounds[0], fillBounds[1], 0, 0, fillBounds[2], fillBounds[3], textureWidth, textureHeight);
+                GuiRenderUtils.drawScaledTexturedRect(
+                    fillBounds[0],
+                    fillBounds[1],
+                    fillBounds[2],
+                    fillBounds[3],
+                    textureBounds[0],
+                    textureBounds[1],
+                    textureBounds[2],
+                    textureBounds[3],
+                    textureWidth,
+                    textureHeight
+                );
             } else {
                 drawRect(fillBounds[0], fillBounds[1], fillBounds[0] + fillBounds[2], fillBounds[1] + fillBounds[3], fill);
             }
@@ -3059,10 +3644,19 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private void drawConfiguredTextureLayers(boolean foreground, MMCEGuiExtConfig.FactoryController cfg) {
-        drawConfiguredTextureLayers(foreground, cfg, null);
+        drawConfiguredTextureLayers(foreground, cfg, null, !foreground);
     }
 
     private void drawConfiguredTextureLayers(boolean foreground, MMCEGuiExtConfig.FactoryController cfg, @Nullable Integer priorityFilter) {
+        drawConfiguredTextureLayers(foreground, cfg, priorityFilter, !foreground);
+    }
+
+    private void drawConfiguredTextureLayers(
+        boolean foreground,
+        MMCEGuiExtConfig.FactoryController cfg,
+        @Nullable Integer priorityFilter,
+        boolean screenCoordinates
+    ) {
         List<TextureLayerDef> layers = foreground ? this.foregroundTextureLayers : this.backgroundTextureLayers;
         if (layers.isEmpty()) {
             return;
@@ -3089,8 +3683,8 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             int texH = layer.textureHeight == null ? getBackgroundTextureHeight(cfg) : Math.max(16, layer.textureHeight.intValue());
             int corner = layer.corner == null ? getBackgroundCorner(cfg) : Math.max(2, layer.corner.intValue());
             boolean useNineSlice = layer.useNineSlice == null ? getUseNineSlice(cfg) : layer.useNineSlice.booleanValue();
-            int drawX = foreground ? offX : this.guiLeft + offX;
-            int drawY = foreground ? offY : this.guiTop + offY;
+            int drawX = GuiRenderUtils.resolveGuiCoordinate(offX, this.guiLeft, screenCoordinates);
+            int drawY = GuiRenderUtils.resolveGuiCoordinate(offY, this.guiTop, screenCoordinates);
             float scaleX = resolveLayerScaleX(layer);
             float scaleY = resolveLayerScaleY(layer);
             float rotation = resolveLayerRotation(layer);
@@ -3161,9 +3755,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             editor.input.setMaxStringLength(1024);
 
             if (editor.showControls) {
-                editor.prev = new GuiButton(buttonId++, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
-                editor.next = new GuiButton(buttonId++, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
-                editor.apply = new GuiButton(
+                editor.prev = createGuiButton(buttonId++, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
+                editor.next = createGuiButton(buttonId++, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
+                editor.apply = createGuiButton(
                     buttonId++,
                     absX + leftControls + inputWidth + 2,
                     absY,
@@ -3220,9 +3814,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         this.smartInterfaceEditorInput = new GuiTextField(0, this.fontRenderer, absX + SMART_EDITOR_BUTTON_W * 2 + 3, absY, inputWidth, SMART_EDITOR_INPUT_H);
         this.smartInterfaceEditorInput.setMaxStringLength(1024);
 
-        this.smartInterfacePrevButton = new GuiButton(201, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
-        this.smartInterfaceNextButton = new GuiButton(202, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
-        this.smartInterfaceApplyButton = new GuiButton(
+        this.smartInterfacePrevButton = createGuiButton(201, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
+        this.smartInterfaceNextButton = createGuiButton(202, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
+        this.smartInterfaceApplyButton = createGuiButton(
             203,
             absX + SMART_EDITOR_BUTTON_W * 2 + 5 + inputWidth,
             absY,
@@ -3238,6 +3832,9 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             return false;
         }
         if (!getSmartInterfaceEditorEnabled(cfg)) {
+            return false;
+        }
+        if (getSmartInterfaceEditorVirtualKeys(cfg).isEmpty() && getSmartInterfaceDataList().length <= 0) {
             return false;
         }
         int configuredX = getSmartInterfaceEditorX(cfg);
@@ -3320,7 +3917,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
 
         String title = resolveSmartInterfaceEditorTitle(hasData, selectableCount, currentIndexDisplay, virtualKey);
         if (!this.smartInterfaceHideTitleText) {
-            this.fontRenderer.drawStringWithShadow(title, this.smartInterfaceEditorX, this.smartInterfaceEditorY - 10, 0xE0E0E0);
+            drawStringWithShadow(title, this.smartInterfaceEditorX, this.smartInterfaceEditorY - 10, 0xE0E0E0);
         }
 
         if (!this.smartInterfaceHideInfoText) {
@@ -3336,7 +3933,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 infoText = "No DataPort bound";
                 infoColor = 0xB0B0B0;
             }
-            this.fontRenderer.drawStringWithShadow(
+            drawStringWithShadow(
                 infoText,
                 this.smartInterfaceEditorX,
                 this.smartInterfaceEditorY + SMART_EDITOR_INPUT_H + 2,
@@ -3574,10 +4171,10 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                         .replace("{index}", Integer.toString(index))
                         .replace("{count}", Integer.toString(count))
                         .replace("{key}", activeKey);
-                this.fontRenderer.drawStringWithShadow(title, editor.x, editor.y - 10, 0xE0E0E0);
+                drawStringWithShadow(title, editor.x, editor.y - 10, 0xE0E0E0);
             }
             if (editor.showInfo) {
-                this.fontRenderer.drawStringWithShadow("Key: " + activeKey, editor.x, editor.y + SMART_EDITOR_INPUT_H + 2, 0xBFD3FF);
+                drawStringWithShadow("Key: " + activeKey, editor.x, editor.y + SMART_EDITOR_INPUT_H + 2, 0xBFD3FF);
             }
         }
     }
@@ -3756,14 +4353,18 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private void drawBackgroundSliders() {
-        drawSliders(null, false);
+        drawSliders(null, false, true);
     }
 
     private void drawCustomSliders(@Nullable Integer priorityFilter) {
-        drawSliders(priorityFilter, true);
+        drawSliders(priorityFilter, true, false);
     }
 
-    private void drawSliders(@Nullable Integer priorityFilter, boolean foreground) {
+    private void drawNegativeForegroundSliders(@Nullable Integer priorityFilter) {
+        drawSliders(priorityFilter, true, true);
+    }
+
+    private void drawSliders(@Nullable Integer priorityFilter, boolean foreground, boolean screenCoordinates) {
         for (CustomSlider slider : this.customSliders) {
             if (!slider.visible || slider.foreground != foreground || !isPageVisible(slider.page)) {
                 continue;
@@ -3771,13 +4372,15 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             if (priorityFilter != null && slider.priority != priorityFilter.intValue()) {
                 continue;
             }
-            drawSlider(slider);
+            drawSlider(slider, screenCoordinates);
         }
     }
 
-    private void drawSlider(CustomSlider slider) {
-        int x = slider.x;
-        int y = slider.y;
+    private void drawSlider(CustomSlider slider, boolean screenCoordinates) {
+        int offsetX = screenCoordinates ? this.guiLeft : 0;
+        int offsetY = screenCoordinates ? this.guiTop : 0;
+        int x = GuiRenderUtils.resolveGuiCoordinate(slider.x, this.guiLeft, screenCoordinates);
+        int y = GuiRenderUtils.resolveGuiCoordinate(slider.y, this.guiTop, screenCoordinates);
         drawRect(x, y, x + slider.width, y + slider.height, slider.trackColor);
         if (slider.borderColor != null) {
             drawProgressBorder(x, y, slider.width, slider.height, slider.borderColor.intValue());
@@ -3791,12 +4394,18 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             drawRect(x, y, x + fillWidth, y + slider.height, slider.fillColor);
         }
         Rectangle thumb = sliderThumbRect(slider);
-        drawRect(thumb.x, thumb.y, thumb.x + thumb.width, thumb.y + thumb.height, slider.thumbColor);
+        drawRect(
+            offsetX + thumb.x,
+            offsetY + thumb.y,
+            offsetX + thumb.x + thumb.width,
+            offsetY + thumb.y + thumb.height,
+            slider.thumbColor
+        );
         if (slider.showText) {
             String text = formatSliderValue(slider.value);
-            int textX = x + Math.max(0, (slider.width - this.fontRenderer.getStringWidth(text)) / 2);
+            int textX = x + Math.max(0, (slider.width - getTextWidth(text)) / 2);
             int textY = y + Math.max(0, (slider.height - this.fontRenderer.FONT_HEIGHT) / 2);
-            this.fontRenderer.drawStringWithShadow(text, textX, textY, slider.textColor);
+            drawStringWithShadow(text, textX, textY, slider.textColor);
         }
     }
 
@@ -3804,12 +4413,28 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         if (mouseButton != 0) {
             return false;
         }
-        CustomSlider slider = findTopmostSliderAt(mouseX, mouseY);
+        CustomSlider slider = startSliderDragAt(mouseX, mouseY);
         if (slider == null) {
             return false;
         }
-        this.draggingSlider = slider;
         updateSliderFromMouse(slider, mouseX, mouseY, true);
+        return true;
+    }
+
+    @Nullable
+    private CustomSlider startSliderDragAt(int mouseX, int mouseY) {
+        CustomSlider slider = findTopmostSliderAt(mouseX, mouseY);
+        if (slider != null) {
+            this.draggingSlider = slider;
+        }
+        return slider;
+    }
+
+    private boolean handleActiveSliderMouseDrag(int mouseX, int mouseY, int mouseButton) {
+        if (mouseButton != 0 || this.draggingSlider == null) {
+            return false;
+        }
+        updateSliderFromMouse(this.draggingSlider, mouseX, mouseY, false);
         return true;
     }
 
@@ -3864,9 +4489,14 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private boolean isPointInSlider(CustomSlider slider, int mouseX, int mouseY) {
-        int x = this.guiLeft + slider.x;
-        int y = this.guiTop + slider.y;
-        return mouseX >= x && mouseY >= y && mouseX < x + slider.width && mouseY < y + slider.height;
+        int localX = mouseX - this.guiLeft;
+        int localY = mouseY - this.guiTop;
+        if (localX >= slider.x && localY >= slider.y
+            && localX < slider.x + slider.width && localY < slider.y + slider.height) {
+            return true;
+        }
+        Rectangle thumb = sliderThumbRect(slider);
+        return thumb.contains(localX, localY);
     }
 
     private Rectangle sliderThumbRect(CustomSlider slider) {
@@ -3913,7 +4543,8 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 boolean hasLabel = style.label != null && !style.label.trim().isEmpty();
                 boolean hasTexture = style.texture != null && !style.texture.trim().isEmpty()
                     || style.hoverTexture != null && !style.hoverTexture.trim().isEmpty()
-                    || style.disabledTexture != null && !style.disabledTexture.trim().isEmpty();
+                    || style.disabledTexture != null && !style.disabledTexture.trim().isEmpty()
+                    || style.pressedTexture != null && !style.pressedTexture.trim().isEmpty();
                 boolean hasHotkey = style.hotkeys != null && !style.hotkeys.isEmpty();
                 if (!hasLabel && !hasTexture && !hasHotkey) {
                     continue;
@@ -3943,10 +4574,16 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 button.visible = visible;
                 button.hotkeys = style.hotkeys == null ? Collections.<String>emptyList() : new ArrayList<String>(style.hotkeys);
                 button.consumeHotkey = style.consumeHotkey == null || style.consumeHotkey.booleanValue();
+                button.baseStyle = style;
+                button.cycleStates = style.cycleStates == null ? Collections.<MachineGuiStyleManager.ButtonCycleStateStyle>emptyList() : new ArrayList<MachineGuiStyleManager.ButtonCycleStateStyle>(style.cycleStates);
+                button.cycleWrap = style.cycleWrap == null || style.cycleWrap.booleanValue();
                 if (visible && (hasLabel || hasTexture)) {
-                    button.button = GuiTexturedButton.forStyle(
-                        buttonId++, this.guiLeft + x, this.guiTop + y, width, height, style.label, style
-                    );
+                    button.guiButtonId = buttonId++;
+                    button.buttonX = this.guiLeft + x;
+                    button.buttonY = this.guiTop + y;
+                    button.buttonWidth = width;
+                    button.buttonHeight = height;
+                    button.button = buildCustomButtonWidget(button, resolveCycleStateIndex(button));
                 }
                 this.customButtons.add(button);
             }
@@ -3964,6 +4601,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             if (!isPageVisible(button.page) || button.button == null) {
                 continue;
             }
+            refreshCustomButtonVisual(button);
             button.button.enabled = !"page".equals(button.action) || !button.targetPage.equals(this.activePageId);
             button.button.drawButton(this.mc, mouseX, mouseY, 0F);
         }
@@ -4032,7 +4670,31 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     }
 
     private boolean matchesHotkey(@Nullable String raw, char typedChar, int keyCode) {
-        return matchesHotkey(raw, typedChar, keyCode, isShiftKeyDown(), isCtrlKeyDown(), isAltKeyDown());
+        return matchesHotkey(raw, typedChar, keyCode, isShiftHotkeyModifierDown(), isCtrlHotkeyModifierDown(), isAltHotkeyModifierDown());
+    }
+
+    private static boolean isShiftHotkeyModifierDown() {
+        try {
+            return isShiftKeyDown();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isCtrlHotkeyModifierDown() {
+        try {
+            return isCtrlKeyDown();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isAltHotkeyModifierDown() {
+        try {
+            return isAltKeyDown();
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private static boolean matchesHotkey(@Nullable String raw, char typedChar, int keyCode, boolean shiftDown, boolean ctrlDown, boolean altDown) {
@@ -4146,6 +4808,10 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             MMCEGuiExt.NET_CHANNEL.sendToServer(PktControllerButtonAction.event(this.factory.getPos(), button.buttonId));
             return;
         }
+        if ("cycle".equals(button.action)) {
+            activateCycleButton(button);
+            return;
+        }
         if (!"smart_set".equals(button.action) && !"smart_add".equals(button.action)) {
             return;
         }
@@ -4172,6 +4838,85 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
             button.min,
             button.max
         ));
+    }
+
+    private void activateCycleButton(CustomButton button) {
+        if (button.key == null || button.key.trim().isEmpty() || button.cycleStates.isEmpty()) {
+            return;
+        }
+        int currentIndex = resolveCycleStateIndex(button);
+        int nextIndex = currentIndex + 1;
+        if (nextIndex >= button.cycleStates.size()) {
+            nextIndex = button.cycleWrap ? 0 : button.cycleStates.size() - 1;
+        }
+        nextIndex = MathHelper.clamp(nextIndex, 0, Math.max(0, button.cycleStates.size() - 1));
+        MachineGuiStyleManager.ButtonCycleStateStyle state = button.cycleStates.get(nextIndex);
+        float nextValue = state.value == null ? (float) nextIndex : state.value.floatValue();
+        MMCEGuiExt.NET_CHANNEL.sendToServer(PktControllerButtonAction.smart(
+            this.factory.getPos(),
+            button.key,
+            false,
+            nextValue,
+            null,
+            null
+        ));
+        ControllerCustomDataAccess.writeNumber(this.factory, button.key, nextValue);
+        refreshCustomButtonVisual(button);
+    }
+
+    private int resolveCycleStateIndex(CustomButton button) {
+        if (button.cycleStates.isEmpty()) {
+            return -1;
+        }
+        if (button.key == null || button.key.trim().isEmpty()) {
+            return 0;
+        }
+        Float current = ControllerCustomDataAccess.readNumber(this.factory, button.key);
+        if (current == null || !Float.isFinite(current.floatValue())) {
+            return 0;
+        }
+        float value = current.floatValue();
+        for (int i = 0; i < button.cycleStates.size(); i++) {
+            MachineGuiStyleManager.ButtonCycleStateStyle state = button.cycleStates.get(i);
+            float stateValue = state.value == null ? (float) i : state.value.floatValue();
+            if (Math.abs(stateValue - value) <= 0.0001F) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    private void refreshCustomButtonVisual(CustomButton button) {
+        if (button.button == null || button.baseStyle == null || button.cycleStates.isEmpty()) {
+            return;
+        }
+        GuiButton rebuilt = buildCustomButtonWidget(button, resolveCycleStateIndex(button));
+        if (rebuilt != null) {
+            rebuilt.visible = button.button.visible;
+            rebuilt.enabled = button.button.enabled;
+            button.button = rebuilt;
+        }
+    }
+
+    @Nullable
+    private GuiButton buildCustomButtonWidget(CustomButton button, int cycleIndex) {
+        if (button.baseStyle == null) {
+            return button.button;
+        }
+        MachineGuiStyleManager.ButtonCycleStateStyle state = cycleIndex >= 0 && cycleIndex < button.cycleStates.size()
+            ? button.cycleStates.get(cycleIndex)
+            : null;
+        String label = state != null && state.label != null ? state.label : button.baseStyle.label;
+        return GuiTexturedButton.forStyle(
+            button.guiButtonId,
+            button.buttonX,
+            button.buttonY,
+            button.buttonWidth,
+            button.buttonHeight,
+            label,
+            applyDefaultButtonCharSpacing(button.baseStyle),
+            state
+        );
     }
 
     // Picks the value to apply based on held modifier keys (data-port smart actions).
@@ -4220,6 +4965,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
                 }
             }
         }
+        this.dynamicVisualRenderer.collectForegroundPriorities(styleOverride.dynamicVisuals, priorities, resolveForegroundContentPriority());
         for (CustomSlider slider : this.customSliders) {
             if (slider.foreground) {
                 priorities.add(Integer.valueOf(slider.priority));
@@ -4252,7 +4998,8 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         if (styleOverride.enableSmartInterfaceEditor != null) {
             return styleOverride.enableSmartInterfaceEditor.booleanValue();
         }
-        return cfg.enableSmartInterfaceEditor;
+        return cfg.enableSmartInterfaceEditor
+            && !MMCEGuiExtConfig.isLegacySmartInterfaceEditorFallback(cfg.smartInterfaceEditorVirtualKey);
     }
 
     private String resolveConfiguredDefaultPanelId(MMCEGuiExtConfig.FactoryController cfg) {
@@ -4360,7 +5107,7 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
     private List<String> getSmartInterfaceEditorVirtualKeys(MMCEGuiExtConfig.FactoryController cfg) {
         String raw = styleOverride.smartInterfaceEditorVirtualKey != null
             ? styleOverride.smartInterfaceEditorVirtualKey
-            : cfg.smartInterfaceEditorVirtualKey;
+            : MMCEGuiExtConfig.sanitizeSmartInterfaceEditorVirtualKey(cfg.smartInterfaceEditorVirtualKey);
         return parseVirtualKeys(raw);
     }
 
@@ -4762,6 +5509,15 @@ public class GuiFactoryControllerResizable extends GuiContainerBase<ContainerFac
         private boolean visible = true;
         private List<String> hotkeys = Collections.emptyList();
         private boolean consumeHotkey = true;
+        @Nullable
+        private MachineGuiStyleManager.ButtonStyle baseStyle;
+        private List<MachineGuiStyleManager.ButtonCycleStateStyle> cycleStates = Collections.emptyList();
+        private boolean cycleWrap = true;
+        private int guiButtonId;
+        private int buttonX;
+        private int buttonY;
+        private int buttonWidth;
+        private int buttonHeight;
         @Nullable
         private GuiButton button;
     }

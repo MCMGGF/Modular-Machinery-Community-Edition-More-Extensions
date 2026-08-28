@@ -3,7 +3,7 @@
 This file is a quick reference for pack authors.
 这份文件给整合包作者做速查表。
 
-The project was formerly known as MMCE GUI Edit / MMCEGE. Technical identifiers such as `mmceguiext` remain unchanged.
+The project was formerly branded MMCE GUI Edit / MMCEGE. Technical identifiers such as `mmceguiext` remain unchanged.
 本项目原名为 MMCE GUI Edit / MMCEGE；`mmceguiext` 等技术标识保持不变。
 
 ## 1. Controller size / 控制器尺寸
@@ -142,12 +142,21 @@ The project was formerly known as MMCE GUI Edit / MMCEGE. Technical identifiers 
 - `defaultPageId`
   - CN: GUI 打开时默认显示的页。未填写时通常使用 `main`。
   - EN: Page shown when the GUI opens. Usually `main` when omitted.
+- `defaultCharSpacing`
+  - CN: 本 controller/style 下 MMCEME 自绘文本的默认字符间距。别名：`defaultCharacterSpacing`、`defaultLetterSpacing`、`default_char_spacing`、`default_letter_spacing`、`textCharSpacing`、`text_char_spacing`。未写或为 `0` 时保持原版字体绘制路径。
+  - EN: Default character spacing for MMCEME-rendered text in this controller/style. Aliases: `defaultCharacterSpacing`, `defaultLetterSpacing`, `default_char_spacing`, `default_letter_spacing`, `textCharSpacing`, `text_char_spacing`. Omitted or `0` keeps the vanilla font path.
 - `page`
   - CN: 可写在 `customPanels` 第 6 段、`texts`、`smartInterfaceEditors`、图层和按钮上，用来限制它们只在某一页显示。`state` / `guiState` 可作为别名。
   - EN: Can be used on the 6th segment of `customPanels`, `texts`, `smartInterfaceEditors`, layers, and buttons to show them only on one page. `state` / `guiState` are accepted aliases.
+- `texts[].charSpacing`
+  - CN: 单条文本覆盖字符间距。别名：`characterSpacing`、`letterSpacing`、`char_spacing`、`letter_spacing`。支持负数/大数；非有限值会被忽略。
+  - EN: Per-text character spacing override. Aliases: `characterSpacing`, `letterSpacing`, `char_spacing`, `letter_spacing`. Negative/large values are allowed; non-finite values are ignored.
 - `buttons`
   - CN: 自定义控制器按钮数组，每个对象一个按钮。
   - EN: Custom controller button array. One object per button.
+- `hotkeys` / `guiHotkeys` / `shortcuts`
+  - CN: GUI 内纯热键数组。每个对象使用与 `buttons[]` 相同的动作字段，但不会显示按钮；`key` / `hotkey` / `hotkeys` 用来声明按键。
+  - EN: GUI-only hotkey array. Each object uses the same action fields as `buttons[]`, but no visible button is drawn; use `key` / `hotkey` / `hotkeys` to declare the shortcut.
 
 ### `subGuis` fields / 子 GUI 条目字段
 
@@ -200,14 +209,14 @@ The project was formerly known as MMCE GUI Edit / MMCEGE. Technical identifiers 
 ### `buttons` fields / 按钮字段
 
 - `x`, `y`
-  - CN: 按钮左上角坐标，必填。
-  - EN: Button top-left position. Required.
+  - CN: 按钮左上角坐标。可见按钮必填；顶层 `hotkeys[]` 纯热键可省略。
+  - EN: Button top-left position. Required for visible buttons; omitted for top-level `hotkeys[]` entries.
 - `width`, `height`
   - CN: 按钮尺寸。可省略，使用默认尺寸。
   - EN: Button size. Optional; defaults are used when omitted.
 - `label`
-  - CN: 按钮显示文字，必填。
-  - EN: Text shown on the button. Required.
+  - CN: 按钮显示文字。可用贴图按钮或纯热键按钮时可省略。
+  - EN: Text shown on the button. Optional for textured buttons and hotkey-only buttons.
 - `action`
   - CN: 按钮行为。支持 `page`、`subgui`、`close_subgui`、`smart_add`、`smart_set`、`event`。`switch_state` / `set_state` 会兼容为 `page`；`data_port_add` / `data_port_set` 会兼容为数值按钮；`open_subgui` / `close_sub_gui` 等别名也会被兼容。
   - EN: Button action. Supports `page`, `subgui`, `close_subgui`, `smart_add`, `smart_set`, and `event`. `switch_state` / `set_state` alias to `page`; `data_port_add` / `data_port_set` alias to numeric data-port buttons; aliases such as `open_subgui` / `close_sub_gui` are also accepted.
@@ -238,6 +247,15 @@ The project was formerly known as MMCE GUI Edit / MMCEGE. Technical identifiers 
 - `visible`
   - CN: 是否显示按钮。
   - EN: Whether the button is visible.
+- `hotkey` / `hotkeys` / `shortcut` / `shortcuts`
+  - CN: GUI 内热键。支持单个字符串或数组，如 `C`、`ctrl+C`、`shift+G`、`ESCAPE`。文本框聚焦时不会触发按钮热键。
+  - EN: GUI-local hotkey. Accepts a string or array, such as `C`, `ctrl+C`, `shift+G`, or `ESCAPE`. Button hotkeys do not fire while a text field is focused.
+- `consumeHotkey`
+  - CN: 热键触发后是否吃掉该按键，默认 `true`。设为 `false` 时动作仍触发，但按键继续交给后续 GUI 逻辑。
+  - EN: Whether the hotkey consumes the key after firing. Defaults to `true`; `false` still fires the action but lets later GUI handling continue.
+- `charSpacing`
+  - CN: 按钮文字字符间距覆盖；别名同 `texts[].charSpacing`。未写时继承 `defaultCharSpacing`。
+  - EN: Button-label character spacing override; aliases are the same as `texts[].charSpacing`. Omitted values inherit `defaultCharSpacing`.
 - `priority`
   - CN: 按钮排序优先级，越大越后处理。
   - EN: Button ordering priority. Higher values are handled later.
@@ -403,8 +421,14 @@ The project was formerly known as MMCE GUI Edit / MMCEGE. Technical identifiers 
   - CN: 工厂线程队列左上角坐标。可用 `queueX` / `queueY` 作为别名。
   - EN: Top-left position of the factory thread queue. `queueX` / `queueY` aliases are accepted.
 - `threadScrollbarX` / `threadScrollbarY`
-  - CN: 工厂线程队列滚动条左上角坐标。可用 `queueScrollbarX` / `queueScrollbarY` 作为别名。
-  - EN: Top-left position of the factory thread queue scrollbar. `queueScrollbarX` / `queueScrollbarY` aliases are accepted.
+  - CN: 工厂线程队列滚动条左上角坐标。旧扁平字段仍可用；新 JSON 推荐使用下面的 `threadScrollbar` 对象。
+  - EN: Top-left position of the factory thread queue scrollbar. Legacy flat fields remain supported; new JSON styles should use the `threadScrollbar` object below.
+- `threadScrollbar`
+  - CN: 集成控制器线程队列滚动条结构化配置。只写这个对象也会触发集成控制器自代理 GUI。
+  - EN: Structured scrollbar config for the factory thread queue. This object alone can trigger the integrated-controller self proxy.
+  - Fields: `x`, `y`, `width`, `height`, `trackTexture`, `thumbTexture`, `trackColor`, `thumbColor`, `textureWidth`, `textureHeight`, `thumbTextureWidth`, `thumbTextureHeight`, `thumbMinHeight`, `visible`.
+  - CN: `trackTexture` / `thumbTexture` 为空时分别回退到 `trackColor` / `thumbColor`；`height` 不写、写 `-1`，或全局 cfg 设 `-1` 时按可见行数自动计算；正数表示固定高度。
+  - EN: Empty `trackTexture` / `thumbTexture` fall back to `trackColor` / `thumbColor`; missing `height`, `height: -1`, or global cfg `-1` uses automatic height from visible rows; positive values remain explicit heights.
 - `threadVisibleRows`
   - CN: 工厂线程队列可见行数，优先级高于全局 `queueVisibleRows`。
   - EN: Visible rows in the factory thread queue. Overrides global `queueVisibleRows`.
@@ -423,11 +447,25 @@ The project was formerly known as MMCE GUI Edit / MMCEGE. Technical identifiers 
     "factoryController": {
       "threadQueueX": 12,
       "threadQueueY": 14,
-      "threadScrollbarX": 98,
-      "threadScrollbarY": 22,
       "threadVisibleRows": 7,
       "threadRowWidth": 90,
-      "threadRowHeight": 34
+      "threadRowHeight": 34,
+      "threadScrollbar": {
+        "x": 98,
+        "y": 22,
+        "width": 8,
+        "height": 197,
+        "trackTexture": "yourmod:textures/gui/scroll_track.png",
+        "thumbTexture": "yourmod:textures/gui/scroll_thumb.png",
+        "trackColor": "66000000",
+        "thumbColor": "FFFFFFFF",
+        "textureWidth": 8,
+        "textureHeight": 197,
+        "thumbTextureWidth": 8,
+        "thumbTextureHeight": 16,
+        "thumbMinHeight": 15,
+        "visible": true
+      }
     }
   }
 }
@@ -465,8 +503,8 @@ The project was formerly known as MMCE GUI Edit / MMCEGE. Technical identifiers 
 }
 ```
 
-- CN: 这组字段可以直接拷到机器 JSON 里。`queueX` / `queueY` / `queueScrollbarX` / `queueScrollbarY` / `queueVisibleRows` / `queueRowWidth` / `queueRowHeight` 这些别名也能用。
-- EN: You can copy this block directly into a machine JSON. Aliases such as `queueX` / `queueY` / `queueScrollbarX` / `queueScrollbarY` / `queueVisibleRows` / `queueRowWidth` / `queueRowHeight` are also accepted.
+- CN: 这组字段可以直接拷到机器 JSON 里。`queueX` / `queueY` / `queueVisibleRows` / `queueRowWidth` / `queueRowHeight` 这些别名也能用；滚动条外观请使用 `threadScrollbar`。
+- EN: You can copy this block directly into a machine JSON. Aliases such as `queueX` / `queueY` / `queueVisibleRows` / `queueRowWidth` / `queueRowHeight` are also accepted; scrollbar visuals should use `threadScrollbar`.
 
 ## 10. Common patterns / 常见写法
 
@@ -571,3 +609,501 @@ EN: Common tweaks:
 - `width` controls the bar length
 - `height` controls the bar thickness
 - `priority` controls what it draws over
+
+## 10. Controller slot layouts / 控制器槽位布局
+
+`slotGroups[]` is supported by both `machineController` and `factoryController`.
+
+- `id`: required stable group id.
+- `firstSlot` / `first_slot`: first container slot for a continuous mapping.
+- `slotCount` / `slot_count`: number of mapped slots. It may be smaller than `rows * columns`, so the last row may be partial.
+- `slotIndices[]` / `slot_indices[]`: sparse container-slot mapping. When present, it takes precedence over `firstSlot + slotCount`.
+- `x`, `y`, `rows`, `columns` (`cols` alias): geometry.
+- `spacingX`, `spacingY`: per-slot spacing. Legacy `slotWidth` / `slotHeight` remain aliases.
+- `enabled`: disabled groups move their mapped slots offscreen.
+- `shiftTarget`: compatibility metadata only; it does not control server-side Shift-click routing.
+
+When a `SlotLayoutProvider` group and JSON group share the same `id`, fields merge individually. JSON geometry wins, while omitted index fields inherit the provider mapping. A JSON-only legacy group without explicit indices is allocated sequentially after the default player slots. Duplicate and out-of-range indices are warned and skipped.
+
+For custom AE bus `gui.components[]`, explicit `index` values can describe sparse item/fluid/gas layouts. `slotIndices[]` belongs to slot-group layouts described above and is not a custom AE bus component field. Holes stay unused and are not compacted. Duplicate or out-of-range indexes are warned and the conflicting mapping is skipped. This is distinct from duplicate bus definition IDs: the first deterministically loaded definition wins and later duplicate IDs are skipped.
+
+`playerInventory` fields:
+
+- `x`, `y`, `hotbarX`, `hotbarY`
+- `mainStart`, `hotbarStart` (defaults `0` and `27`)
+- `enabled`
+
+## 11. Dynamic visuals / 动态可视化组件
+
+- `dynamicVisuals`
+  - CN: 控制器动态可视化数组，普通控制器和集成控制器都支持。统一支持贴图切换、动态填充、圆饼/环形图、曲线图。
+  - EN: Dynamic visual component array for both Machine and Factory controllers. Supports texture switching, fills, pie/ring charts and line charts.
+- aliases / 别名: `dynamic_visuals`, `visuals`, `dynamicWidgets`, `dynamic_widgets`.
+
+### `dynamicVisuals` fields / 条目字段
+
+- `id`: optional stable id, also used by chart history.
+- `x`, `y`, `width`, `height`: required rectangle.
+- `priority`: foreground render priority. Defaults to normal controller content priority.
+- `foreground`: `true`/omitted = foreground; `false` = background.
+- `page`, `visible`: same page/visibility rules as other controller widgets.
+- `source`: value source object.
+- `history`: optional sampling config for charts.
+- `transform`: optional static transform object.
+- `transformByValue`: optional variable-driven transform object. Supported channels: `offsetX`, `offsetY`, `scale`, `scaleX`, `scaleY`, `rotation`, `alpha`, `pivotX`, `pivotY`.
+- `visibleByValue`: optional variable-driven visibility object. Supports `min`, `max`, `equals`, `invert`, optional independent `source`.
+- `renderer`: renderer object.
+- `rendererSwitchByValue`: optional ordered renderer-switch rule array. Each rule supports `min`, `max`, `equals`, optional independent `source`, and its own `renderer`.
+- `rendererByValue`: optional variable-driven color object. Supported channels: `backgroundColor`, `fillColor`, `borderColor`, `color`, `lineColor`, `gridColor`.
+
+### `source` fields / 数据源字段
+
+```json
+"source": { "type": "customData", "key": "heat", "default": 0, "min": 0, "max": 100, "clamp": true, "invert": false }
+```
+
+```json
+"source": { "type": "machine", "metric": "recipeProgress", "default": 0, "min": 0, "max": 1 }
+```
+
+```json
+"source": {
+  "type": "customData",
+  "key": "amount",
+  "default": 0,
+  "min": 0,
+  "max": 1,
+  "maxSource": { "type": "customData", "key": "capacity", "default": 1 }
+}
+```
+
+```json
+"source": {
+  "type": "combined",
+  "combine": "weightedSum",
+  "sources": [
+    { "type": "customData", "key": "heat", "default": 0, "weight": 0.0065 },
+    { "type": "customData", "key": "warning", "default": 0, "weight": 0.35 }
+  ],
+  "min": 0,
+  "max": 1,
+  "clamp": true
+}
+```
+
+Metrics: `recipeProgress`, `recipeMaxProgress`, `energyStored`, `energyCapacity`, `energyRatio`, `parallelism`, `threadCount`, `activeThreadCount`, `idleThreadCount`; factory additionally accepts `factoryThreadCount`, `factoryActiveThreadCount`, `factoryIdleThreadCount`.
+
+- `type`
+  - CN: 支持 `customData`、`machine`、`combined`。`combined` 用于多 source 组合。
+  - EN: Supports `customData`, `machine`, and `combined`. Use `combined` for multi-source composition.
+- `combine`
+  - CN: 仅 `combined` 使用。支持 `sum`、`average`、`weightedSum`、`weightedAverage`、`min`、`max`、`multiply`、`subtract`、`divide`、`first`、`last`。
+  - EN: Used by `combined` only. Supports `sum`, `average`, `weightedSum`, `weightedAverage`, `min`, `max`, `multiply`, `subtract`, `divide`, `first`, and `last`.
+- `sources`
+  - CN: 子 source 数组。每个子项都可以是 `customData`、`machine`，也可以继续嵌套 `combined`。
+  - EN: Child source array. Each child may be `customData`, `machine`, or another nested `combined`.
+- `weight`
+  - CN: 仅子 source 使用。`weightedSum` / `weightedAverage` 会先用 `weight` 缩放每个子项的原始值，再参与组合；不写时默认 `1`。
+  - EN: Used on child sources. `weightedSum` / `weightedAverage` scale each child's raw value by `weight` before combining; defaults to `1`.
+- `minSource`, `maxSource` (aliases: `min_source`, `max_source`)
+  - CN: 接受完整 `customData` / `machine` / `combined` source。有限动态值覆盖静态 `min` / `max`；缺失或非有限值回退静态值。bound source 按原始值读取，不执行自己的归一化。最终 `max <= min` 时输出 `0`。
+  - EN: Accept complete `customData`, `machine`, or `combined` sources. Finite dynamic values override static `min` / `max`; missing or non-finite values fall back to the static bounds. Bound sources are read raw without applying their own normalization. Final `max <= min` produces `0`.
+- 规则 / rule
+  - CN: 会先把各子 source 当作原始数值读取并完成组合，再对父级 source 执行 `min`、`max`、`clamp`、`invert`。
+  - EN: Child sources are resolved as raw numeric values and combined first; then the parent source applies `min`, `max`, `clamp`, and `invert`.
+- `weightedSum` / `weightedAverage`
+  - CN: `weightedSum` 适合 mixed-scale 场景，先用 `weight` 对齐贡献量；`weightedAverage` 更适合同量纲的 `0..1` 信号加权混合，输出范围更直观。
+  - EN: `weightedSum` fits mixed-scale inputs where `weight` aligns contribution magnitudes; `weightedAverage` is usually better for already-normalized `0..1` signals when you want a weighted blend with a predictable range.
+- `subtract` / `divide`
+  - CN: 以第一个子项为左操作数，后续子项依次参与减法/除法。
+  - EN: Uses the first child as the left operand, then applies subtraction / division in order.
+- `first` / `last`
+  - CN: 轻量选择器，适合做多来源兜底或覆盖顺序。
+  - EN: Lightweight selectors, useful for simple fallback / override chains.
+
+### `transform` / 静态变换
+
+```json
+"transform": {
+  "offsetX": 4,
+  "offsetY": -2,
+  "scale": 1.1,
+  "rotation": 45,
+  "alpha": 0.8,
+  "origin": "center",
+  "pivotX": 0.5,
+  "pivotY": 0.5,
+  "pivotUnit": "ratio"
+}
+```
+
+- `offsetX`, `offsetY`
+  - CN: 静态坐标偏移，支持负数。
+  - EN: Static coordinate offset; negative values are allowed.
+- `scale`, `scaleX`, `scaleY`
+  - CN: 静态缩放。`scale` 为统一缩放，`scaleX/Y` 可分别覆盖。
+  - EN: Static scaling. `scale` is uniform; `scaleX/Y` override each axis.
+- `rotation`
+  - CN: 静态旋转角度，单位为度。
+  - EN: Static rotation in degrees.
+- `alpha`
+  - CN: 静态透明度，支持 `0.0-1.0`，也兼容 `0-255`。
+  - EN: Static alpha. Supports `0.0-1.0` and also accepts `0-255`.
+- `origin`
+  - CN: 变换原点，支持 `topLeft`、`topCenter`、`topRight`、`centerLeft`、`center`、`centerRight`、`bottomLeft`、`bottomCenter`、`bottomRight`。
+  - EN: Transform origin. Supports `topLeft`, `topCenter`, `topRight`, `centerLeft`, `center`, `centerRight`, `bottomLeft`, `bottomCenter`, `bottomRight`.
+- `pivotX`, `pivotY`
+  - CN: 显式自定义旋转/缩放支点。仅在 `transform` 中生效；写了之后会优先于 `origin`。
+  - EN: Explicit custom rotation/scale pivot. Only works inside `transform`; when present it overrides `origin`.
+- `pivotUnit`
+  - CN: 支点单位。`ratio` 表示相对宽高的 `0..1` 比例坐标，`px` 表示绝对像素坐标；默认 `ratio`。
+  - EN: Pivot unit. `ratio` means `0..1` relative coordinates based on width/height; `px` means absolute pixel coordinates; defaults to `ratio`.
+
+### `transformByValue` / 变量驱动变换
+
+```json
+"transformByValue": {
+  "rotation": { "min": 0, "max": 360 },
+  "scale": { "min": 0.8, "max": 1.2 },
+  "alpha": {
+    "min": 0.3,
+    "max": 1.0,
+    "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 }
+  }
+}
+```
+
+- supported channels / 支持通道:
+  - `offsetX`, `offsetY`, `scale`, `scaleX`, `scaleY`, `rotation`, `alpha`, `pivotX`, `pivotY`
+- per-channel fields / 每个通道字段:
+  - `min`, `max`
+    - CN: 把归一化后的 `0-1` 数值映射到该区间。
+    - EN: Maps the normalized `0-1` input into this output range.
+  - `source`
+    - CN: 可选独立数据源；未写时默认使用该 visual 的主 `source`。
+    - EN: Optional independent source; otherwise the visual's main `source` is reused.
+- `pivotX` / `pivotY`
+  - CN: 变量驱动支点坐标。单位仍由静态 `transform.pivotUnit` 决定；未写时默认 `ratio`。
+  - EN: Variable-driven pivot coordinates. Their units are still controlled by static `transform.pivotUnit`; if omitted, it defaults to `ratio`.
+
+### `visibleByValue` / 变量驱动显隐
+
+```json
+"visibleByValue": {
+  "min": 0.15,
+  "max": 0.95,
+  "invert": false,
+  "source": { "type": "customData", "key": "alarm", "default": 0, "min": 0, "max": 1 }
+}
+```
+
+- `min`, `max`, `equals`
+  - CN: 对归一化后的输入值做范围/等值判断。
+  - EN: Range / equality checks against the normalized input value.
+- `invert`
+  - CN: 取反最终显隐结果。
+  - EN: Inverts the final visible / hidden decision.
+- `source`
+  - CN: 可选独立数据源；未写时默认复用该 visual 的主 `source`。
+  - EN: Optional independent source; otherwise the visual's main `source` is reused.
+- 规则 / rule
+  - CN: 未配置 `visibleByValue` 时按普通 `visible` 处理；配置后只有条件命中才会渲染。
+  - EN: Without `visibleByValue`, the normal `visible` flag is used; with it, the component renders only when the condition passes.
+
+### `rendererByValue` / 变量驱动颜色
+
+```json
+"rendererByValue": {
+  "fillColor": {
+    "fromColor": "FF33CC66",
+    "toColor": "FFFF5544"
+  },
+  "borderColor": {
+    "fromColor": "FF66FF99",
+    "toColor": "FFFFAA66",
+    "source": { "type": "customData", "key": "danger", "default": 0, "min": 0, "max": 1 }
+  }
+}
+```
+
+- supported channels / 支持通道
+  - `backgroundColor`, `fillColor`, `borderColor`, `color`, `lineColor`, `gridColor`
+- per-channel fields / 每个通道字段
+  - `fromColor`, `toColor`
+    - CN: 按归一化后的 `0-1` 值做线性插值。
+    - EN: Linear interpolation endpoints for normalized `0-1` input.
+  - `source`
+    - CN: 可选独立数据源；未写时默认复用该 visual 的主 `source`。
+    - EN: Optional independent source; otherwise the visual's main `source` is reused.
+- 回退规则 / fallback rule
+  - CN: 若只写了 `fromColor` 或 `toColor`，另一端会优先回退到静态 `renderer` 对应颜色；若静态颜色也没写，则退回已填写的那一端。
+  - EN: If only one endpoint is provided, the other side first falls back to the matching static renderer color; if that is also missing, the provided endpoint is reused.
+
+### `rendererSwitchByValue` / 变量驱动整套 renderer 切换
+
+```json
+"rendererSwitchByValue": [
+  {
+    "max": 0.34,
+    "renderer": {
+      "type": "fill",
+      "backgroundColor": "22000000",
+      "fillColor": "FF44AAFF",
+      "borderColor": "FFFFFFFF",
+      "direction": "up"
+    }
+  },
+  {
+    "min": 0.34,
+    "max": 0.67,
+    "renderer": {
+      "type": "pie",
+      "mode": "ring",
+      "innerRadius": 8,
+      "backgroundColor": "22000000",
+      "color": "FFFFCC44"
+    }
+  },
+  {
+    "min": 0.67,
+    "renderer": {
+      "type": "textureSwitch",
+      "fallbackTexture": "pack:textures/gui/fan.png",
+      "frames": [
+        { "texture": "pack:textures/gui/fan.png" }
+      ]
+    }
+  }
+]
+```
+
+- rule fields / 规则字段
+  - `min`, `max`, `equals`
+    - CN: 对归一化后的输入值做匹配。
+    - EN: Match conditions against the normalized input value.
+  - `source`
+    - CN: 可选独立数据源；未写时默认复用该 visual 的主 `source`。
+    - EN: Optional independent source; otherwise the visual's main `source` is reused.
+  - `renderer`
+    - CN: 命中该规则后使用的完整 renderer 定义。
+    - EN: The full renderer definition used when the rule matches.
+- 规则 / rule
+  - CN: 按数组顺序首个命中的规则生效；若都不命中，则回退到静态 `renderer`；如果静态 `renderer` 也没写，则该 visual 不绘制。
+  - EN: The first matching rule in array order wins; if none matches, the static `renderer` is used as fallback; if no static `renderer` exists either, the visual is skipped.
+
+### renderer: `textureSwitch`
+
+```json
+"renderer": {
+  "type": "textureSwitch",
+  "fallbackTexture": "pack:textures/gui/unknown.png",
+  "frames": [
+    { "max": 30, "texture": "pack:textures/gui/low.png" },
+    { "max": 70, "texture": "pack:textures/gui/mid.png" },
+    { "texture": "pack:textures/gui/high.png" }
+  ]
+}
+```
+
+### renderer: `animatedTexture`
+
+`animatedTexture` is time-driven PNG animation. It accepts the aliases `animated_texture`, `animation`, `spriteSheet`, and `spritesheet`. GIF decoding and automatic GIF playback are not supported.
+
+Sprite-sheet form:
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "texture": "yourmod:textures/gui/fan_sheet.png",
+  "frameWidth": 16,
+  "frameHeight": 16,
+  "frameCount": 8,
+  "columns": 4,
+  "textureWidth": 64,
+  "textureHeight": 32,
+  "u": 0,
+  "v": 0,
+  "ticksPerFrame": 2,
+  "startFrame": 0,
+  "loop": true,
+  "reverse": false,
+  "pingPong": false
+}
+```
+
+If `columns` is omitted, it is inferred from `textureWidth / frameWidth`; if it cannot be inferred, frames are treated as one row. Frame bounds are still limited by `frameCount` and the declared texture dimensions.
+
+Multi-file form:
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "ticksPerFrame": 3,
+  "frames": [
+    "yourmod:textures/gui/spark_0.png",
+    "yourmod:textures/gui/spark_1.png",
+    { "texture": "yourmod:textures/gui/spark_2.png", "u": 0, "v": 0, "textureWidth": 16, "textureHeight": 16 }
+  ]
+}
+```
+
+`frames[]` is played in array order. Each entry is either a texture string or an object with `texture`, `u`, `v`, `textureWidth`, and `textureHeight`. `textureSwitch` is value-driven; `animatedTexture` is tick/time-driven. / `textureSwitch` 按数值切换；`animatedTexture` 按 tick/时间播放。请使用 PNG 帧图或 PNG 帧图集，不要使用 GIF。
+
+### `customData` numeric precision / `customData` 数值精度
+
+`customData` may contain NBT `Long` or `Double` values, but dynamic visual evaluation is currently float-oriented. Large `Long` values and high-precision `Double` values may be rounded when converted to `float`. Smart Interface editors, sliders, `smart_set`, `smart_add`, and virtual DataPort numeric writes mainly use `Float`, so GUI input fields cannot reliably preserve every digit of an arbitrarily large `Long`. Use strings or server/script-side `Long` handling for exact large integers, and normalize large values before rendering ratios or progress bars. / `customData` 可包含 NBT `Long` 或 `Double`，但动态视觉当前主要走 `float`；Smart Interface、滑块、`smart_set`、`smart_add` 和虚拟 DataPort 数值写入主要走 `Float`，无法保证超大 Long 的每一位精确保存。
+
+### renderer: `fill`
+
+```json
+"renderer": {
+  "type": "fill",
+  "backgroundTexture": "pack:textures/gui/tank_empty.png",
+  "fillTexture": "pack:textures/gui/tank_full.png",
+  "direction": "up"
+}
+```
+
+`direction`: `right`, `left`, `up`, `down`.
+
+### renderer: `pie`
+
+```json
+"renderer": {
+  "type": "pie",
+  "mode": "ring",
+  "startAngle": -90,
+  "innerRadius": 10,
+  "color": "FFFFAA00",
+  "backgroundColor": "33000000",
+  "segments": 64
+}
+```
+
+### renderer: `lineChart`
+
+```json
+"history": { "enabled": true, "samples": 60, "intervalTicks": 5 },
+"renderer": {
+  "type": "lineChart",
+  "lineColor": "FF55CCFF",
+  "fillColor": "3355CCFF",
+  "gridColor": "22000000",
+  "lineWidth": 1,
+  "showGrid": true
+}
+```
+
+### Combined example / 综合示例
+
+```json
+{
+  "id": "fan",
+  "x": 120,
+  "y": 30,
+  "width": 32,
+  "height": 32,
+  "source": { "type": "customData", "key": "speed", "default": 0, "min": 0, "max": 100 },
+  "transform": { "pivotX": 0.5, "pivotY": 0.5, "pivotUnit": "ratio", "alpha": 0.6 },
+  "transformByValue": {
+    "rotation": { "min": 0, "max": 360 },
+    "pivotX": { "min": 0.35, "max": 0.65 },
+    "pivotY": { "min": 0.35, "max": 0.65 },
+    "scale": { "min": 0.85, "max": 1.15 },
+    "alpha": {
+      "min": 0.4,
+      "max": 1.0,
+      "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 }
+    }
+  },
+  "renderer": {
+    "type": "textureSwitch",
+    "fallbackTexture": "pack:textures/gui/fan.png",
+    "frames": [
+      { "texture": "pack:textures/gui/fan.png" }
+    ]
+  }
+}
+```
+
+In this example, the static `pivotUnit` is `ratio`, so the dynamic `pivotX` / `pivotY` values are also treated as relative coordinates.
+
+### Combined example with visibility + colors / 带显隐与颜色联动的综合示例
+
+```json
+{
+  "id": "warning_ring",
+  "x": 160,
+  "y": 28,
+  "width": 28,
+  "height": 28,
+  "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 },
+  "visibleByValue": { "min": 0.05 },
+  "renderer": {
+    "type": "pie",
+    "mode": "ring",
+    "innerRadius": 8,
+    "backgroundColor": "22000000",
+    "color": "FF44FF44"
+  },
+  "rendererByValue": {
+    "color": {
+      "fromColor": "FF44FF44",
+      "toColor": "FFFF4444"
+    }
+  }
+}
+```
+
+### Combined example with renderer switching / 带整套 renderer 切换的综合示例
+
+```json
+{
+  "id": "mode_preview",
+  "x": 196,
+  "y": 28,
+  "width": 28,
+  "height": 28,
+  "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 },
+  "renderer": {
+    "type": "fill",
+    "backgroundColor": "22000000",
+    "fillColor": "FF44AAFF",
+    "borderColor": "FFFFFFFF",
+    "direction": "up"
+  },
+  "rendererSwitchByValue": [
+    {
+      "max": 0.34,
+      "renderer": {
+        "type": "fill",
+        "backgroundColor": "22000000",
+        "fillColor": "FF44AAFF",
+        "borderColor": "FFFFFFFF",
+        "direction": "up"
+      }
+    },
+    {
+      "min": 0.34,
+      "max": 0.67,
+      "renderer": {
+        "type": "pie",
+        "mode": "ring",
+        "innerRadius": 8,
+        "backgroundColor": "22000000",
+        "color": "FFFFCC44"
+      }
+    },
+    {
+      "min": 0.67,
+      "renderer": {
+        "type": "textureSwitch",
+        "fallbackTexture": "pack:textures/gui/fan.png",
+        "frames": [
+          { "texture": "pack:textures/gui/fan.png" }
+        ]
+      }
+    }
+  ]
+}
+```

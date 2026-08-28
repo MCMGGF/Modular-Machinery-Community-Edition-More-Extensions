@@ -1,0 +1,11 @@
+{
+  "package": "com.fushu.mmceguiext.mixin",
+  "refmap": "mixins.mmceguiext.refmap.json",
+  "target": "@env(DEFAULT)",
+  "minVersion": "0.8",
+  "compatibilityLevel": "JAVA_8",
+  "priority": 900,
+  "mixins": [
+    "MixinParallelControllerData"
+  ]
+}

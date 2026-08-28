@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.common.registry;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
+import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.fushu.mmceguiext.common.block.BlockCustomHatch;
 import com.fushu.mmceguiext.common.item.ItemBlockCustomHatch;
 import com.fushu.mmceguiext.common.tile.TileCustomHatch;
@@ -35,11 +36,19 @@ public final class CustomHatchGameRegistry {
     public static void onRegisterBlocks(RegistryEvent.Register<Block> event) {
         BLOCKS.clear();
         MODEL_BINDINGS.clear();
-        genericBlock = new BlockCustomHatch(null, "custom_hatch");
-        event.getRegistry().register(genericBlock);
-        BLOCKS.put("custom_hatch", genericBlock);
-        MODEL_BINDINGS.put("custom_hatch", new ModelBinding(new ResourceLocation(MMCEGuiExt.MODID, "custom_hatch"), "facing=north"));
-        CustomBlockIdRegistry.claim("custom_hatch", "generic custom hatch", "custom_hatch");
+        genericBlock = null;
+        if (!MMCEGuiExtConfig.areCustomHatchesEnabled()) {
+            CustomHatchRegistry.clear();
+            LOGGER.info("JSON-defined custom hatches are disabled by config; no custom hatch blocks will be registered.");
+            return;
+        }
+        if (MMCEGuiExtConfig.shouldRegisterGenericCustomHatch()) {
+            genericBlock = new BlockCustomHatch(null, "custom_hatch");
+            event.getRegistry().register(genericBlock);
+            BLOCKS.put("custom_hatch", genericBlock);
+            MODEL_BINDINGS.put("custom_hatch", new ModelBinding(new ResourceLocation(MMCEGuiExt.MODID, "custom_hatch"), "facing=north"));
+            CustomBlockIdRegistry.claim("custom_hatch", "generic custom hatch", "custom_hatch");
+        }
         List<CustomHatchRegistry.CustomHatchDef> defs = CustomHatchRegistry.getCached();
         if (defs.isEmpty()) {
             defs = CustomHatchRegistry.loadAll();
@@ -70,6 +79,9 @@ public final class CustomHatchGameRegistry {
 
     @SubscribeEvent
     public static void onRegisterItems(RegistryEvent.Register<Item> event) {
+        if (!MMCEGuiExtConfig.areCustomHatchesEnabled()) {
+            return;
+        }
         for (Map.Entry<String, BlockCustomHatch> entry : BLOCKS.entrySet()) {
             BlockCustomHatch block = entry.getValue();
             CustomHatchRegistry.CustomHatchDef def = block.getDefinition();

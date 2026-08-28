@@ -1,9 +1,10 @@
 #loader crafttweaker reloadable
 
 import crafttweaker.data.IData;
-import mods.modularmachinery.ControllerButtonClickEvent;
 import mods.modularmachinery.ControllerGUIRenderEvent;
 import mods.modularmachinery.MMEvents;
+import mods.mmceguiext.ControllerButtonClickEvent;
+import mods.mmceguiext.MMCEGEEvents;
 
 val BUTTON_TEST_MACHINE = "mmcege_controller_button_test";
 
@@ -11,7 +12,7 @@ function readFloat(data as IData, key as string) as float {
     return data.getFloat(key, 0.0);
 }
 
-MMEvents.onControllerButtonClick(BUTTON_TEST_MACHINE, function(event as ControllerButtonClickEvent) {
+MMCEGEEvents.onControllerButtonClick(BUTTON_TEST_MACHINE, function(event as ControllerButtonClickEvent) {
     if (event.buttonId != "event_ping") {
         return;
     }

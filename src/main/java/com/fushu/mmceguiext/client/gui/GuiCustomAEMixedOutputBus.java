@@ -56,7 +56,7 @@ public class GuiCustomAEMixedOutputBus extends AEBaseGui {
                 String title = this.definition.displayName == null || this.definition.displayName.trim().isEmpty()
                     ? I18n.format("gui.meitemoutputbus.title")
                     : this.definition.displayName;
-                this.fontRenderer.drawString(title, 28, 6, 0x404040);
+                GuiRenderUtils.drawString(this.fontRenderer, title, 28, 6, 0x404040, false, 0.0F);
             }
             GlobalTextureLayerConfig.drawLayers(this.definition.textureLayers, true, this.guiLeft, this.guiTop, 0, 0, priority);
         }

@@ -14,6 +14,8 @@ jobs:
   build:
     name: Build mod jar
     runs-on: ubuntu-latest
+    env:
+      MMCEGE_CURSEMAVEN_MIRROR_PATH: ${{ github.workspace }}/.gradle/cursemaven-repo
 
     steps:
       - name: Checkout
@@ -30,13 +32,22 @@ jobs:
         with:
           gradle-version: 8.2
 
+      - name: Cache CurseMaven mirror
+        uses: actions/cache@v4
+        with:
+          path: .gradle/cursemaven-repo
+          key: cursemaven-${{ runner.os }}-${{ hashFiles('build.gradle.kts', 'scripts/ci/cursemaven-lock.tsv', 'scripts/ci/prepare-cursemaven-mirror.sh') }}
+
+      - name: Prepare CurseMaven mirror
+        run: bash scripts/ci/prepare-cursemaven-mirror.sh
+
       - name: Build
         run: gradle build --no-daemon --no-parallel --console=plain --stacktrace
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: MMCEME-${{ github.sha }}
+          name: Modular-Machinery-Community-Edition-More-Extensions-${{ github.sha }}
           path: build/libs/*.jar
           if-no-files-found: error
           retention-days: 14

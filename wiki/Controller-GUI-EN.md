@@ -6,7 +6,7 @@ Replace / customize the MMCE Machine and Factory controller GUIs: resizable, cus
 
 ## How it works
 
-MMCEME hooks Forge's `GuiOpenEvent` and, the moment MMCE opens the vanilla `GuiMachineController` / `GuiFactoryController`, swaps in the resizable version — **only when** a custom texture, hidden default background, or per-machine style override is present. It does **not** patch any MMCE GUI class.
+MMCE More Extensions (MMCEME) hooks Forge's `GuiOpenEvent` and, the moment MMCE opens the vanilla `GuiMachineController` / `GuiFactoryController`, swaps in the resizable version — **only when** a custom texture, hidden default background, or per-machine style override is present. It does **not** patch any MMCE GUI class.
 
 Styles come from two layers; per-machine wins, falling back to global:
 - **Global**: `config/mmceguiext/client.cfg`
@@ -26,9 +26,29 @@ Styles come from two layers; per-machine wins, falling back to global:
 - Smart Interface editor: `enableSmartInterfaceEditor`, `smartInterfaceEditorX`/`Y` (`-1` = auto bottom-right), `smartInterfaceEditorInputWidth`, `smartInterfaceEditorVirtualKey` (writes to controller `customData[key]` when no DataPort is bound; multiple keys split by `,` or `;`)
 - Factory only: `factoryController.specialThreadBackgroundColor` (hex `RRGGBB` or `AARRGGBB`, tint for core/special thread rows)
 
-The global switch `enabled`, scroll step `wheelStep`, etc. live here too. See `examples/game-ready-1.0.1/client.cfg.sample`.
+The global switch `enabled`, scroll step `wheelStep`, etc. live here too. `maxGuiConfigFileSizeMiB` defaults to `8` and is the shared file size limit for all MMCE More Extensions JSON files, including GUI, custom hatches, custom AE buses, capacity cards, and button policies; its range is `1-64`. The historical key name is retained for compatibility. See `examples/game-ready-1.0.1/client.cfg.sample`.
 
 **Background rules**: custom texture present → use it; absent → use MMCE default; absent and `hideDefaultBackground=true` → draw no background. When the MMCE default texture is used, info text stays in the original info area; multi-panel mode is enabled only in custom-texture mode.
+
+---
+
+## Optional static parallel-controller tiers
+
+`experimental.enableCustomParallelControllerTiers` is disabled by default. After a full restart, enabling it adds static `mmceme_0` through `mmceme_15` parallel-controller tiers to MMCE during early loading:
+
+```ini
+experimental {
+    B:enableCustomParallelControllerTiers=true
+    I:customParallelControllerTierCount=2
+    I:customParallelControllerDefaultMaxParallelism=32
+    S:customParallelControllerMaxParallelisms <
+        32
+        128
+     >
+}
+```
+
+`customParallelControllerTierCount` accepts `1-16`. Values in `customParallelControllerMaxParallelisms` are read in tier order; missing entries fall back to `customParallelControllerDefaultMaxParallelism`. This is static controller-tier support, not a runtime rule that changes parallelism from machine state. After the first startup, each tier can also be adjusted in `modularmachinery.cfg` under `parallel-controller.mmceme_*`. If WhimCraft already extends the same MMCE parallel-controller enum, MMCEME declines to add a second extension.
 
 ---
 
@@ -53,9 +73,17 @@ Write it into each machine JSON:
       "guiWidth": 520, "guiHeight": 240,
       "specialThreadBackgroundColor": "B2E5FF",
       "threadQueueX": 12, "threadQueueY": 14,
-      "threadScrollbarX": 98, "threadScrollbarY": 22,
       "threadVisibleRows": 7,
-      "threadRowWidth": 90, "threadRowHeight": 34
+      "threadRowWidth": 90, "threadRowHeight": 34,
+      "threadScrollbar": {
+        "x": 98, "y": 22, "width": 8, "height": 197,
+        "trackTexture": "yourmod:textures/gui/scroll_track.png",
+        "thumbTexture": "yourmod:textures/gui/scroll_thumb.png",
+        "trackColor": "66000000", "thumbColor": "FFFFFFFF",
+        "textureWidth": 8, "textureHeight": 197,
+        "thumbTextureWidth": 8, "thumbTextureHeight": 16,
+        "thumbMinHeight": 15, "visible": true
+      }
     }
   }
 }
@@ -69,7 +97,7 @@ Aliases:
 Per-machine values override global. Since `1.0.1+`, if a machine defines any `mmce_gui_ext` node, unspecified GUI size falls back to the MMCE base size (`176x213` / `280x213`) first, reducing coupling to global cfg.
 
 Common per-machine fields (see the quick reference for the full list): `backgroundTexture`, `backgroundTextureOffsetX/Y`, `hideDefaultBackground`, `guiWidth`, `guiHeight`, `enableRightExtension`, `useNineSlice`, `backgroundTextureWidth/Height`, `backgroundCorner`, `centerFullGui`, `specialThreadBackgroundColor`, `enableSmartInterfaceEditor`, `smartInterfaceEditorX/Y`, `smartInterfaceEditorInputWidth`, `smartInterfaceEditorVirtualKey`, `smartInterfaceEditorPriority`, `foregroundContentPriority`, `hideDefaultSmartInterfaceEditor`, `defaultPanelId`, `customPanels`, `smartInterfaceEditors`, `sliders`, `textureLayers`/`backgroundLayers`/`foregroundLayers`, `buttons`.
-For the factory thread queue, the copy-paste fields are `threadQueueX`, `threadQueueY`, `threadScrollbarX`, `threadScrollbarY`, `threadVisibleRows`, `threadRowWidth`, and `threadRowHeight`; aliases like `queueX`, `queueY`, `queueScrollbarX`, `queueScrollbarY`, `queueVisibleRows`, `queueRowWidth`, and `queueRowHeight` are accepted. Customizing these fields also triggers the integrated-controller self proxy.
+For the factory thread queue, use `threadQueueX`, `threadQueueY`, `threadVisibleRows`, `threadRowWidth`, and `threadRowHeight` for the row layout. Use the preferred structured `threadScrollbar` object for scrollbar position, size, track/thumb textures, colors, texture source sizes, minimum thumb height, and visibility. Set `height` to `-1` to calculate the track height automatically from the visible thread rows; positive values remain explicit heights. Legacy `threadScrollbarX/Y` remain supported. Customizing these fields also triggers the integrated-controller self proxy.
 
 ---
 
@@ -107,16 +135,24 @@ Custom editors: `smartInterfaceEditors[]`, each supports `id`, `x`, `y`, `inputW
 
 Virtual DataPort: write values even without a physical port. Recommended read (compatible with both native + virtual): read `ctrl.getSmartInterfaceData(key)` first, then fall back to `ctrl.customData`.
 
+**Numeric precision:** `customData` may contain NBT `Long` or `Double` values, but the current client-side dynamic-visual path is float-oriented. Large `Long` values outside the exact integer range of an IEEE-754 `float`, and `Double` values with more precision than a `float` can retain, may be rounded when read by the GUI. Smart Interface editors, sliders, `smart_set`, `smart_add`, and virtual DataPort numeric writes mainly use the `Float` pathway, so they cannot reliably write every digit of an arbitrarily large `Long`. Use strings or server/script-side `Long` handling when exact large integers matter, and normalize large values before using them as visual inputs.
+
 ---
 
 ## 7. Custom buttons & pages
 
 `buttons[]` are defined per-machine and validated server-side by a policy manager to prevent forged actions. Action types:
 - `page` — client-side page switch.
-- `event` — fire MMCE `ControllerButtonClickEvent` server-side.
+- `subgui` — open a configured sub GUI.
+- `close_subgui` — close the current sub GUI.
+- `event` — fire one MMCEME `ControllerButtonClickEvent` on the server.
 - `smart_set` / `smart_add` — set / add a Smart Interface value (optional min/max clamp).
 
-Examples: `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `controller-button-test.json`.
+Use `hotkey` / `hotkeys` on a button for GUI-local shortcuts. Top-level `hotkeys[]` / `guiHotkeys[]` / `shortcuts[]` create invisible hotkey-only actions; for example, `C` can open a modal sub GUI and `ESCAPE` can run `close_subgui`. Hotkeys are only active while the controller GUI is open, and focused text fields keep normal typing priority.
+
+Register `event` handlers with `mods.mmceguiext.MMCEGEEvents.onControllerButtonClick`. Machine keys may use either `machine_path` or `namespace:machine_path`; registrations of the same handler through both aliases are deduplicated. The event is already server-side, so no `world.isRemote()` guard is required.
+
+Examples: `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `controller-button-test.json`, `subgui-page-reference.json`.
 
 ---
 
@@ -175,3 +211,275 @@ Read from text lines pushed into MMCE's `ControllerGUIRenderEvent.extraInfo[]` (
 - Give every runtime-controllable layer an `id`.
 - Separate multiple `virtualKey`s with commas; `showControls=false` hides the left/right and OK buttons for that input.
 - Restart to verify JSON changes; ZS can be `/ct reload`ed.
+
+## 9. Dynamic visuals
+
+`dynamicVisuals[]` works in both Machine and Factory controller styles. It is the unified system for variable-driven visuals: `source` -> normalization -> optional visibility / transform / renderer selection / color overrides -> optional `history` -> `renderer`.
+
+Renderers supported now: `textureSwitch`, `animatedTexture`, `fill`, `pie`/`ring`, and `lineChart`. Sources can read controller `customData` / Smart Interface numeric values, or built-in machine metrics such as `recipeProgress`, `energyRatio`, `parallelism`, `threadCount`, plus factory thread-count metrics.
+
+`source.type` currently supports:
+- `customData`
+- `machine`
+- `combined`
+
+`combined` first resolves multiple child sources as raw numeric values, then applies the parent source's `min`, `max`, `clamp`, and `invert`. Supported `combine` modes: `sum`, `average`, `weightedSum`, `weightedAverage`, `min`, `max`, `multiply`, `subtract`, `divide`, `first`, `last`. Child entries may be `customData`, `machine`, or nested `combined`. Each child may also define `weight`, used by `weightedSum` / `weightedAverage`.
+
+Use `minSource` / `maxSource` (aliases `min_source` / `max_source`) for dynamic bounds. Each accepts a complete `customData`, `machine`, or `combined` source. Finite dynamic values override static `min` / `max`; missing or non-finite values fall back to the static bounds. Bound sources are read raw without applying their own normalization. Final `max <= min` produces normalized value `0`.
+
+`animatedTexture` is tick/time-driven and supports PNG frame animation from either a sprite sheet or an ordered list of PNG files. Accepted type aliases are `animated_texture`, `animation`, `spriteSheet`, and `spritesheet`.
+
+Sprite-sheet fields:
+- `texture`, `frameWidth`, `frameHeight`, `frameCount`
+- optional `columns`, `textureWidth`, `textureHeight`, `u`, `v`
+- `ticksPerFrame` (default `2`), `startFrame` (default `0`), `loop` (default `true`), `reverse` (default `false`), `pingPong` (default `false`)
+
+Multi-file fields:
+- `frames[]` in playback order
+- each frame can be a texture string or an object with `texture`, `u`, `v`, `textureWidth`, and `textureHeight`
+
+If `columns` is omitted, it is inferred from `textureWidth / frameWidth`; if that is unavailable, the sheet is treated as one row. GIF decoding and automatic GIF playback are not supported. Use PNG files or a PNG sprite sheet for Minecraft compatibility. `textureSwitch` remains value-driven, while `animatedTexture` is time-driven.
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "texture": "yourmod:textures/gui/fan_sheet.png",
+  "frameWidth": 16,
+  "frameHeight": 16,
+  "frameCount": 8,
+  "columns": 4,
+  "textureWidth": 64,
+  "textureHeight": 32,
+  "ticksPerFrame": 2,
+  "loop": true
+}
+```
+
+The renderer can also use multiple files:
+
+```json
+"renderer": {
+  "type": "animatedTexture",
+  "ticksPerFrame": 3,
+  "frames": [
+    "yourmod:textures/gui/spark_0.png",
+    "yourmod:textures/gui/spark_1.png",
+    { "texture": "yourmod:textures/gui/spark_2.png", "u": 0, "v": 0, "textureWidth": 16, "textureHeight": 16 }
+  ]
+}
+```
+
+```json
+"source": {
+  "type": "customData",
+  "key": "oneblock.component.energy_in.amount",
+  "default": 0,
+  "min": 0,
+  "max": 1,
+  "maxSource": {
+    "type": "customData",
+    "key": "oneblock.component.energy_in.capacity",
+    "default": 1
+  }
+}
+```
+
+Optional transforms are also supported:
+- `transform`: static `offsetX`, `offsetY`, `scale`, `scaleX`, `scaleY`, `rotation`, `alpha`, `pivotX`, `pivotY`, `pivotUnit`, and legacy `origin` (`topLeft`, `topCenter`, `topRight`, `centerLeft`, `center`, `centerRight`, `bottomLeft`, `bottomCenter`, `bottomRight`).
+- `transformByValue`: variable-driven `offsetX`, `offsetY`, `scale`, `scaleX`, `scaleY`, `rotation`, `alpha`, `pivotX`, `pivotY`.
+- Dynamic `pivotX` / `pivotY` use the static `transform.pivotUnit` for their units. If `pivotUnit` is omitted, it defaults to `ratio`; use `ratio` for 0..1 relative coordinates, or `px` for absolute pixel coordinates.
+- each `transformByValue` channel may define its own independent `source`; otherwise it reuses the visual's main `source`.
+
+Optional visibility / color overrides are also supported:
+- `visibleByValue`: conditional visibility driven by the normalized value. Supports `min`, `max`, `equals`, `invert`, and an optional independent `source`.
+- `rendererSwitchByValue`: ordered rules that can switch the whole renderer definition by value. Each rule supports `min`, `max`, `equals`, an optional independent `source`, and its own `renderer`.
+- `rendererByValue`: variable-driven color interpolation for color-capable renderers. Supported channels: `backgroundColor`, `fillColor`, `borderColor`, `color`, `lineColor`, `gridColor`.
+- each `rendererByValue` channel accepts `{ "fromColor": ..., "toColor": ... }` and may define its own independent `source`.
+- `rendererSwitchByValue` uses first-match order. If nothing matches, it falls back to the static `renderer`; if that is also omitted, the visual is skipped.
+- if one color endpoint is omitted, the static renderer color is used as the fallback endpoint first; if that is also absent, the provided endpoint is reused.
+
+```json
+"dynamicVisuals": [
+  {
+    "id": "energy_ring",
+    "x": 120,
+    "y": 24,
+    "width": 32,
+    "height": 32,
+    "source": { "type": "machine", "metric": "energyRatio", "min": 0, "max": 1 },
+    "renderer": {
+      "type": "pie",
+      "mode": "ring",
+      "startAngle": -90,
+      "innerRadius": 10,
+      "color": "FFFFAA00",
+      "backgroundColor": "33000000"
+    }
+  }
+]
+```
+
+Use `foreground`, `priority`, `page`, `visible`, `visibleByValue`, `rendererSwitchByValue`, and `rendererByValue` exactly like other controller widgets.
+
+Variable-driven rotation example:
+
+```json
+{
+  "id": "fan",
+  "x": 120,
+  "y": 30,
+  "width": 32,
+  "height": 32,
+  "source": { "type": "customData", "key": "speed", "default": 0, "min": 0, "max": 100 },
+  "transform": { "pivotX": 0.5, "pivotY": 0.5, "pivotUnit": "ratio", "alpha": 0.6 },
+  "transformByValue": {
+    "rotation": { "min": 0, "max": 360 },
+    "pivotX": { "min": 0.35, "max": 0.65 },
+    "pivotY": { "min": 0.35, "max": 0.65 },
+    "scale": { "min": 0.85, "max": 1.15 },
+    "alpha": {
+      "min": 0.4,
+      "max": 1.0,
+      "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 }
+    }
+  },
+  "renderer": {
+    "type": "textureSwitch",
+    "fallbackTexture": "pack:textures/gui/fan.png",
+    "frames": [
+      { "texture": "pack:textures/gui/fan.png" }
+    ]
+  }
+}
+```
+
+In this example, the static `pivotUnit` is `ratio`, so the dynamic `pivotX` / `pivotY` values are also interpreted as relative coordinates.
+
+Visibility + color example:
+
+```json
+{
+  "id": "warning_ring",
+  "x": 160,
+  "y": 28,
+  "width": 28,
+  "height": 28,
+  "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 },
+  "visibleByValue": { "min": 0.05 },
+  "renderer": {
+    "type": "pie",
+    "mode": "ring",
+    "innerRadius": 8,
+    "backgroundColor": "22000000",
+    "color": "FF44FF44"
+  },
+  "rendererByValue": {
+    "color": {
+      "fromColor": "FF44FF44",
+      "toColor": "FFFF4444"
+    }
+  }
+}
+```
+
+This example stays hidden near zero, then fades from green to red as `warning` rises.
+
+Multi-source example:
+
+```json
+{
+  "id": "hybrid_fill",
+  "x": 196,
+  "y": 64,
+  "width": 64,
+  "height": 8,
+  "source": {
+    "type": "combined",
+    "combine": "weightedSum",
+    "sources": [
+      { "type": "customData", "key": "heat", "default": 0, "weight": 0.0065 },
+      { "type": "customData", "key": "warning", "default": 0, "weight": 0.35 }
+    ],
+    "min": 0,
+    "max": 1,
+    "clamp": true
+  },
+  "renderer": {
+    "type": "fill",
+    "backgroundColor": "22000000",
+    "fillColor": "FF55CCFF",
+    "borderColor": "FFFFFFFF",
+    "direction": "right"
+  },
+  "rendererByValue": {
+    "fillColor": {
+      "fromColor": "FF55CCFF",
+      "toColor": "FFFF8844"
+    }
+  }
+}
+```
+
+This example blends `heat` and `warning` into one shared fill bar, while the child `weight` values keep the mixed scales aligned and `rendererByValue` shifts the fill toward orange as the combined pressure rises.
+
+The same weighted combined source can also be reused inside:
+- `visibleByValue.source` for threshold-based reveal / hide
+- `transformByValue.<channel>.source` for motion driven by the mixed signal
+- `rendererSwitchByValue[*].source` when renderer mode should follow the same aggregate state
+
+As a rule of thumb, use `weightedSum` when you are aligning mixed raw scales, and prefer `weightedAverage` when the child sources are already in the same `0..1` range and you want a stable weighted blend.
+
+Renderer-switch example:
+
+```json
+{
+  "id": "mode_preview",
+  "x": 196,
+  "y": 28,
+  "width": 28,
+  "height": 28,
+  "source": { "type": "customData", "key": "warning", "default": 0, "min": 0, "max": 1 },
+  "renderer": {
+    "type": "fill",
+    "backgroundColor": "22000000",
+    "fillColor": "FF44AAFF",
+    "borderColor": "FFFFFFFF",
+    "direction": "up"
+  },
+  "rendererSwitchByValue": [
+    {
+      "max": 0.34,
+      "renderer": {
+        "type": "fill",
+        "backgroundColor": "22000000",
+        "fillColor": "FF44AAFF",
+        "borderColor": "FFFFFFFF",
+        "direction": "up"
+      }
+    },
+    {
+      "min": 0.34,
+      "max": 0.67,
+      "renderer": {
+        "type": "pie",
+        "mode": "ring",
+        "innerRadius": 8,
+        "backgroundColor": "22000000",
+        "color": "FFFFCC44"
+      }
+    },
+    {
+      "min": 0.67,
+      "renderer": {
+        "type": "textureSwitch",
+        "fallbackTexture": "pack:textures/gui/fan.png",
+        "frames": [
+          { "texture": "pack:textures/gui/fan.png" }
+        ]
+      }
+    }
+  ]
+}
+```
+
+This example switches the whole renderer from fill -> ring -> texture as `warning` grows.

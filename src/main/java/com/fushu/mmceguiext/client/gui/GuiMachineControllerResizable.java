@@ -2,6 +2,7 @@ package com.fushu.mmceguiext.client.gui;
 
 import com.fushu.mmceguiext.MMCEGuiExt;
 import com.fushu.mmceguiext.MMCEGuiExtConfig;
+import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.fushu.mmceguiext.client.config.MachineGuiStyleManager;
 import com.fushu.mmceguiext.client.config.ProgressBarStyleSupport;
 import com.fushu.mmceguiext.common.network.PktControllerButtonAction;
@@ -28,6 +29,8 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.input.Keyboard;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
 import java.awt.Rectangle;
@@ -45,6 +48,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class GuiMachineControllerResizable extends GuiContainerBase<ContainerController> {
+    private static final Logger LOGGER = LogManager.getLogger(MMCEGuiExt.MODID);
     private static final int BASE_WIDTH = 176;
     private static final int BASE_HEIGHT = 213;
     private static final int PLAYER_INVENTORY_LEFT = 8;
@@ -125,6 +129,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
     private final List<CustomSlider> customSliders = new ArrayList<CustomSlider>();
     private final List<TextureLayerDef> backgroundTextureLayers = new ArrayList<TextureLayerDef>();
     private final List<TextureLayerDef> foregroundTextureLayers = new ArrayList<TextureLayerDef>();
+    private final DynamicVisualRenderer dynamicVisualRenderer = new DynamicVisualRenderer();
     private final Map<String, LayerRuntimeState> layerRuntimeStates = new HashMap<String, LayerRuntimeState>();
     private final Set<String> textureLayerIds = new HashSet<String>();
     private String activePageId = "main";
@@ -155,14 +160,16 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
 
     @Override
     public void initGui() {
-        this.baseStyleOverride = MachineGuiStyleManager.resolveMachineController(resolveMachine());
+        this.baseStyleOverride = resolveBaseControllerStyle();
         this.replaceSubGuiStack.clear();
         this.modalSubGuiStack.clear();
         this.styleOverride = this.baseStyleOverride;
         this.customBackgroundTexture = resolveCustomTexture();
         resolveGuiScaleConfig();
         super.initGui();
+        applySlotLayout();
         initializeCurrentContext(null, false, null, this.activePageId);
+        this.dynamicVisualRenderer.reset();
         this.currentRuntimeState = captureRuntimeState(null, false);
         this.modalSubGuiDragging = false;
         this.modalSubGuiDragOffsetX = 0;
@@ -339,6 +346,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             }
             drawConfiguredTextureLayers(false, cfg);
             drawBackgroundProgressBars();
+            drawDynamicVisuals(false, null);
             drawBackgroundSliders();
             drawNegativeForegroundTextureLayers(cfg);
             return;
@@ -395,6 +403,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         // Users should draw panel areas directly in their custom GUI textures.
         drawConfiguredTextureLayers(false, cfg);
         drawBackgroundProgressBars();
+        drawDynamicVisuals(false, null);
         drawBackgroundSliders();
         drawNegativeForegroundTextureLayers(cfg);
     }
@@ -445,7 +454,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                         GlStateManager.pushMatrix();
                         GlStateManager.scale((float) FONT_SCALE, (float) FONT_SCALE, 1.0F);
                         for (String line : lines) {
-                            this.fontRenderer.drawStringWithShadow(line, textX, textY, 0xFFFFFF);
+                            drawStringWithShadow(line, textX, textY, 0xFFFFFF);
                             textY += this.fontRenderer.FONT_HEIGHT + 2;
                         }
                         GlStateManager.popMatrix();
@@ -456,6 +465,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                 }
             }
             drawProgressBars(Integer.valueOf(priority));
+            drawDynamicVisuals(true, Integer.valueOf(priority));
             drawCustomSliders(Integer.valueOf(priority));
             drawConfiguredTexts(Integer.valueOf(priority));
             if (priority >= 0) {
@@ -486,9 +496,10 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             if (priority.intValue() >= 0) {
                 continue;
             }
-            drawProgressBars(priority);
-            drawCustomSliders(priority);
-            drawConfiguredTextureLayers(true, cfg, priority);
+            drawProgressBars(priority, true);
+            drawDynamicVisuals(true, priority, true);
+            drawNegativeForegroundSliders(priority);
+            drawConfiguredTextureLayers(true, cfg, priority, true);
         }
     }
 
@@ -634,13 +645,11 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             mouseX = toLogicalMouseX(mouseX);
             mouseY = toLogicalMouseY(mouseY);
         }
-        if (isUsingDefaultBackground(MMCEGuiExtConfig.machineController)) {
-            super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
+        if (handleActiveSliderMouseDrag(mouseX, mouseY, clickedMouseButton)) {
             return;
         }
-
-        if (clickedMouseButton == 0 && this.draggingSlider != null) {
-            updateSliderFromMouse(this.draggingSlider, mouseX, mouseY, false);
+        if (isUsingDefaultBackground(MMCEGuiExtConfig.machineController)) {
+            super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
             return;
         }
 
@@ -652,6 +661,58 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             }
         }
         super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
+    }
+
+    private float resolveDefaultCharSpacing() {
+        return GuiRenderUtils.sanitizeCharSpacing(this.styleOverride.defaultCharSpacing);
+    }
+
+    private float resolveCharSpacing(@Nullable Float charSpacing) {
+        return GuiRenderUtils.resolveCharSpacing(charSpacing, resolveDefaultCharSpacing());
+    }
+
+    private MachineGuiStyleManager.ButtonStyle applyDefaultButtonCharSpacing(MachineGuiStyleManager.ButtonStyle style) {
+        if (style != null && style.charSpacing == null) {
+            float spacing = resolveDefaultCharSpacing();
+            if (spacing != 0.0F) {
+                style.charSpacing = Float.valueOf(spacing);
+            }
+        }
+        return style;
+    }
+
+    private GuiButton createGuiButton(int id, int x, int y, int width, int height, String label) {
+        float spacing = resolveDefaultCharSpacing();
+        if (spacing == 0.0F) {
+            return new GuiButton(id, x, y, width, height, label);
+        }
+        return GuiTexturedButton.builder(id, x, y, width, height, label)
+            .charSpacing(spacing)
+            .build();
+    }
+
+    private List<String> wrapFormattedStringToWidth(String text, int width) {
+        return GuiRenderUtils.listFormattedStringToWidth(this.fontRenderer, text, width, resolveDefaultCharSpacing());
+    }
+
+    private int getTextWidth(String text) {
+        return Math.round(GuiRenderUtils.getStringWidth(this.fontRenderer, text, resolveDefaultCharSpacing()));
+    }
+
+    private int getTextWidth(String text, float charSpacing) {
+        return Math.round(GuiRenderUtils.getStringWidth(this.fontRenderer, text, charSpacing));
+    }
+
+    private int drawStringWithShadow(String text, float x, float y, int color) {
+        return GuiRenderUtils.drawString(this.fontRenderer, text, x, y, color, true, resolveDefaultCharSpacing());
+    }
+
+    private int drawString(String text, float x, float y, int color) {
+        return GuiRenderUtils.drawString(this.fontRenderer, text, x, y, color, false, resolveDefaultCharSpacing());
+    }
+
+    private int drawStringWithSpacing(String text, float x, float y, int color, boolean shadow, float charSpacing) {
+        return GuiRenderUtils.drawString(this.fontRenderer, text, x, y, color, shadow, charSpacing);
     }
 
     private void drawDefaultForeground() {
@@ -666,13 +727,13 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
 
         int redstone = controller.getWorld().getStrongPower(controller.getPos());
         if (redstone > 0) {
-            List<String> out = this.fontRenderer.listFormattedStringToWidth(
+            List<String> out = wrapFormattedStringToWidth(
                 I18n.format("gui.controller.status.redstone_stopped"),
                 MathHelper.floor(135 * (1.0D / FONT_SCALE))
             );
             for (String draw : out) {
                 offsetY += 10;
-                this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
                 offsetY += 10;
             }
             GlStateManager.popMatrix();
@@ -681,18 +742,18 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
 
         DynamicMachine machine = controller.getBlueprintMachine();
         if (getShowBlueprintInfo(cfg) && machine != null) {
-            this.fontRenderer.drawStringWithShadow(I18n.format("gui.controller.blueprint", ""), offsetX, offsetY, 0xFFFFFF);
-            List<String> out = this.fontRenderer.listFormattedStringToWidth(
+            drawStringWithShadow(I18n.format("gui.controller.blueprint", ""), offsetX, offsetY, 0xFFFFFF);
+            List<String> out = wrapFormattedStringToWidth(
                 machine.getLocalizedName(),
                 MathHelper.floor(135 * (1.0D / FONT_SCALE))
             );
             for (String draw : out) {
                 offsetY += 10;
-                this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
             }
             offsetY += 15;
         } else if (getShowBlueprintInfo(cfg) && !controller.isStructureFormed()) {
-            this.fontRenderer.drawStringWithShadow(
+            drawStringWithShadow(
                 I18n.format("gui.controller.blueprint", I18n.format("gui.controller.blueprint.none")),
                 offsetX,
                 offsetY,
@@ -704,14 +765,14 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         DynamicMachine found = controller.getFoundMachine();
         if (getShowStructureInfo(cfg)) {
             if (found != null) {
-                this.fontRenderer.drawStringWithShadow(I18n.format("gui.controller.structure", ""), offsetX, offsetY, 0xFFFFFF);
-                List<String> out = this.fontRenderer.listFormattedStringToWidth(
+                drawStringWithShadow(I18n.format("gui.controller.structure", ""), offsetX, offsetY, 0xFFFFFF);
+                List<String> out = wrapFormattedStringToWidth(
                     found.getLocalizedName(),
                     MathHelper.floor(135 * (1.0D / FONT_SCALE))
                 );
                 for (String draw : out) {
                     offsetY += 10;
-                    this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+                    drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
                 }
 
                 ControllerGUIRenderEvent event = new ControllerGUIRenderEvent(controller);
@@ -725,7 +786,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                         }
                         RoutedText routed = parseRoutedText(s, "main");
                         waitForDraw.addAll(
-                            this.fontRenderer.listFormattedStringToWidth(
+                            wrapFormattedStringToWidth(
                                 routed.text,
                                 MathHelper.floor(135 * (1.0D / FONT_SCALE))
                             )
@@ -734,11 +795,11 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                     offsetY += 5;
                     for (String s : waitForDraw) {
                         offsetY += 10;
-                        this.fontRenderer.drawStringWithShadow(s, offsetX, offsetY, 0xFFFFFF);
+                        drawStringWithShadow(s, offsetX, offsetY, 0xFFFFFF);
                     }
                 }
             } else {
-                this.fontRenderer.drawStringWithShadow(
+                drawStringWithShadow(
                     I18n.format("gui.controller.structure", I18n.format("gui.controller.structure.none")),
                     offsetX,
                     offsetY,
@@ -752,14 +813,14 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         }
 
         if (getShowStatusInfo(cfg)) {
-            this.fontRenderer.drawStringWithShadow(I18n.format("gui.controller.status"), offsetX, offsetY, 0xFFFFFF);
-            List<String> statusOut = this.fontRenderer.listFormattedStringToWidth(
+            drawStringWithShadow(I18n.format("gui.controller.status"), offsetX, offsetY, 0xFFFFFF);
+            List<String> statusOut = wrapFormattedStringToWidth(
                 I18n.format(controller.getControllerStatus().getUnlocMessage()),
                 MathHelper.floor(135 * (1.0D / FONT_SCALE))
             );
             for (String draw : statusOut) {
                 offsetY += 10;
-                this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
             }
             offsetY += 15;
         }
@@ -768,7 +829,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         if (getShowStatusInfo(cfg) && activeRecipe != null) {
             if (activeRecipe.getTotalTick() > 0) {
                 int progress = (activeRecipe.getTick() * 100) / activeRecipe.getTotalTick();
-                this.fontRenderer.drawStringWithShadow(
+                drawStringWithShadow(
                     I18n.format("gui.controller.status.crafting.progress", progress + "%"),
                     offsetX,
                     offsetY,
@@ -782,14 +843,14 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             int parallelism = activeRecipe.getParallelism();
             int maxParallelism = activeRecipe.getMaxParallelism();
             if (parallelism > 1) {
-                this.fontRenderer.drawStringWithShadow(
+                drawStringWithShadow(
                     I18n.format("gui.controller.parallelism", parallelism),
                     offsetX,
                     offsetY,
                     0xFFFFFF
                 );
                 offsetY += 10;
-                this.fontRenderer.drawStringWithShadow(
+                drawStringWithShadow(
                     I18n.format("gui.controller.max_parallelism", maxParallelism),
                     offsetX,
                     offsetY,
@@ -803,7 +864,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             int usedTimeCache = TileMultiblockMachineController.usedTimeCache;
             float searchUsedTimeCache = TileMultiblockMachineController.searchUsedTimeCache;
             String workMode = TileMultiblockMachineController.workModeCache.getDisplayName();
-            List<String> perf = this.fontRenderer.listFormattedStringToWidth(
+            List<String> perf = wrapFormattedStringToWidth(
                 String.format(
                     "Avg: %dus/t (Search: %sms), WorkMode: %s",
                     usedTimeCache,
@@ -814,7 +875,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             );
             for (String draw : perf) {
                 offsetY += 10;
-                this.fontRenderer.drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
+                drawStringWithShadow(draw, offsetX, offsetY, 0xFFFFFF);
             }
         }
 
@@ -846,26 +907,80 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             int color = text.color == null ? 0xFFFFFF : text.color.intValue();
             float scale = text.scale == null ? 1.0F : Math.max(0.05F, text.scale.floatValue());
             boolean shadow = text.shadow == null || text.shadow.booleanValue();
-            int alignedX = GuiRenderUtils.resolveAlignedTextX(text.x, Math.round(this.fontRenderer.getStringWidth(value) * scale), text.align);
+            float charSpacing = resolveCharSpacing(text.charSpacing);
+            int alignedX = GuiRenderUtils.resolveAlignedTextX(text.x, Math.round(getTextWidth(value, charSpacing) * scale), text.align);
             GlStateManager.pushMatrix();
             GlStateManager.scale(scale, scale, 1.0F);
             int drawX = MathHelper.floor((float) (alignedX / scale));
             int drawY = MathHelper.floor((float) (text.y / scale));
-            if (shadow) {
-                this.fontRenderer.drawStringWithShadow(value, drawX, drawY, color);
-            } else {
-                this.fontRenderer.drawString(value, drawX, drawY, color);
-            }
+            drawStringWithSpacing(value, drawX, drawY, color, shadow, charSpacing);
             GlStateManager.popMatrix();
         }
     }
 
+    private void drawDynamicVisuals(boolean foreground, @Nullable Integer priorityFilter) {
+        drawDynamicVisuals(foreground, priorityFilter, !foreground);
+    }
+
+    private void drawDynamicVisuals(boolean foreground, @Nullable Integer priorityFilter, boolean screenCoordinates) {
+        this.dynamicVisualRenderer.render(
+            this.styleOverride.dynamicVisuals,
+            this.controller,
+            this::resolveDynamicVisualMetric,
+            screenCoordinates ? this.guiLeft : 0,
+            screenCoordinates ? this.guiTop : 0,
+            foreground,
+            priorityFilter,
+            this::isPageVisible,
+            resolveForegroundContentPriority()
+        );
+    }
+
+    private float resolveDynamicVisualMetric(String metric, float fallback) {
+        ActiveMachineRecipe recipe = this.controller.getActiveRecipe();
+        String key = metric == null ? "recipeProgress" : metric;
+        if ("recipeProgress".equals(key)) {
+            return ProgressBarStyleSupport.recipeProgress(recipe);
+        }
+        if ("recipeMaxProgress".equals(key)) {
+            return recipe == null ? fallback : (float) recipe.getTotalTick();
+        }
+        if ("parallelism".equals(key)) {
+            return recipe == null ? 0.0F : (float) recipe.getParallelism();
+        }
+        if ("threadCount".equals(key)) {
+            return 1.0F;
+        }
+        if ("activeThreadCount".equals(key)) {
+            return recipe == null ? 0.0F : 1.0F;
+        }
+        if ("idleThreadCount".equals(key)) {
+            return recipe == null ? 1.0F : 0.0F;
+        }
+        if ("energyStored".equals(key)) {
+            return DynamicVisualRenderer.reflectMetric(this.controller, fallback, "getEnergyStored", "getEnergy", "getCurrentEnergy");
+        }
+        if ("energyCapacity".equals(key)) {
+            return DynamicVisualRenderer.reflectMetric(this.controller, fallback, "getMaxEnergyStored", "getEnergyCapacity", "getMaxEnergy");
+        }
+        if ("energyRatio".equals(key)) {
+            float stored = DynamicVisualRenderer.reflectMetric(this.controller, fallback, "getEnergyStored", "getEnergy", "getCurrentEnergy");
+            float capacity = DynamicVisualRenderer.reflectMetric(this.controller, 0.0F, "getMaxEnergyStored", "getEnergyCapacity", "getMaxEnergy");
+            return capacity <= 0.0F ? fallback : stored / capacity;
+        }
+        return fallback;
+    }
+
     private void drawProgressBars(@Nullable Integer priorityFilter) {
+        drawProgressBars(priorityFilter, false);
+    }
+
+    private void drawProgressBars(@Nullable Integer priorityFilter, boolean screenCoordinates) {
         if (styleOverride.progressBars == null || styleOverride.progressBars.isEmpty()) {
             return;
         }
         for (MachineGuiStyleManager.ProgressBarStyle bar : styleOverride.progressBars) {
-            if (bar == null) {
+            if (bar == null || Boolean.FALSE.equals(bar.foreground)) {
                 continue;
             }
             if (bar.visible != null && !bar.visible.booleanValue()) {
@@ -878,7 +993,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             if (priorityFilter != null && priority != priorityFilter.intValue()) {
                 continue;
             }
-            drawProgressBar(bar, resolveProgressBarValue(bar));
+            drawProgressBar(bar, resolveProgressBarValue(bar), screenCoordinates);
         }
     }
 
@@ -896,7 +1011,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             if (!isPageVisible(bar.page)) {
                 continue;
             }
-            drawProgressBar(bar, resolveProgressBarValue(bar));
+            drawProgressBar(bar, resolveProgressBarValue(bar), true);
         }
     }
 
@@ -908,42 +1023,75 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         return ProgressBarStyleSupport.normalizeProgressValue(bar, 0.0F);
     }
 
-    private void drawProgressBar(MachineGuiStyleManager.ProgressBarStyle bar, float progress) {
-        drawProgressBarBody(bar, progress);
+    private void drawProgressBar(
+        MachineGuiStyleManager.ProgressBarStyle bar,
+        float progress,
+        boolean screenCoordinates
+    ) {
+        int drawX = GuiRenderUtils.resolveGuiCoordinate(bar.x, this.guiLeft, screenCoordinates);
+        int drawY = GuiRenderUtils.resolveGuiCoordinate(bar.y, this.guiTop, screenCoordinates);
+        drawProgressBarBody(bar, progress, drawX, drawY);
         if (Boolean.TRUE.equals(bar.showText)) {
             String text = Math.round(progress * 100.0F) + "%";
             int color = bar.textColor == null ? 0xFFFFFFFF : bar.textColor.intValue();
-            int textX = bar.x + Math.max(0, (bar.width - this.fontRenderer.getStringWidth(text)) / 2);
-            int textY = bar.y + Math.max(0, (bar.height - this.fontRenderer.FONT_HEIGHT) / 2);
-            this.fontRenderer.drawStringWithShadow(text, textX, textY, color);
+            int textX = drawX + Math.max(0, (bar.width - getTextWidth(text)) / 2);
+            int textY = drawY + Math.max(0, (bar.height - this.fontRenderer.FONT_HEIGHT) / 2);
+            drawStringWithShadow(text, textX, textY, color);
         }
     }
 
-    private void drawProgressBarBody(MachineGuiStyleManager.ProgressBarStyle bar, float progress) {
+    private void drawProgressBarBody(
+        MachineGuiStyleManager.ProgressBarStyle bar,
+        float progress,
+        int drawX,
+        int drawY
+    ) {
         int textureWidth = bar.textureWidth == null ? bar.width : Math.max(1, bar.textureWidth.intValue());
         int textureHeight = bar.textureHeight == null ? bar.height : Math.max(1, bar.textureHeight.intValue());
-        int bgX = bar.x;
-        int bgY = bar.y;
         ResourceLocation backgroundTexture = resolveProgressBarTexture(bar, false);
         if (backgroundTexture != null) {
             this.mc.getTextureManager().bindTexture(backgroundTexture);
-            Gui.drawModalRectWithCustomSizedTexture(bgX, bgY, 0, 0, bar.width, bar.height, textureWidth, textureHeight);
+            GuiRenderUtils.drawTexturedRect(drawX, drawY, 0, 0, bar.width, bar.height, textureWidth, textureHeight);
         } else {
             int bg = bar.backgroundColor == null ? 0x66000000 : bar.backgroundColor.intValue();
-            drawRect(bgX, bgY, bgX + bar.width, bgY + bar.height, bg);
+            drawRect(drawX, drawY, drawX + bar.width, drawY + bar.height, bg);
         }
         if (bar.borderColor != null) {
-            drawProgressBorder(bar.x, bar.y, bar.width, bar.height, bar.borderColor.intValue());
+            drawProgressBorder(drawX, drawY, bar.width, bar.height, bar.borderColor.intValue());
         }
 
-        int[] fillBounds = ProgressBarStyleSupport.computeFillBounds(bar.x, bar.y, bar.width, bar.height, bar.direction, progress);
+        int[] fillBounds = ProgressBarStyleSupport.computeFillBounds(
+            drawX,
+            drawY,
+            bar.width,
+            bar.height,
+            bar.direction,
+            progress
+        );
         if (fillBounds[2] <= 0 || fillBounds[3] <= 0) {
             return;
         }
         ResourceLocation fillTexture = resolveProgressBarTexture(bar, true);
         if (fillTexture != null) {
+            int[] textureBounds = ProgressBarStyleSupport.computeFillTextureBounds(
+                textureWidth,
+                textureHeight,
+                bar.direction,
+                progress
+            );
             this.mc.getTextureManager().bindTexture(fillTexture);
-            Gui.drawModalRectWithCustomSizedTexture(fillBounds[0], fillBounds[1], 0, 0, fillBounds[2], fillBounds[3], textureWidth, textureHeight);
+            GuiRenderUtils.drawScaledTexturedRect(
+                fillBounds[0],
+                fillBounds[1],
+                fillBounds[2],
+                fillBounds[3],
+                textureBounds[0],
+                textureBounds[1],
+                textureBounds[2],
+                textureBounds[3],
+                textureWidth,
+                textureHeight
+            );
         } else {
             int fill = bar.fillColor == null ? 0xFF55CC66 : bar.fillColor.intValue();
             drawRect(fillBounds[0], fillBounds[1], fillBounds[0] + fillBounds[2], fillBounds[1] + fillBounds[3], fill);
@@ -1108,6 +1256,29 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         return runtime != null && runtime.priority != null ? runtime.priority.intValue() : layer.priority;
     }
 
+    private void applySlotLayout() {
+        if (this.inventorySlots == null || this.inventorySlots.inventorySlots == null) {
+            return;
+        }
+        ControllerSlotLayoutEngine.apply(
+            this.inventorySlots.inventorySlots,
+            getSlotLayoutProvider(),
+            this.styleOverride == null ? null : this.styleOverride.slotGroups,
+            this.styleOverride == null ? null : this.styleOverride.playerInventory
+        );
+    }
+
+    @Nullable
+    private com.fushu.mmceguiext.api.gui.SlotLayoutProvider getSlotLayoutProvider() {
+        if (this.inventorySlots instanceof com.fushu.mmceguiext.api.gui.SlotLayoutProvider) {
+            return (com.fushu.mmceguiext.api.gui.SlotLayoutProvider) this.inventorySlots;
+        }
+        if (this.controller instanceof com.fushu.mmceguiext.api.gui.SlotLayoutProvider) {
+            return (com.fushu.mmceguiext.api.gui.SlotLayoutProvider) this.controller;
+        }
+        return null;
+    }
+
     private void applyPlayerInventoryVisibility(MMCEGuiExtConfig.MachineController cfg) {
         boolean hidePlayerInventory = getHidePlayerInventory(cfg);
         if (this.inventorySlots == null || this.inventorySlots.inventorySlots == null) {
@@ -1270,12 +1441,14 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         String statusPanel = resolveInfoSectionPanel(defaultPanelId, "status", "status_info");
         String parallelismPanel = resolveInfoSectionPanel(defaultPanelId, "parallelism", "parallelism_info", "threads", "thread_info");
         String performancePanel = resolveInfoSectionPanel(defaultPanelId, "performance", "performance_info", "perf");
+        DynamicMachine found = controller.getFoundMachine();
 
         int redstone = controller.getWorld().getStrongPower(controller.getPos());
         if (redstone > 0) {
             if (getShowStatusInfo(cfg)) {
                 addWrapped(linesByPanel, panelMap, statusPanel, I18n.format("gui.controller.status.redstone_stopped"), defaultPanelId);
             }
+            addControllerExtraInfo(linesByPanel, panelMap, defaultPanelId, structurePanel);
             return linesByPanel;
         }
 
@@ -1295,21 +1468,9 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             addBlank(linesByPanel, blueprintPanel);
         }
 
-        DynamicMachine found = controller.getFoundMachine();
         if (getShowStructureInfo(cfg) && found != null) {
             addWrapped(linesByPanel, panelMap, structurePanel, I18n.format("gui.controller.structure", ""), defaultPanelId);
             addWrapped(linesByPanel, panelMap, structurePanel, found.getLocalizedName(), defaultPanelId);
-            ControllerGUIRenderEvent event = new ControllerGUIRenderEvent(controller);
-            event.postEvent();
-            for (String extra : event.getExtraInfo()) {
-                if (consumeGuiDirective(extra)) {
-                    continue;
-                }
-                RoutedText routed = parseRoutedText(extra, defaultPanelId);
-                String targetPanel = panelMap.containsKey(routed.panelId) ? routed.panelId : structurePanel;
-                addWrapped(linesByPanel, panelMap, targetPanel, routed.text, defaultPanelId);
-            }
-            addBlank(linesByPanel, structurePanel);
         } else if (getShowStructureInfo(cfg)) {
             addWrapped(
                 linesByPanel,
@@ -1319,12 +1480,11 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                 defaultPanelId
             );
             addBlank(linesByPanel, structurePanel);
-        } else if (found != null) {
-            ControllerGUIRenderEvent event = new ControllerGUIRenderEvent(controller);
-            event.postEvent();
-            for (String extra : event.getExtraInfo()) {
-                consumeGuiDirective(extra);
-            }
+        }
+
+        addControllerExtraInfo(linesByPanel, panelMap, defaultPanelId, structurePanel);
+        if (getShowStructureInfo(cfg) && found != null) {
+            addBlank(linesByPanel, structurePanel);
         }
 
         if (getShowStatusInfo(cfg)) {
@@ -1385,6 +1545,24 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         return linesByPanel;
     }
 
+    private void addControllerExtraInfo(
+        Map<String, List<String>> linesByPanel,
+        Map<String, PanelDef> panelMap,
+        String defaultPanelId,
+        String fallbackPanel
+    ) {
+        ControllerGUIRenderEvent event = new ControllerGUIRenderEvent(controller);
+        event.postEvent();
+        for (String extra : event.getExtraInfo()) {
+            if (consumeGuiDirective(extra)) {
+                continue;
+            }
+            RoutedText routed = parseRoutedText(extra, defaultPanelId);
+            String targetPanel = panelMap.containsKey(routed.panelId) ? routed.panelId : fallbackPanel;
+            addWrapped(linesByPanel, panelMap, targetPanel, routed.text, defaultPanelId);
+        }
+    }
+
     private void addWrapped(
         Map<String, List<String>> linesByPanel,
         Map<String, PanelDef> panelMap,
@@ -1410,7 +1588,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             return;
         }
         int wrapWidth = Math.max(24, MathHelper.floor((float) ((panel.rect.width - 8) / FONT_SCALE)));
-        target.addAll(this.fontRenderer.listFormattedStringToWidth(text, wrapWidth));
+        target.addAll(wrapFormattedStringToWidth(text, wrapWidth));
     }
 
     private void addBlank(Map<String, List<String>> linesByPanel, String panelId) {
@@ -1593,6 +1771,31 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             return found;
         }
         return controller.getBlueprintMachine();
+    }
+
+    private MachineGuiStyleManager.ControllerStyle resolveBaseControllerStyle() {
+        MachineGuiStyleManager.ControllerStyle baseStyle = MachineGuiStyleManager.resolveMachineController(resolveMachine());
+        ResourceLocation styleKey = resolveProvidedStyleKey();
+        if (styleKey == null) {
+            return baseStyle;
+        }
+
+        MachineGuiStyleManager.ControllerStyle keyedStyle = MachineGuiStyleManager.resolveMachineController(styleKey);
+        if (keyedStyle == MachineGuiStyleManager.ControllerStyle.EMPTY || keyedStyle.isEmpty()) {
+            return baseStyle;
+        }
+        if (baseStyle == MachineGuiStyleManager.ControllerStyle.EMPTY || baseStyle.isEmpty()) {
+            return keyedStyle;
+        }
+        return MachineGuiStyleManager.ControllerStyle.copyOf(baseStyle).mergeFrom(keyedStyle);
+    }
+
+    @Nullable
+    private ResourceLocation resolveProvidedStyleKey() {
+        if (controller instanceof IMachineGuiStyleProvider) {
+            return ((IMachineGuiStyleProvider) controller).getMachineControllerGuiStyle();
+        }
+        return null;
     }
 
     @Nullable
@@ -2029,7 +2232,10 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                     int localMouseX = mouseX - guiLeft;
                     int localMouseY = mouseY - guiTop;
                     drawGuiContainerBackgroundLayer(partialTicks, localMouseX, localMouseY);
+                    GlStateManager.pushMatrix();
+                    GlStateManager.translate((float) guiLeft, (float) guiTop, 0.0F);
                     drawGuiContainerForegroundLayer(localMouseX, localMouseY);
+                    GlStateManager.popMatrix();
                 }
             });
         } finally {
@@ -2071,6 +2277,9 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             @Override
             public void run() {
                 if (handleCustomButtonMouseClicked(mouseX, mouseY, mouseButton)) {
+                    return;
+                }
+                if (handleCustomSliderMouseClicked(mouseX, mouseY, mouseButton)) {
                     return;
                 }
                 if (handleCustomSmartInterfaceMouseClicked(mouseX, mouseY, mouseButton)) {
@@ -2139,8 +2348,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                     updateModalSubGuiPosition(mouseX - modalSubGuiDragOffsetX, mouseY - modalSubGuiDragOffsetY);
                     return;
                 }
-                if (clickedMouseButton == 0 && draggingSlider != null) {
-                    updateSliderFromMouse(draggingSlider, mouseX, mouseY, false);
+                if (handleActiveSliderMouseDrag(mouseX, mouseY, clickedMouseButton)) {
                     return;
                 }
                 if (isUsingDefaultBackground(MMCEGuiExtConfig.machineController)) {
@@ -2566,10 +2774,19 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
     }
 
     private void drawConfiguredTextureLayers(boolean foreground, MMCEGuiExtConfig.MachineController cfg) {
-        drawConfiguredTextureLayers(foreground, cfg, null);
+        drawConfiguredTextureLayers(foreground, cfg, null, !foreground);
     }
 
     private void drawConfiguredTextureLayers(boolean foreground, MMCEGuiExtConfig.MachineController cfg, @Nullable Integer priorityFilter) {
+        drawConfiguredTextureLayers(foreground, cfg, priorityFilter, !foreground);
+    }
+
+    private void drawConfiguredTextureLayers(
+        boolean foreground,
+        MMCEGuiExtConfig.MachineController cfg,
+        @Nullable Integer priorityFilter,
+        boolean screenCoordinates
+    ) {
         List<TextureLayerDef> layers = foreground ? this.foregroundTextureLayers : this.backgroundTextureLayers;
         if (layers.isEmpty()) {
             return;
@@ -2596,8 +2813,8 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             int texH = layer.textureHeight == null ? getBackgroundTextureHeight(cfg) : Math.max(16, layer.textureHeight.intValue());
             int corner = layer.corner == null ? getBackgroundCorner(cfg) : Math.max(2, layer.corner.intValue());
             boolean useNineSlice = layer.useNineSlice == null ? getUseNineSlice(cfg) : layer.useNineSlice.booleanValue();
-            int drawX = foreground ? offX : this.guiLeft + offX;
-            int drawY = foreground ? offY : this.guiTop + offY;
+            int drawX = GuiRenderUtils.resolveGuiCoordinate(offX, this.guiLeft, screenCoordinates);
+            int drawY = GuiRenderUtils.resolveGuiCoordinate(offY, this.guiTop, screenCoordinates);
             float scaleX = resolveLayerScaleX(layer);
             float scaleY = resolveLayerScaleY(layer);
             float rotation = resolveLayerRotation(layer);
@@ -2668,9 +2885,9 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             editor.input.setMaxStringLength(1024);
 
             if (editor.showControls) {
-                editor.prev = new GuiButton(buttonId++, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
-                editor.next = new GuiButton(buttonId++, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
-                editor.apply = new GuiButton(
+                editor.prev = createGuiButton(buttonId++, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
+                editor.next = createGuiButton(buttonId++, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
+                editor.apply = createGuiButton(
                     buttonId++,
                     absX + leftControls + inputWidth + 2,
                     absY,
@@ -2727,9 +2944,9 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         this.smartInterfaceEditorInput = new GuiTextField(0, this.fontRenderer, absX + SMART_EDITOR_BUTTON_W * 2 + 3, absY, inputWidth, SMART_EDITOR_INPUT_H);
         this.smartInterfaceEditorInput.setMaxStringLength(1024);
 
-        this.smartInterfacePrevButton = new GuiButton(101, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
-        this.smartInterfaceNextButton = new GuiButton(102, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
-        this.smartInterfaceApplyButton = new GuiButton(
+        this.smartInterfacePrevButton = createGuiButton(101, absX, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, "<");
+        this.smartInterfaceNextButton = createGuiButton(102, absX + SMART_EDITOR_BUTTON_W + 1, absY, SMART_EDITOR_BUTTON_W, SMART_EDITOR_BUTTON_H, ">");
+        this.smartInterfaceApplyButton = createGuiButton(
             103,
             absX + SMART_EDITOR_BUTTON_W * 2 + 5 + inputWidth,
             absY,
@@ -2745,6 +2962,9 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             return false;
         }
         if (!getSmartInterfaceEditorEnabled(cfg)) {
+            return false;
+        }
+        if (getSmartInterfaceEditorVirtualKeys(cfg).isEmpty() && getSmartInterfaceDataList().length <= 0) {
             return false;
         }
         int configuredX = getSmartInterfaceEditorX(cfg);
@@ -2827,7 +3047,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
 
         String title = resolveSmartInterfaceEditorTitle(hasData, selectableCount, currentIndexDisplay, virtualKey);
         if (!this.smartInterfaceHideTitleText) {
-            this.fontRenderer.drawStringWithShadow(title, this.smartInterfaceEditorX, this.smartInterfaceEditorY - 10, 0xE0E0E0);
+            drawStringWithShadow(title, this.smartInterfaceEditorX, this.smartInterfaceEditorY - 10, 0xE0E0E0);
         }
 
         if (!this.smartInterfaceHideInfoText) {
@@ -2843,7 +3063,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                 infoText = "No DataPort bound";
                 infoColor = 0xB0B0B0;
             }
-            this.fontRenderer.drawStringWithShadow(
+            drawStringWithShadow(
                 infoText,
                 this.smartInterfaceEditorX,
                 this.smartInterfaceEditorY + SMART_EDITOR_INPUT_H + 2,
@@ -3081,10 +3301,10 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                         .replace("{index}", Integer.toString(index))
                         .replace("{count}", Integer.toString(count))
                         .replace("{key}", activeKey);
-                this.fontRenderer.drawStringWithShadow(title, editor.x, editor.y - 10, 0xE0E0E0);
+                drawStringWithShadow(title, editor.x, editor.y - 10, 0xE0E0E0);
             }
             if (editor.showInfo) {
-                this.fontRenderer.drawStringWithShadow("Key: " + activeKey, editor.x, editor.y + SMART_EDITOR_INPUT_H + 2, 0xBFD3FF);
+                drawStringWithShadow("Key: " + activeKey, editor.x, editor.y + SMART_EDITOR_INPUT_H + 2, 0xBFD3FF);
             }
         }
     }
@@ -3263,14 +3483,18 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
     }
 
     private void drawBackgroundSliders() {
-        drawSliders(null, false);
+        drawSliders(null, false, true);
     }
 
     private void drawCustomSliders(@Nullable Integer priorityFilter) {
-        drawSliders(priorityFilter, true);
+        drawSliders(priorityFilter, true, false);
     }
 
-    private void drawSliders(@Nullable Integer priorityFilter, boolean foreground) {
+    private void drawNegativeForegroundSliders(@Nullable Integer priorityFilter) {
+        drawSliders(priorityFilter, true, true);
+    }
+
+    private void drawSliders(@Nullable Integer priorityFilter, boolean foreground, boolean screenCoordinates) {
         for (CustomSlider slider : this.customSliders) {
             if (!slider.visible || slider.foreground != foreground || !isPageVisible(slider.page)) {
                 continue;
@@ -3278,13 +3502,15 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             if (priorityFilter != null && slider.priority != priorityFilter.intValue()) {
                 continue;
             }
-            drawSlider(slider);
+            drawSlider(slider, screenCoordinates);
         }
     }
 
-    private void drawSlider(CustomSlider slider) {
-        int x = slider.x;
-        int y = slider.y;
+    private void drawSlider(CustomSlider slider, boolean screenCoordinates) {
+        int offsetX = screenCoordinates ? this.guiLeft : 0;
+        int offsetY = screenCoordinates ? this.guiTop : 0;
+        int x = GuiRenderUtils.resolveGuiCoordinate(slider.x, this.guiLeft, screenCoordinates);
+        int y = GuiRenderUtils.resolveGuiCoordinate(slider.y, this.guiTop, screenCoordinates);
         drawRect(x, y, x + slider.width, y + slider.height, slider.trackColor);
         if (slider.borderColor != null) {
             drawProgressBorder(x, y, slider.width, slider.height, slider.borderColor.intValue());
@@ -3300,12 +3526,18 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         }
 
         Rectangle thumb = sliderThumbRect(slider);
-        drawRect(thumb.x, thumb.y, thumb.x + thumb.width, thumb.y + thumb.height, slider.thumbColor);
+        drawRect(
+            offsetX + thumb.x,
+            offsetY + thumb.y,
+            offsetX + thumb.x + thumb.width,
+            offsetY + thumb.y + thumb.height,
+            slider.thumbColor
+        );
         if (slider.showText) {
             String text = formatSliderValue(slider.value);
-            int textX = x + Math.max(0, (slider.width - this.fontRenderer.getStringWidth(text)) / 2);
+            int textX = x + Math.max(0, (slider.width - getTextWidth(text)) / 2);
             int textY = y + Math.max(0, (slider.height - this.fontRenderer.FONT_HEIGHT) / 2);
-            this.fontRenderer.drawStringWithShadow(text, textX, textY, slider.textColor);
+            drawStringWithShadow(text, textX, textY, slider.textColor);
         }
     }
 
@@ -3313,12 +3545,28 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         if (mouseButton != 0) {
             return false;
         }
-        CustomSlider slider = findTopmostSliderAt(mouseX, mouseY);
+        CustomSlider slider = startSliderDragAt(mouseX, mouseY);
         if (slider == null) {
             return false;
         }
-        this.draggingSlider = slider;
         updateSliderFromMouse(slider, mouseX, mouseY, true);
+        return true;
+    }
+
+    @Nullable
+    private CustomSlider startSliderDragAt(int mouseX, int mouseY) {
+        CustomSlider slider = findTopmostSliderAt(mouseX, mouseY);
+        if (slider != null) {
+            this.draggingSlider = slider;
+        }
+        return slider;
+    }
+
+    private boolean handleActiveSliderMouseDrag(int mouseX, int mouseY, int mouseButton) {
+        if (mouseButton != 0 || this.draggingSlider == null) {
+            return false;
+        }
+        updateSliderFromMouse(this.draggingSlider, mouseX, mouseY, false);
         return true;
     }
 
@@ -3373,9 +3621,14 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
     }
 
     private boolean isPointInSlider(CustomSlider slider, int mouseX, int mouseY) {
-        int x = this.guiLeft + slider.x;
-        int y = this.guiTop + slider.y;
-        return mouseX >= x && mouseY >= y && mouseX < x + slider.width && mouseY < y + slider.height;
+        int localX = mouseX - this.guiLeft;
+        int localY = mouseY - this.guiTop;
+        if (localX >= slider.x && localY >= slider.y
+            && localX < slider.x + slider.width && localY < slider.y + slider.height) {
+            return true;
+        }
+        Rectangle thumb = sliderThumbRect(slider);
+        return thumb.contains(localX, localY);
     }
 
     private Rectangle sliderThumbRect(CustomSlider slider) {
@@ -3422,7 +3675,8 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                 boolean hasLabel = style.label != null && !style.label.trim().isEmpty();
                 boolean hasTexture = style.texture != null && !style.texture.trim().isEmpty()
                     || style.hoverTexture != null && !style.hoverTexture.trim().isEmpty()
-                    || style.disabledTexture != null && !style.disabledTexture.trim().isEmpty();
+                    || style.disabledTexture != null && !style.disabledTexture.trim().isEmpty()
+                    || style.pressedTexture != null && !style.pressedTexture.trim().isEmpty();
                 boolean hasHotkey = style.hotkeys != null && !style.hotkeys.isEmpty();
                 if (!hasLabel && !hasTexture && !hasHotkey) {
                     continue;
@@ -3452,9 +3706,18 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                 button.visible = visible;
                 button.hotkeys = style.hotkeys == null ? Collections.<String>emptyList() : new ArrayList<String>(style.hotkeys);
                 button.consumeHotkey = style.consumeHotkey == null || style.consumeHotkey.booleanValue();
+                button.baseStyle = style;
+                button.cycleStates = style.cycleStates == null ? Collections.<MachineGuiStyleManager.ButtonCycleStateStyle>emptyList() : new ArrayList<MachineGuiStyleManager.ButtonCycleStateStyle>(style.cycleStates);
+                button.cycleWrap = style.cycleWrap == null || style.cycleWrap.booleanValue();
                 if (visible && (hasLabel || hasTexture)) {
+                    button.guiButtonId = buttonId++;
+                    button.buttonX = this.guiLeft + x;
+                    button.buttonY = this.guiTop + y;
+                    button.buttonWidth = width;
+                    button.buttonHeight = height;
                     button.button = GuiTexturedButton.forStyle(
-                        buttonId++, this.guiLeft + x, this.guiTop + y, width, height, style.label, style
+                        button.guiButtonId, button.buttonX, button.buttonY, button.buttonWidth, button.buttonHeight,
+                        style.label, applyDefaultButtonCharSpacing(style), resolveCycleState(button)
                     );
                 }
                 this.customButtons.add(button);
@@ -3473,6 +3736,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             if (!isPageVisible(button.page) || button.button == null) {
                 continue;
             }
+            refreshCustomButtonVisual(button);
             button.button.enabled = !"page".equals(button.action) || !button.targetPage.equals(this.activePageId);
             button.button.drawButton(this.mc, mouseX, mouseY, 0F);
         }
@@ -3541,7 +3805,31 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
     }
 
     private boolean matchesHotkey(@Nullable String raw, char typedChar, int keyCode) {
-        return matchesHotkey(raw, typedChar, keyCode, isShiftKeyDown(), isCtrlKeyDown(), isAltKeyDown());
+        return matchesHotkey(raw, typedChar, keyCode, isShiftHotkeyModifierDown(), isCtrlHotkeyModifierDown(), isAltHotkeyModifierDown());
+    }
+
+    private static boolean isShiftHotkeyModifierDown() {
+        try {
+            return isShiftKeyDown();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isCtrlHotkeyModifierDown() {
+        try {
+            return isCtrlKeyDown();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isAltHotkeyModifierDown() {
+        try {
+            return isAltKeyDown();
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private static boolean matchesHotkey(@Nullable String raw, char typedChar, int keyCode, boolean shiftDown, boolean ctrlDown, boolean altDown) {
@@ -3655,6 +3943,10 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             MMCEGuiExt.NET_CHANNEL.sendToServer(PktControllerButtonAction.event(this.controller.getPos(), button.buttonId));
             return;
         }
+        if ("cycle".equals(button.action)) {
+            activateCycleButton(button);
+            return;
+        }
         if (!"smart_set".equals(button.action) && !"smart_add".equals(button.action)) {
             return;
         }
@@ -3673,6 +3965,13 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         if (!Float.isFinite(effectiveValue)) {
             return;
         }
+        LOGGER.debug(
+            "Sending controller smart button action at {} key={} action={} value={}",
+            this.controller.getPos(),
+            button.key,
+            button.action,
+            effectiveValue
+        );
         MMCEGuiExt.NET_CHANNEL.sendToServer(PktControllerButtonAction.smart(
             this.controller.getPos(),
             button.key,
@@ -3681,6 +3980,79 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
             button.min,
             button.max
         ));
+    }
+
+    private void activateCycleButton(CustomButton button) {
+        if (button.key == null || button.key.trim().isEmpty() || button.cycleStates.isEmpty()) {
+            return;
+        }
+        int currentIndex = resolveCycleStateIndex(button);
+        int nextIndex = currentIndex + 1;
+        if (nextIndex >= button.cycleStates.size()) {
+            nextIndex = button.cycleWrap ? 0 : button.cycleStates.size() - 1;
+        }
+        nextIndex = MathHelper.clamp(nextIndex, 0, Math.max(0, button.cycleStates.size() - 1));
+        MachineGuiStyleManager.ButtonCycleStateStyle state = button.cycleStates.get(nextIndex);
+        float nextValue = state.value == null ? (float) nextIndex : state.value.floatValue();
+        MMCEGuiExt.NET_CHANNEL.sendToServer(PktControllerButtonAction.smart(
+            this.controller.getPos(),
+            button.key,
+            false,
+            nextValue,
+            null,
+            null
+        ));
+        ControllerCustomDataAccess.writeNumber(this.controller, button.key, nextValue);
+        refreshCustomButtonVisual(button);
+    }
+
+    private int resolveCycleStateIndex(CustomButton button) {
+        if (button.cycleStates.isEmpty()) {
+            return -1;
+        }
+        if (button.key == null || button.key.trim().isEmpty()) {
+            return 0;
+        }
+        Float current = ControllerCustomDataAccess.readNumber(this.controller, button.key);
+        if (current == null || !Float.isFinite(current.floatValue())) {
+            return 0;
+        }
+        float value = current.floatValue();
+        for (int i = 0; i < button.cycleStates.size(); i++) {
+            MachineGuiStyleManager.ButtonCycleStateStyle state = button.cycleStates.get(i);
+            float stateValue = state.value == null ? (float) i : state.value.floatValue();
+            if (Math.abs(stateValue - value) <= 0.0001F) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    @Nullable
+    private MachineGuiStyleManager.ButtonCycleStateStyle resolveCycleState(CustomButton button) {
+        int index = resolveCycleStateIndex(button);
+        return index >= 0 && index < button.cycleStates.size() ? button.cycleStates.get(index) : null;
+    }
+
+    private void refreshCustomButtonVisual(CustomButton button) {
+        if (button.button == null || button.baseStyle == null || button.cycleStates.isEmpty()) {
+            return;
+        }
+        GuiButton rebuilt = GuiTexturedButton.forStyle(
+            button.guiButtonId,
+            button.buttonX,
+            button.buttonY,
+            button.buttonWidth,
+            button.buttonHeight,
+            button.baseStyle.label,
+            applyDefaultButtonCharSpacing(button.baseStyle),
+            resolveCycleState(button)
+        );
+        if (rebuilt != null) {
+            rebuilt.visible = button.button.visible;
+            rebuilt.enabled = button.button.enabled;
+            button.button = rebuilt;
+        }
     }
 
     // Picks the value to apply based on held modifier keys (data-port smart actions).
@@ -3729,6 +4101,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
                 }
             }
         }
+        this.dynamicVisualRenderer.collectForegroundPriorities(styleOverride.dynamicVisuals, priorities, resolveForegroundContentPriority());
         for (CustomSlider slider : this.customSliders) {
             if (slider.foreground) {
                 priorities.add(Integer.valueOf(slider.priority));
@@ -3761,7 +4134,8 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         if (styleOverride.enableSmartInterfaceEditor != null) {
             return styleOverride.enableSmartInterfaceEditor.booleanValue();
         }
-        return cfg.enableSmartInterfaceEditor;
+        return cfg.enableSmartInterfaceEditor
+            && !MMCEGuiExtConfig.isLegacySmartInterfaceEditorFallback(cfg.smartInterfaceEditorVirtualKey);
     }
 
     private String resolveConfiguredDefaultPanelId(MMCEGuiExtConfig.MachineController cfg) {
@@ -3869,7 +4243,7 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
     private List<String> getSmartInterfaceEditorVirtualKeys(MMCEGuiExtConfig.MachineController cfg) {
         String raw = styleOverride.smartInterfaceEditorVirtualKey != null
             ? styleOverride.smartInterfaceEditorVirtualKey
-            : cfg.smartInterfaceEditorVirtualKey;
+            : MMCEGuiExtConfig.sanitizeSmartInterfaceEditorVirtualKey(cfg.smartInterfaceEditorVirtualKey);
         return parseVirtualKeys(raw);
     }
 
@@ -4271,6 +4645,15 @@ public class GuiMachineControllerResizable extends GuiContainerBase<ContainerCon
         private boolean visible = true;
         private List<String> hotkeys = Collections.emptyList();
         private boolean consumeHotkey = true;
+        @Nullable
+        private MachineGuiStyleManager.ButtonStyle baseStyle;
+        private List<MachineGuiStyleManager.ButtonCycleStateStyle> cycleStates = Collections.emptyList();
+        private boolean cycleWrap = true;
+        private int guiButtonId;
+        private int buttonX;
+        private int buttonY;
+        private int buttonWidth;
+        private int buttonHeight;
         @Nullable
         private GuiButton button;
     }

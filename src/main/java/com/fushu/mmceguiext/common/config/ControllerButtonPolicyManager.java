@@ -1,5 +1,6 @@
 package com.fushu.mmceguiext.common.config;
 
+import com.fushu.mmceguiext.api.gui.IMachineGuiStyleProvider;
 import com.fushu.mmceguiext.MMCEGuiExt;
 import com.fushu.mmceguiext.MMCEGuiExtConfig;
 import com.google.gson.JsonArray;
@@ -9,6 +10,7 @@ import com.google.gson.JsonParser;
 import hellfirepvp.modularmachinery.common.machine.DynamicMachine;
 import hellfirepvp.modularmachinery.common.tiles.TileFactoryController;
 import hellfirepvp.modularmachinery.common.tiles.base.TileMultiblockMachineController;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.Loader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,9 +29,9 @@ import java.util.stream.Stream;
 
 public final class ControllerButtonPolicyManager {
     private static final long RELOAD_INTERVAL_MS = 5000L;
-    private static final long MAX_MACHINE_CONFIG_BYTES = 1024L * 1024L;
     private static final String MACHINERY_DIR = "modularmachinery/machinery";
     private static final String SUBGUI_DIR = "mmceguiext/subgui";
+    private static final String STYLE_DIR = "mmceguiext/styles";
     private static final int MAX_BUTTONS_PER_CONTROLLER = 256;
     private static final int MAX_SMART_EDITOR_KEYS_PER_CONTROLLER = 256;
     private static final int MAX_STRING_LENGTH = 128;
@@ -128,18 +130,27 @@ public final class ControllerButtonPolicyManager {
         if (machine == null) {
             machine = controller.getBlueprintMachine();
         }
-        if (machine == null || machine.getRegistryName() == null) {
-            return java.util.Collections.emptyList();
-        }
 
         Map<String, List<ButtonPolicy>> source = controller instanceof TileFactoryController ? FACTORY_BUTTONS : MACHINE_BUTTONS;
-        String fullKey = machine.getRegistryName().toString().toLowerCase(Locale.ROOT);
-        List<ButtonPolicy> fullMatch = source.get(fullKey);
-        if (fullMatch != null) {
-            return fullMatch;
+        String styleKey = resolveProvidedStyleKey(controller);
+        if (machine != null && machine.getRegistryName() != null) {
+            String fullKey = machine.getRegistryName().toString().toLowerCase(Locale.ROOT);
+            List<ButtonPolicy> fullMatch = source.get(fullKey);
+            if (fullMatch != null) {
+                return fullMatch;
+            }
+            List<ButtonPolicy> pathMatch = source.get(machine.getRegistryName().getPath().toLowerCase(Locale.ROOT));
+            if (pathMatch != null) {
+                return pathMatch;
+            }
         }
-        List<ButtonPolicy> pathMatch = source.get(machine.getRegistryName().getPath().toLowerCase(Locale.ROOT));
-        return pathMatch == null ? java.util.Collections.emptyList() : pathMatch;
+        if (styleKey != null) {
+            List<ButtonPolicy> styleMatch = source.get(styleKey);
+            if (styleMatch != null) {
+                return styleMatch;
+            }
+        }
+        return java.util.Collections.emptyList();
     }
 
     private static List<String> resolveEditorKeys(TileMultiblockMachineController controller) {
@@ -151,18 +162,45 @@ public final class ControllerButtonPolicyManager {
         if (machine == null) {
             machine = controller.getBlueprintMachine();
         }
-        if (machine == null || machine.getRegistryName() == null) {
-            return configuredFallbackEditorKeys(controller);
-        }
 
         Map<String, List<String>> source = controller instanceof TileFactoryController ? FACTORY_EDITOR_KEYS : MACHINE_EDITOR_KEYS;
-        String fullKey = machine.getRegistryName().toString().toLowerCase(Locale.ROOT);
-        List<String> fullMatch = source.get(fullKey);
-        if (fullMatch != null) {
-            return fullMatch;
+        String styleKey = resolveProvidedStyleKey(controller);
+        if (machine != null && machine.getRegistryName() != null) {
+            String fullKey = machine.getRegistryName().toString().toLowerCase(Locale.ROOT);
+            List<String> fullMatch = source.get(fullKey);
+            if (fullMatch != null) {
+                return fullMatch;
+            }
+            List<String> pathMatch = source.get(machine.getRegistryName().getPath().toLowerCase(Locale.ROOT));
+            if (pathMatch != null) {
+                return pathMatch;
+            }
         }
-        List<String> pathMatch = source.get(machine.getRegistryName().getPath().toLowerCase(Locale.ROOT));
-        return pathMatch == null ? configuredFallbackEditorKeys(controller) : pathMatch;
+        if (styleKey != null) {
+            List<String> styleMatch = source.get(styleKey);
+            if (styleMatch != null) {
+                return styleMatch;
+            }
+        }
+        return configuredFallbackEditorKeys(controller);
+    }
+
+    @Nullable
+    private static String resolveProvidedStyleKey(TileMultiblockMachineController controller) {
+        if (!(controller instanceof IMachineGuiStyleProvider)) {
+            return null;
+        }
+        return resolveProvidedStyleKey((IMachineGuiStyleProvider) controller);
+    }
+
+    @Nullable
+    static String resolveProvidedStyleKey(IMachineGuiStyleProvider provider) {
+        try {
+            ResourceLocation style = provider.getMachineControllerGuiStyle();
+            return style == null ? null : style.toString().toLowerCase(Locale.ROOT);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     private static void ensureLoaded() {
@@ -180,14 +218,18 @@ public final class ControllerButtonPolicyManager {
     }
 
     private static void reload() {
+        reload(Loader.instance().getConfigDir().toPath());
+    }
+
+    static void reload(Path configDir) {
         MACHINE_BUTTONS.clear();
         FACTORY_BUTTONS.clear();
         MACHINE_EDITOR_KEYS.clear();
         FACTORY_EDITOR_KEYS.clear();
 
-        Path configDir = Loader.instance().getConfigDir().toPath();
         scanPolicyDir(configDir.resolve(MACHINERY_DIR));
         scanPolicyDir(configDir.resolve(SUBGUI_DIR));
+        scanPolicyDir(configDir.resolve(STYLE_DIR));
     }
 
     private static void scanPolicyDir(Path dir) {
@@ -212,8 +254,10 @@ public final class ControllerButtonPolicyManager {
 
     private static void loadMachineJson(Path path) {
         try {
-            if (Files.size(path) > MAX_MACHINE_CONFIG_BYTES) {
-                LOGGER.warn("Skipping MMCE GUI ext button policy {} because it is larger than {} bytes.", path, MAX_MACHINE_CONFIG_BYTES);
+            long fileSize = Files.size(path);
+            long maxFileSize = MMCEGuiExtConfig.getMaxExtensionConfigFileBytes();
+            if (!MMCEGuiExtConfig.isExtensionConfigFileSizeAllowed(fileSize)) {
+                LOGGER.warn("Skipping MMCE GUI ext button policy {} because it is larger than {} bytes.", path, maxFileSize);
                 return;
             }
             JsonElement rootElement = new JsonParser().parse(new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
@@ -489,6 +533,7 @@ public final class ControllerButtonPolicyManager {
         String raw = controller instanceof TileFactoryController
             ? MMCEGuiExtConfig.factoryController.smartInterfaceEditorVirtualKey
             : MMCEGuiExtConfig.machineController.smartInterfaceEditorVirtualKey;
+        raw = MMCEGuiExtConfig.sanitizeSmartInterfaceEditorVirtualKey(raw);
         List<String> out = new ArrayList<String>();
         addVirtualKeys(out, raw);
         return out.isEmpty() ? java.util.Collections.emptyList() : out;
@@ -511,7 +556,7 @@ public final class ControllerButtonPolicyManager {
             String targetPage = getString(obj, "targetPage", "target_page", "pageTarget", "page_target");
             action = targetPage == null ? null : "page";
         }
-        if (!"event".equals(action) && !"smart_set".equals(action) && !"smart_add".equals(action)) {
+        if (!"event".equals(action) && !"smart_set".equals(action) && !"smart_add".equals(action) && !"cycle".equals(action)) {
             return null;
         }
 
@@ -556,6 +601,9 @@ public final class ControllerButtonPolicyManager {
         if ("event".equals(action)) {
             return policy.buttonId == null ? null : policy;
         }
+        if ("cycle".equals(action)) {
+            return policy.key == null ? null : policy;
+        }
         if (policy.key == null) {
             return null;
         }
@@ -596,6 +644,10 @@ public final class ControllerButtonPolicyManager {
             || "data_add".equals(text) || "data-port-add".equals(text) || "data_port_add".equals(text)
             || "port_add".equals(text) || "port-add".equals(text)) {
             return "smart_add";
+        }
+        if ("cycle".equals(text) || "cycle_mode".equals(text) || "mode_cycle".equals(text)
+            || "switch_mode".equals(text) || "next_mode".equals(text)) {
+            return "cycle";
         }
         return null;
     }

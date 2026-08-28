@@ -1,6 +1,7 @@
 package com.fushu.mmceguiext.common.tile;
 
 import appeng.api.AEApi;
+import appeng.api.config.Actionable;
 import appeng.api.networking.GridFlags;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.security.IActionHost;
@@ -20,11 +21,15 @@ import appeng.me.helpers.AENetworkProxy;
 import appeng.me.helpers.IGridProxyable;
 import appeng.me.helpers.MachineSource;
 import appeng.util.Platform;
+import com.fushu.mmceguiext.api.machine.IMultiMachineComponentProvider;
 import com.fushu.mmceguiext.common.block.BlockCustomAEMixedOutputBus;
 import com.fushu.mmceguiext.common.item.ItemBlockCustomAEMixedOutputBus;
 import com.fushu.mmceguiext.common.registry.CustomAEMixedOutputBusRegistry;
 import com.fushu.mmceguiext.common.registry.CustomCapacityCardRegistry;
 import com.fushu.mmceguiext.common.util.CustomIdValidator;
+import com.fushu.mmceguiext.common.requirement.LongFluidIOHandler;
+import com.fushu.mmceguiext.common.requirement.LongGasIOHandler;
+import com.fushu.mmceguiext.common.requirement.LongRequirementAmounts;
 import com.mekeng.github.common.me.data.IAEGasStack;
 import com.mekeng.github.common.me.data.impl.AEGasStack;
 import com.mekeng.github.common.me.inventory.IGasInventoryHost;
@@ -70,6 +75,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent implements
     SelectiveUpdateTileEntity,
     MachineComponentTile,
+    IMultiMachineComponentProvider,
     IActionHost,
     IGridProxyable,
     IGridTickable,
@@ -133,6 +139,11 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
                 return combinedHandler;
             }
         };
+    }
+
+    @Override
+    public long getMachineComponentGroupId() {
+        return this.combinedComponent.getGroupID();
     }
 
     private IOInventory buildInventory() {
@@ -586,10 +597,16 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
 
     @Nonnull
     public Collection<MachineComponent<?>> provideComponents() {
-        return Collections.emptyList();
+        return provideMachineComponents();
     }
 
-    private class CombinedBusHandler extends InfItemFluidHandler {
+    @Nonnull
+    @Override
+    public Collection<MachineComponent<?>> provideMachineComponents() {
+        return Collections.<MachineComponent<?>>singletonList(this.combinedComponent);
+    }
+
+    private class CombinedBusHandler extends InfItemFluidHandler implements LongFluidIOHandler, LongGasIOHandler {
         private CombinedBusHandler() {
             super(inventory, fluidTanks);
         }
@@ -665,6 +682,24 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
         }
 
         @Override
+        public synchronized long mmceguiext$simulateFluidIO(net.minecraftforge.fluids.FluidStack stack,
+                                                            long maxAmount,
+                                                            IOType actionType) {
+            return actionType == IOType.OUTPUT
+                ? doLongFluidOutput(stack, maxAmount, false)
+                : 0L;
+        }
+
+        @Override
+        public synchronized long mmceguiext$doFluidIO(net.minecraftforge.fluids.FluidStack stack,
+                                                      long maxAmount,
+                                                      IOType actionType) {
+            return actionType == IOType.OUTPUT
+                ? doLongFluidOutput(stack, maxAmount, true)
+                : 0L;
+        }
+
+        @Override
         public synchronized int receiveGas(@Nullable EnumFacing side, GasStack toReceive, boolean doTransfer) {
             return receiveActiveGas(toReceive, doTransfer);
         }
@@ -693,6 +728,24 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
         @Override
         public mekanism.api.gas.GasTankInfo[] getTankInfo() {
             return limitedGasTankInfo(gasHandler.getTankInfo(), getActiveGasSlotBound());
+        }
+
+        @Override
+        public synchronized long mmceguiext$simulateGasIO(GasStack stack,
+                                                          long maxAmount,
+                                                          IOType actionType) {
+            return actionType == IOType.OUTPUT
+                ? doLongGasOutput(stack, maxAmount, false)
+                : 0L;
+        }
+
+        @Override
+        public synchronized long mmceguiext$doGasIO(GasStack stack,
+                                                    long maxAmount,
+                                                    IOType actionType) {
+            return actionType == IOType.OUTPUT
+                ? doLongGasOutput(stack, maxAmount, true)
+                : 0L;
         }
     }
 
@@ -809,8 +862,17 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
                     inventory.setStackInSlot(slot, ItemStack.EMPTY);
                     success = true;
                 } else {
-                    inventory.setStackInSlot(slot, left.createItemStack());
-                    success |= left.getStackSize() != aeStack.getStackSize();
+                    long remaining = LongRequirementAmounts.clampReportedAmount(
+                        aeStack.getStackSize(),
+                        left.getStackSize()
+                    );
+                    if (remaining <= 0L) {
+                        inventory.setStackInSlot(slot, ItemStack.EMPTY);
+                        success = true;
+                    } else {
+                        inventory.setStackInSlot(slot, left.copy().setStackSize(remaining).createItemStack());
+                        success |= remaining != aeStack.getStackSize();
+                    }
                 }
             }
         } finally {
@@ -844,8 +906,17 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
                     fluidTanks.setFluidInSlot(slot, null);
                     success = true;
                 } else {
-                    fluidTanks.setFluidInSlot(slot, left);
-                    success |= left.getStackSize() != fluid.getStackSize();
+                    long remaining = LongRequirementAmounts.clampReportedAmount(
+                        fluid.getStackSize(),
+                        left.getStackSize()
+                    );
+                    if (remaining <= 0L) {
+                        fluidTanks.setFluidInSlot(slot, null);
+                        success = true;
+                    } else {
+                        fluidTanks.setFluidInSlot(slot, left.copy().setStackSize(remaining));
+                        success |= remaining != fluid.getStackSize();
+                    }
                 }
             }
         } finally {
@@ -877,8 +948,21 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
                     gasTanks.setGas(slot, null);
                     success = true;
                 } else {
-                    gasTanks.setGas(slot, left.getGasStack());
-                    success |= left.getStackSize() != gas.amount;
+                    long remaining = LongRequirementAmounts.clampReportedAmount(
+                        gas.amount,
+                        left.getStackSize()
+                    );
+                    if (remaining <= 0L) {
+                        gasTanks.setGas(slot, null);
+                        success = true;
+                    } else {
+                        GasStack remainingGas = left.getGasStack();
+                        if (remainingGas != null) {
+                            remainingGas.amount = LongRequirementAmounts.downcastAmount(remaining);
+                            gasTanks.setGas(slot, remainingGas);
+                            success |= remaining != gas.amount;
+                        }
+                    }
                 }
             }
         }
@@ -980,8 +1064,11 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
                 continue;
             }
             multiplier *= modifier.multiplier;
-            flatFluid += modifier.flatFluid;
-            flatGas += modifier.flatGas;
+            if (!Double.isFinite(multiplier) || multiplier <= 0.0D) {
+                multiplier = Double.MAX_VALUE;
+            }
+            flatFluid = LongRequirementAmounts.saturatedAdd(flatFluid, modifier.flatFluid);
+            flatGas = LongRequirementAmounts.saturatedAdd(flatGas, modifier.flatGas);
         }
         int newFluidCapacity = clampCapacity(FLUID_TANK_CAPACITY, multiplier, flatFluid);
         int newGasCapacity = clampCapacity(GAS_TANK_CAPACITY, multiplier, flatGas);
@@ -1005,9 +1092,11 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
     }
 
     private int clampCapacity(int baseCapacity, double multiplier, long flatBonus) {
-        double scaled = Math.max(1.0D, baseCapacity * multiplier);
-        long capacity = Math.round(scaled) + Math.max(0L, flatBonus);
-        return (int) Math.max(1L, Math.min(Integer.MAX_VALUE, capacity));
+        double safeMultiplier = Double.isFinite(multiplier) && multiplier > 0.0D ? multiplier : 1.0D;
+        double scaled = Math.max(1.0D, baseCapacity * safeMultiplier);
+        long scaledCapacity = scaled >= Long.MAX_VALUE ? Long.MAX_VALUE : Math.max(1L, Math.round(scaled));
+        long capacity = LongRequirementAmounts.saturatedAdd(scaledCapacity, Math.max(0L, flatBonus));
+        return LongRequirementAmounts.downcastAmount(Math.max(1L, capacity));
     }
 
     private void markAllSlotsChanged() {
@@ -1037,8 +1126,13 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
             }
             long overflow = stack.getStackSize() - this.currentFluidCapacity;
             IAEFluidStack left = Platform.poweredInsert(this.proxy.getEnergy(), inv, stack.copy().setStackSize(overflow), this.source);
-            long remainingOverflow = left == null ? 0L : left.getStackSize();
-            this.fluidTanks.setFluidInSlot(slot, stack.copy().setStackSize(this.currentFluidCapacity + remainingOverflow));
+            long remainingOverflow = left == null
+                ? 0L
+                : Math.min(overflow, Math.max(0L, left.getStackSize()));
+            this.fluidTanks.setFluidInSlot(
+                slot,
+                stack.copy().setStackSize(LongRequirementAmounts.saturatedAdd(this.currentFluidCapacity, remainingOverflow))
+            );
         }
     }
 
@@ -1051,9 +1145,13 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
             GasStack overflow = stack.copy();
             overflow.amount = stack.amount - this.currentGasCapacity;
             IAEGasStack left = Platform.poweredInsert(this.proxy.getEnergy(), inv, AEGasStack.of(overflow), this.source);
-            int remainingOverflow = left == null ? 0 : (int) left.getStackSize();
+            long remainingOverflow = left == null
+                ? 0L
+                : Math.min((long) overflow.amount, Math.max(0L, left.getStackSize()));
             GasStack resized = stack.copy();
-            resized.amount = this.currentGasCapacity + remainingOverflow;
+            resized.amount = LongRequirementAmounts.downcastAmount(
+                LongRequirementAmounts.saturatedAdd(this.currentGasCapacity, remainingOverflow)
+            );
             this.gasTanks.setGas(slot, resized);
         }
     }
@@ -1092,6 +1190,12 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
 
     @Override
     public void gridChanged() {
+        markAllSlotsChanged();
+        try {
+            this.proxy.getTick().alertDevice(this.proxy.getNode());
+        } catch (GridAccessException ignored) {
+            // The next periodic full check will retry if the grid is not ready yet.
+        }
     }
 
     @Nonnull
@@ -1281,6 +1385,84 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
         return filled;
     }
 
+    private long doLongFluidOutput(net.minecraftforge.fluids.FluidStack stack,
+                                   long maxAmount,
+                                   boolean doTransfer) {
+        if (stack == null || maxAmount <= 0L) {
+            return 0L;
+        }
+        long local = doTransfer
+            ? fillActiveFluidLong(stack, maxAmount)
+            : simulateActiveFluidFillLong(stack, maxAmount);
+        long remaining = maxAmount - local;
+        if (remaining <= 0L || !this.proxy.isActive()) {
+            return local;
+        }
+        try {
+            IAEFluidStack request = this.fluidChannel.createStack(stack);
+            if (request == null) {
+                return local;
+            }
+            request.setStackSize(remaining);
+            IMEMonitor<IAEFluidStack> inventory =
+                this.proxy.getStorage().getInventory(this.fluidChannel);
+            IAEFluidStack left = Platform.poweredInsert(
+                this.proxy.getEnergy(),
+                inventory,
+                request,
+                this.source,
+                doTransfer ? Actionable.MODULATE : Actionable.SIMULATE
+            );
+            long rejected = left == null ? 0L : Math.max(0L, left.getStackSize());
+            long network = Math.max(0L, remaining - Math.min(remaining, rejected));
+            return LongRequirementAmounts.saturatedAdd(local, network);
+        } catch (GridAccessException | RuntimeException e) {
+            return local;
+        }
+    }
+
+    private long simulateActiveFluidFillLong(net.minecraftforge.fluids.FluidStack stack, long maxAmount) {
+        long capacity = 0L;
+        int slotBound = getActiveFluidSlotBound();
+        for (int slot = 0; slot < slotBound && capacity < maxAmount; slot++) {
+            if (!isFluidSlotDefined(slot)) {
+                continue;
+            }
+            IAEFluidStack stored = this.fluidTanks.getFluidInSlot(slot);
+            if (stored != null) {
+                net.minecraftforge.fluids.FluidStack storedStack = stored.getFluidStack();
+                if (storedStack == null || !storedStack.isFluidEqual(stack)) {
+                    continue;
+                }
+            }
+            long storedAmount = stored == null ? 0L : Math.max(0L, stored.getStackSize());
+            long free = Math.max(0L, (long) this.currentFluidCapacity - storedAmount);
+            capacity = LongRequirementAmounts.saturatedAdd(
+                capacity,
+                Math.min(maxAmount - capacity, free)
+            );
+        }
+        return capacity;
+    }
+
+    private long fillActiveFluidLong(net.minecraftforge.fluids.FluidStack stack, long maxAmount) {
+        long filled = 0L;
+        while (filled < maxAmount) {
+            long remaining = maxAmount - filled;
+            net.minecraftforge.fluids.FluidStack request = stack.copy();
+            request.amount = LongRequirementAmounts.downcastAmount(remaining);
+            int step = fillActiveFluid(request, true);
+            if (step <= 0) {
+                break;
+            }
+            filled += Math.min((long) step, remaining);
+            if (step < request.amount) {
+                break;
+            }
+        }
+        return filled;
+    }
+
     @Nullable
     private net.minecraftforge.fluids.FluidStack drainActiveFluid(net.minecraftforge.fluids.FluidStack resource, boolean doDrain) {
         if (resource == null || resource.amount <= 0) {
@@ -1349,6 +1531,79 @@ public class TileCustomAEMixedOutputBus extends TileColorableMachineComponent im
             int slotReceived = this.gasTanks.addGas(slot, remaining, doTransfer);
             received += slotReceived;
             remaining.amount -= slotReceived;
+        }
+        return received;
+    }
+
+    private long doLongGasOutput(GasStack stack, long maxAmount, boolean doTransfer) {
+        if (stack == null || maxAmount <= 0L) {
+            return 0L;
+        }
+        long local = doTransfer
+            ? receiveActiveGasLong(stack, maxAmount)
+            : simulateActiveGasReceiveLong(stack, maxAmount);
+        long remaining = maxAmount - local;
+        if (remaining <= 0L || !this.proxy.isActive()) {
+            return local;
+        }
+        try {
+            IAEGasStack request = AEGasStack.of(stack);
+            if (request == null) {
+                return local;
+            }
+            request.setStackSize(remaining);
+            IMEMonitor<IAEGasStack> inventory =
+                this.proxy.getStorage().getInventory(this.gasChannel);
+            IAEGasStack left = Platform.poweredInsert(
+                this.proxy.getEnergy(),
+                inventory,
+                request,
+                this.source,
+                doTransfer ? Actionable.MODULATE : Actionable.SIMULATE
+            );
+            long rejected = left == null ? 0L : Math.max(0L, left.getStackSize());
+            long network = Math.max(0L, remaining - Math.min(remaining, rejected));
+            return LongRequirementAmounts.saturatedAdd(local, network);
+        } catch (GridAccessException | RuntimeException e) {
+            return local;
+        }
+    }
+
+    private long simulateActiveGasReceiveLong(GasStack stack, long maxAmount) {
+        long capacity = 0L;
+        int slotBound = getActiveGasSlotBound();
+        for (int slot = 0; slot < slotBound && capacity < maxAmount; slot++) {
+            if (!isGasSlotDefined(slot)) {
+                continue;
+            }
+            GasStack stored = this.gasTanks.getGasStack(slot);
+            if (stored != null && !stored.isGasEqual(stack)) {
+                continue;
+            }
+            long storedAmount = stored == null ? 0L : Math.max(0L, (long) stored.amount);
+            long free = Math.max(0L, (long) this.currentGasCapacity - storedAmount);
+            capacity = LongRequirementAmounts.saturatedAdd(
+                capacity,
+                Math.min(maxAmount - capacity, free)
+            );
+        }
+        return capacity;
+    }
+
+    private long receiveActiveGasLong(GasStack stack, long maxAmount) {
+        long received = 0L;
+        while (received < maxAmount) {
+            long remaining = maxAmount - received;
+            GasStack request = stack.copy();
+            request.amount = LongRequirementAmounts.downcastAmount(remaining);
+            int step = receiveActiveGas(request, true);
+            if (step <= 0) {
+                break;
+            }
+            received += Math.min((long) step, remaining);
+            if (step < request.amount) {
+                break;
+            }
         }
         return received;
     }

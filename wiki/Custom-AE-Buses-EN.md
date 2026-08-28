@@ -2,9 +2,9 @@
 
 [Home](Home) · [中文版](Custom-AE-Buses-ZH)
 
-> ⚠️ **Experimental.** The JSON shape mirrors the hatch system, but this is newer and fields may change. Capabilities depend on **AE2 + Mekanism Energistics** both being present. Re-verify saves and recipes after updating the mod.
+> ⚠️ **Experimental and disabled by default.** Set `customContent.enableCustomAEBuses=true` in `config/mmceguiext/client.cfg` before using these definitions. The JSON shape mirrors the hatch system, but this is newer and fields may change. Current custom AE bus registration depends on classic **AE2 (`appliedenergistics2`) + Mekanism Energistics** both being present. AE2S (`ae2`) is accepted for mod startup, but native AE2S custom buses are not implemented yet. Re-verify saves and recipes after updating the mod.
 
-Three bus types, one directory each, one `.json` per bus, registered as a block + tile **at game start**, connecting to the AE2 ME network via an `AENetworkProxy` (requires a channel, consumes network power). Max file size 1 MB each.
+Three bus types, one directory each, one `.json` per bus, registered as a block + tile **at game start after enabling**, connecting to the AE2 ME network via an `AENetworkProxy` (requires a channel, consumes network power). The file size limit is the shared `maxGuiConfigFileSizeMiB` setting in `config/mmceguiext/client.cfg` (default `8 MiB`, range `1-64 MiB`).
 
 | Bus | Directory | Direction | Item | Fluid | Gas | config slots |
 |---|---|---|:--:|:--:|:--:|:--:|
@@ -19,6 +19,14 @@ Two ways to define the GUI:
 - **Legacy style**: flat `configSlots`/`storageSlots`/`fluid*`/`gas*` fields. The mod auto-converts them to new style via `buildLegacyGui`.
 
 Per-bus support: ME Item Input = legacy only; Mixed Input = both (new style wins); Mixed Output = new style only.
+
+### Sparse indexes and duplicate indexes
+
+Sparse layouts are supported. In the new `gui.components[]` form, set explicit `index` values for item slots, fluid tanks, gas tanks, or other logical components when the layout has holes. `slotIndices[]` belongs to the separate controller slot-group layout API and is not a custom AE bus `gui.components[]` field. Missing indexes remain unused; the loader does not compact them into a different slot.
+
+Indexes must be unique within their logical component group and must stay within the documented range. Duplicate or out-of-range indexes produce a warning and the conflicting mapping is skipped. GUI coordinates are separate from logical storage indexes, so moving a component does not renumber storage automatically.
+
+This is separate from duplicate definition IDs across JSON files. Definitions are loaded in deterministic file order; the first definition for an ID wins and later duplicate IDs are skipped with a warning. Give every bus definition a unique `id`.
 
 ---
 
@@ -211,7 +219,7 @@ Capacity constants: fluid/gas tanks 8000 mB each; default item slots 25, tanks 1
 
 | Constant | Value | Applies to |
 |---|---|---|
-| Max file size | 1 MB | all |
+| Max file size | `maxGuiConfigFileSizeMiB` MiB (default `8`, range `1-64`) | all |
 | `MAX_SLOT_POINTS` | 4096 | item input bus |
 | `MAX_GUI_COMPONENTS` | 2048 | mixed input/output |
 | `MAX_COMPONENT_INDEX` | 4095 | mixed input/output |
