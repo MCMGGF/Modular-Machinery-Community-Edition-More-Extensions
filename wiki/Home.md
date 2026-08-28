@@ -33,7 +33,7 @@
 
 ```powershell
 .\mmce-src\gradlew.bat -p .\mmce-gui-ext build
-# -> mmce-gui-ext/build/libs/MMCEGE-1.1.0-beta.jar
+# -> mmce-gui-ext/build/libs/Modular-Machinery-Community-Edition-More-Extensions-1.4.1.jar
 ```
 
 ---
@@ -41,7 +41,7 @@
 <a name="中文"></a>
 # 中文
 
-**MMCE 更多扩展（MMCEME）** · MC `1.12.2` · 版本 `1.1.0-beta`
+**MMCE 更多扩展（MMCEME）** · MC `1.12.2` · 版本 `1.4.1`
 
 Modular Machinery: Community Edition More Extensions is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork). It bundles the controller GUI, custom hatches, custom AE buses, Long V2 requirements, dynamic visuals, and optional static parallel-controller tiers:
 
