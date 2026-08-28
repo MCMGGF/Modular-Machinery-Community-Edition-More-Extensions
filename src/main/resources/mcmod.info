@@ -1,8 +1,8 @@
 [
   {
     "modid": "mmceguiext",
-    "name": "Modular Machinery: Community Edition Gui Edit",
-    "description": "MMCEGE - Resizable controller GUIs and GUI background replacements for ModularMachinery CE.",
+    "name": "Modular Machinery: Community Edition More Extensions",
+    "description": "Modular Machinery: Community Edition More Extensions, formerly MMCEGE - GUI customization, custom machine components, dynamic visuals, and extended Modular Machinery CE integrations.",
     "version": "${version}",
     "mcversion": "${mcversion}",
     "url": "",

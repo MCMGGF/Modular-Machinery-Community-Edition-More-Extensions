@@ -61,4 +61,13 @@ general {
         S:specialThreadBackgroundColor=FF7DD3FC
         B:useNineSlice=true
     }
+
+    experimental {
+        B:enableCustomParallelControllerTiers=false
+        B:enableLongFluidGasRequirements=false
+        I:customParallelControllerDefaultMaxParallelism=32
+        I:customParallelControllerTierCount=1
+        S:customParallelControllerMaxParallelisms <
+         >
+    }
 }

@@ -1,0 +1,481 @@
+itemGroup.modularmachinery=Modular Machinery Community Edition
+
+command.modularmachinery.syntax=/mm-syntax
+command.modularmachinery.hand=/mm-hand
+command.modularmachinery.hand.empty=Please hold an item to get the data from.
+command.modularmachinery.get_blueprint=/mm-get_blueprint <machineName>
+command.modularmachinery.get_blueprint.player_only=§cThis command can only be executed by the player.
+command.modularmachinery.get_blueprint.not_found=The machine with the registered name %s was not found!
+command.modularmachinery.get_blueprint.success=Blueprints have been given.
+command.modularmachinery.reload=/mm-reload
+command.modularmachinery.reload_client=/mm-reload_client
+command.modularmachinery.performance_report=/mm-performance_report [reset]
+command.modularmachinery.performance_report.title=Modular Machinery - Concurrent Performance Reporting (%s Executions Counted)
+command.modularmachinery.performance_report.reset=Performance report has been reset.
+command.modularmachinery.performance_report.total_executed=Total executed: %s
+command.modularmachinery.performance_report.tasks_avg_per_execution=Avg of tasks per execution: %s
+
+command.modularmachinery.performance_report.total_used_time=Total used time: %s ms
+command.modularmachinery.performance_report.used_time_avg_per_execution=Avg spent per execution: %s ms
+
+command.modularmachinery.performance_report.task_used_time=Parallel operation used time: %s ms
+
+command.modularmachinery.performance_report.task_used_time_avg=Parallel operation used time avg: %s ms
+command.modularmachinery.performance_report.used_time_avg=Single task used time average: %s µs
+
+gui.controller.blueprint=Blueprint Found: %s
+gui.controller.blueprint.none=None
+gui.controller.structure=Structure Found: %s
+gui.controller.structure.none=None
+gui.controller.status=Status:
+gui.controller.status.redstone_stopped=Machine stopped by incoming redstone signal
+gui.controller.status.missing_structure=Missing structure
+gui.controller.status.no_recipe=No matching recipe found
+gui.controller.status.chunk_unloaded=A block in the multiblock structure was unloaded and stopped working
+gui.controller.status.idle=Idle
+gui.controller.status.crafting=Processing...
+gui.controller.status.crafting.progress=Progress: %s
+gui.controller.parallelism=Parallelism：%s
+gui.controller.max_parallelism=Max Parallelism：%s
+
+gui.factory.threads=%s Threads Running / %s Threads Max
+gui.factory.thread=Thread #%s
+
+gui.smartinterface.title=Smart Data Interface (TotalBound: %s, Current: %s)
+gui.smartinterface.notfound=Not Found Bound Machine.
+gui.smartinterface.value=Current Value: %.0f
+gui.smartinterface.prev=Previous
+gui.smartinterface.next=Next
+
+gui.parallelcontroller.title=Parallel Controller
+gui.parallelcontroller.max_value=Max Parallelism: %s
+gui.parallelcontroller.current_value=Current Parallelism: %s
+
+gui.upgradebus.title=Upgrade Bus
+gui.upgradebus.bounded.empty=No binding machinery.
+gui.upgradebus.bounded=Bound %s machinery
+gui.upgradebus.incompatible=§eWarning: %s is not compatible with this machinery.
+
+gui.groupinputconfig.title=Group ID Settings
+gui.groupinputconfig.tooltip=In different groups, recipe checks are performed independently
+gui.groupinputconfig.value=Current ID:
+gui.groupinputconfig.enable=Enable Group
+gui.groupinputconfig.close=Disable Group
+
+gui.meitemoutputbus.title=ME Machinery Item Output Bus
+gui.meiteminputbus.title=ME Machinery Item Input Bus
+
+gui.meiteminputbus.inv_action=Use the scroll wheel and the SHIFT and CONTROL key combination to modify the number of marked items.
+gui.meiteminputbus.inv_action.increase.normal=Scroll the wheel up to increase the number of items by 1.
+gui.meiteminputbus.inv_action.decrease.normal=Scroll the wheel down or right-click on an item to decrease the number of items by 1.
+gui.meiteminputbus.inv_action.increase=The wheel is scrolling up to increase the number of %s items while press the %s key combination.
+gui.meiteminputbus.inv_action.decrease=The wheel is scrolling down to decrease the number of %s items while press the %s key combination.
+gui.meiteminputbus.inv_action.multiply=The wheel is scrolling up to double the number of items while press the %s key combination.
+gui.meiteminputbus.inv_action.divide=The wheel is scrolling down to halve the number of items while press the %s key combination.
+gui.meiteminputbus.items_marked=Items marked: %s
+gui.meitembus.item_cached=Items Cached: %s
+gui.meitembus.nbt_stored=Items have been stored internally.
+gui.meitembus.stack_size.name=Max Stack Size
+gui.meitembus.stack_size.config=Configure Max Stack Size
+
+gui.mefluidoutputbus.title=ME Machinery Fluid Output Bus
+gui.mefluidinputbus.title=ME Machinery Fluid Input Bus
+gui.megasoutputbus.title=ME Machinery Gas Output Bus
+gui.megasinputbus.title=ME Machinery Gas Input Bus
+gui.mepatternprovider.title=ME Machinery Pattern Provider
+gui.mepatternprovider.inventory=Inventory
+gui.mepatternprovider.cached=Cached
+gui.mepatternprovider.single_inv=Single Inv
+gui.mepatternprovider.single_inv.desc=The single inv is also mechanically recognized, but clicking to clear an item does not clear the single inv.
+gui.mepatternprovider.current=§a[Currently Enabled]
+gui.mepatternprovider.default.desc=Default: The provider works normally.
+gui.mepatternprovider.crafting_lock_mode.desc=Crafting Lock Mode: Items will only continue to be stored when the machine completes the recipe.
+gui.mepatternprovider.blocking_mode.desc=Blocking Mode: Items will not continue to be stored when there are items in the provider.
+gui.mepatternprovider.enhanced_blocking_mode.desc=Enhanced Blocking Mode: builds on the blocking mode so that the current recipe can still continue to store items.
+gui.mepatternprovider.isolation_input.desc=Input Isolation Mode: Set up independent containers for each pattern slot, and recipe checks are isolated from each other, group settings will be ignored.
+gui.mepatternprovider.work_mode.desc=Provider work mode (Click to switch between the 5 modes):
+gui.mepatternprovider.return_items=Return Items
+gui.mepatternprovider.return_items.desc=Return all items and fluids in the provider to the ME network. This will reset the state of the Crafting Lock Mode.
+gui.mepatternprovider.nbt_stored=Provider Configured.
+
+gui.preview.button.menu.tip=Click to open the Preview Options menu.
+gui.preview.button.machine_info=Extra Info:
+gui.preview.button.machine_info.xyz.0=Length / Height / Width:
+gui.preview.button.machine_info.xyz.1=§c%s§f - §a%s§f - §9%s§f
+gui.preview.button.machine_info.controller_y_pos=Controller Y pos: §6%s§f
+gui.preview.button.machine_info.internal_parallelism=Internal Parallelism：§2%s§f
+gui.preview.button.machine_info.max_parallelism=Max Parallelism：§a%s§f
+gui.preview.button.machine_info.max_threads=Max Threads(Only Factory Controller)：§b%s§f
+gui.preview.button.machine_info.core_threads=Special Threads(Only Factory Controller)：§9%s§f
+gui.preview.button.machine_info.dynamic_pattern=§eDynamic structures exist.
+gui.preview.button.machine_info.requires_blueprint=§cRequires blueprint.
+gui.preview.button.toggle_layer_render.tip=Click to switch to slice preview mode.
+gui.preview.button.toggle_3d_render.tip=Click to switch to 3D preview mode.
+gui.preview.button.place_world_preview.tip=Click to project the current preview to the world.
+gui.preview.button.enable_cycle_replaceable_blocks.tip.0=Click to enable timed cycle replacement of blocks.
+gui.preview.button.enable_cycle_replaceable_blocks.tip.1=Cycle Replaceable: Cycles through all available blocks in each position in sequence every 1.5 seconds.
+gui.preview.button.disable_cycle_replaceable_blocks.tip=Click to disable timed cycle replacement of blocks.
+gui.preview.button.dynamic_pattern_plus.tip=Click to reduce the size of the dynamic structure. (Current: §a%s§f)
+gui.preview.button.dynamic_pattern_subtract.tip=Click to increase the size of the dynamic structure. (Current: §a%s§f)
+gui.preview.button.toggle_unformed.tip=Click to switch the structure to the unformed state.
+gui.preview.button.toggle_formed.tip=Click to switch the structure to the formed state.
+gui.preview.button.toggle_upgrade_display.enable.tip=Click to display a list of available upgrades for the machinery.
+gui.preview.button.toggle_upgrade_display.disable.tip=Click to hide the list of available upgrades for machinery.
+gui.preview.button.toggle_upgrade_display.item.enable_overlay.tip=Click to highlight the position in the structure preview in green.
+gui.preview.button.toggle_upgrade_display.item.disable_overlay.tip=Click to turn off highlighting in the structure preview.
+gui.preview.button.reset_center.tip=Click to reset the center of the preview.
+gui.preview.button.layer_render_scrollbar.up.tip=Click on the square one level up from the preview structure.
+gui.preview.button.layer_render_scrollbar.down.tip=Click on the square one layer below the preview structure.
+gui.preview.button.layer_render_scrollbar.tip=Hold and drag to quickly adjust the layer of squares you want to preview.
+gui.preview.button.layer_render_scrollbar.state.tip=Current/Total number of levels: §a%s§f / §e%s§f
+gui.preview.compiling.progress=Renderer is pre compiling! (Progress：%s%%)
+gui.preview.optifine_shader_pack_warn=§4Opt Shader detected! Performance will drop dramatically.
+gui.preview.vbo_unsupported_warn=§4VBO is not supported on GPU! Performance will drop dramatically.
+gui.preview.vbo_disabled_warn=§4VBO is not enabled！Performance will drop dramatically.
+
+top.recipe.progress=Progress
+top.machine.owner=Owner:
+top.machine.owner.self=You
+top.machine.owner.unknown=Unknown
+top.machine.working=Processing
+top.machine.structure.found=Structure formed
+top.machine.structure.none=Missing structure
+top.max_parallelism=Max Parallelism:
+top.parallelism=Parallelism:
+top.factory.thread=Thread #
+top.factory.thread.running=Threads Running
+top.factory.thread.max=Threads max
+top.energy.input=Total Energy Consumption:
+top.energy.output=Total Energy Generation:
+
+craftcheck.failure.item.input=Missing input item!
+craftcheck.failure.item.output.space=Not enough inventory space for item output(s)!
+craftcheck.failure.fluid.input=Missing fluid input!
+craftcheck.failure.fluid.output.space=Not enough tank space for fluid output(s)!
+craftcheck.failure.gas.input=Missing gas input!
+craftcheck.failure.gas.output.space=Not enough space for gas output(s)!
+craftcheck.failure.energy.input=Not enough energy!
+craftcheck.failure.energy.output.space=Energy output hatch are full
+craftcheck.failure.interface.number.notequal=Different values for Smart Data Interface inputs!
+
+component.missing.modularmachinery.energy.output=No Energy Output Hatch found!
+component.missing.modularmachinery.energy.input=No Energy Input Hatch found!
+component.missing.modularmachinery.fluid.output=No Fluid Output Hatch found!
+component.missing.modularmachinery.fluid.input=No Fluid Input Hatch found!
+component.missing.modularmachinery.fluid_pertick.output=No Fluid Output Hatch found!
+component.missing.modularmachinery.fluid_pertick.input=No Fluid Input Hatch found!
+component.missing.modularmachinery.gas.output=No Fluid Output Hatch found!
+component.missing.modularmachinery.gas.input=No Fluid Input Hatch found!
+component.missing.modularmachinery.item.output=No Item Output found!
+component.missing.modularmachinery.item.input=No Item Input found!
+component.missing.modularmachinery.interface.number=No Smart Data Interface found!
+
+gui.blueprint.popout.info=Sneak to freeze the current preview to be able to preview it in world.
+gui.blueprint.popout.place=Rightclick to place preview; move away from the placed one or open another structure preview (blueprint) to remove the one in-world; the rotation can be automatically rotated according to its orientation when viewing the controller.
+gui.blueprint.popout.placed.dynamic_pattern=The dynamic structure size of the projection is prioritized when using automatic assembly during projection.
+
+jei.category.preview=Structure Preview
+
+message.structurebuild.confirmrotation=Controller is facing %s
+message.structurebuild.confirmrotation.rotating=Rotating structure for saving by %s degrees...
+message.structurebuild.empty=You have nothing selected to save.
+message.structurebuild.warndedicated=You're saving the machine on a dedicated server! Be sure to download it from the server!
+message.structurebuild.save=Machine saved as %s in the machinery directory!
+message.structurebuild.fail=Failed to save the machine to a file! Check the log for more information!
+message.machine_projector.project=Projecting the structure of %s
+message.assembly.tip.no_machine=Modular Assembly: No modular machine found!
+message.assembly.tip.already_assembly=Modular Assembly: The machine is in the assembly queue!
+message.assembly.tip.success=Modular Assembly: Assembled successfully!
+message.assembly.tip.cancelled=Modular Assembly: Assembled cancelled!
+message.assembly.tip.cannot_replace=Modular Assembly: Cannot place a block at %s, please check if a block exists at the target position!
+message.assembly.tip.too_high=Modular Assembly: Cannot place a block at %s, because building height limit is exceeded!
+message.assembly.tip.skipped=Modular Assembly: Placement of block that have skipped %s.
+message.assembly.tip.missing=Modular Assembly: %s Needs item assembly, but inventory is missing block or bucket!
+message.assembly.tip.required=Modular assembly: Missing ingredients, the following ingredients are required:
+message.assembly.tip.or=or
+message.assembly.tip.partial_assembly=Modular Assembly: despite the absence of some materials, the assembly §cwill continue using the existing materials!
+message.assembly.tip.too_quickly=Modular Assembly: You need to wait a moment before you can start assembly again.
+
+message.reloading=Modular Machinery: Reloading!
+message.reloaded=Modular Machinery: Reloaded recipes! Changes in JEI require a restart of the client! Machinery upgrades in the upgrade bus need to be repositioned to refresh their effects!
+message.cleared.recipes=Modular Machinery: Cleared %s recipes.
+message.reloaded.recipes=Modular Machinery: Reloaded %s recipes.
+message.reloaded.machines=Modular Machinery: Reloaded %s machines.
+
+message.blockmepatternprovider.save=Saved pattern provider coordinates!
+message.blockmepatternprovider.load=Loaded pattern provider coordinates!
+message.blockmepatternprovider.tip0=Use a memory card to bind the ME Mechanical Template Provider!
+message.blockmepatternprovider.tip1=Bound provider coordinates at X:%s, Y:%s, Z:%s.
+
+tooltip.item.controller.owner.self=§aYou are the owner of the controller.
+tooltip.item.controller.owner.not_self=§cYou are not the owner of the controller.
+
+tooltip.machinery.empty=Empty
+
+tooltip.machinery.ingredient_array_input=Accepts the following inputs (only one of them is consumed):
+tooltip.machinery.ingredient_array_output=Output the following items: %s
+tooltip.machinery.ingredient_array_output.weight=Weights: %s
+tooltip.machinery.catalyst=§aAs catalyst input. (optional input)
+tooltip.machinery.catalyst.effect=Catalytic effect:
+
+tooltip.machinery.fuel=Accepts any fuel.
+tooltip.machinery.fuel.item=BurnTime: %s
+tooltip.machinery.fuel.in=Required total Fuel Burntime:
+tooltip.machinery.fuel.in.total=%s ticks.
+
+tooltip.machinery.blueprint.required=Requires Blueprint
+tooltip.machinery.blueprint.upgrades=Upgrades
+
+tooltip.machinery.duration.seconds=Processing Time：%.1f Seconds
+tooltip.machinery.duration.tick=(%s Tick)
+
+tooltip.machinery.chance.in=Consumption Chance: %s
+tooltip.machinery.chance.out=Production Chance: %s
+tooltip.machinery.chance.in.never=Doesn't get consumed.
+tooltip.machinery.chance.out.never=Is never produced.
+
+tooltip.machinery.min_max_amount.input=Consumption: %s ~ %s
+tooltip.machinery.min_max_amount.output=Quantity output: %s ~ %s
+
+tooltip.machinery.energy.in=Required Energy:
+tooltip.machinery.energy.out=Produced Energy:
+tooltip.machinery.energy.tick=%s %s/t
+tooltip.machinery.energy.total=Total：%s %s
+
+tooltip.machinery.smartinterface.value=Smart Interface Number Input：%s
+tooltip.machinery.smartinterface.minvalue=Smart Interface Min Number Input：%s
+tooltip.machinery.smartinterface.maxvalue=Smart Interface Max Number Input：%s
+
+tooltip.energy.type.fe=FE
+tooltip.energy.type.rf=RF
+tooltip.energy.type.ic2_eu=EU
+tooltip.energy.type.gt_eu=EU
+
+tooltip.fluid_pertick.in=Consumption per Tick: %smB
+tooltip.fluid_pertick.out=Prooduction per Tick: %smB
+
+tooltip.constructtool.creative=Creative Structure-To-JSON Tool
+
+tooltip.itembus.slot=1 Slot
+tooltip.itembus.slots=%s Slots
+
+tooltip.mepatternmirrorimage=Use Memory Card to bind the corresponding ME Machinery Pattern Provider.
+
+tooltip.groupinput.block=Modify group settings by shift+right-clicking the block when empty-handed
+
+tooltip.fluidhatch.empty=Empty
+tooltip.fluidhatch.fluid=[Fluid]
+tooltip.fluidhatch.gas=[Gas]
+tooltip.fluidhatch.tank=%smb / %smb
+tooltip.fluidhatch.tank.gas=%s / %s
+tooltip.fluidhatch.tank.info=Can hold %s mb
+tooltip.fluidhatch.tank.mek=Accepts Mekanism Gas
+
+tooltip.energyhatch.charge=%s / %s %s
+tooltip.energyhatch.storage=Stores %s FE
+tooltip.energyhatch.out.transfer=Transfers %s FE per tick
+tooltip.energyhatch.in.accept=Accepts %s FE per tick
+
+tooltip.energyhatch.ic2.powerrate=EU/t
+tooltip.energyhatch.ic2.any=Any
+tooltip.energyhatch.ic2.out.voltage=EU Output Voltage: %s
+tooltip.energyhatch.ic2.out.transfer=EU Output Transfer: %s %s
+tooltip.energyhatch.ic2.in.voltage=EU Input Voltage: %s
+tooltip.energyhatch.ic2.in.transfer=EU Input Transfer: %s %s
+
+tooltip.energyhatch.gregtech.voltage.in=Voltage IN: §a%s §7(§a%s§7)
+tooltip.energyhatch.gregtech.voltage.out=Voltage OUT: §a%s §7(§a%s§7)
+tooltip.energyhatch.gregtech.amperage=Amperage: §e%s
+tooltip.energyhatch.gregtech.storage=Internal Energy Capacity: §9%s
+
+tooltip.ic2.powertier.0.name=ULV
+tooltip.ic2.powertier.1.name=LV
+tooltip.ic2.powertier.2.name=MV
+tooltip.ic2.powertier.3.name=HV
+tooltip.ic2.powertier.4.name=EV
+tooltip.ic2.powertier.5.name=IV
+tooltip.ic2.powertier.6.name=LuV
+tooltip.ic2.powertier.7.name=ZPM
+tooltip.ic2.powertier.8.name=UV
+tooltip.ic2.powertier.9.name=UHV
+tooltip.ic2.powertier.10.name=UEV
+tooltip.ic2.powertier.11.name=UIV
+tooltip.ic2.powertier.12.name=UXV
+
+tooltip.modularmachinery.machine_projector=Sneak and right-click the controller to project the structure of the machine
+
+item.modularmachinery.itemblueprint.name=Machine Blueprint
+item.modularmachinery.itemmodularium.name=Modularium
+item.modularmachinery.itemconstructtool.name=Construct Selection Tool
+item.modularmachinery.machine_projector.name=Machine Projector
+
+block.modularmachinery.crushing_wheels.name=Crushing Wheels
+
+tile.modularmachinery.blockcontroller.name=Machine Controller
+tile.modularmachinery.machinecontroller.name=%s Controller
+tile.modularmachinery.machinecontroller.deprecated.tip.0=Modular controller compatibility will be removed in a future release.
+tile.modularmachinery.machinecontroller.deprecated.tip.1=Please contact the modpack author to transfer the controller to MMCE's controller.
+
+tile.modularmachinery.blockfactorycontroller.name=Factory Controller
+
+# To be honest, the factory system is so scalable that I think calling
+# it a factory controller makes it seem like it's not sci-fi enough.
+# You can also change the name yourself.
+tile.modularmachinery.machinefactorycontroller.name=%s Integration Controller
+
+tile.modularmachinery.blockcasing.plain.name=Machine Casing
+tile.modularmachinery.blockcasing.vent.name=Machine Vent
+tile.modularmachinery.blockcasing.firebox.name=Firebox Casing
+tile.modularmachinery.blockcasing.gearbox.name=Machine Gearbox
+tile.modularmachinery.blockcasing.reinforced.name=Reinforced Machine Casing
+tile.modularmachinery.blockcasing.circuitry.name=Machine Circuitry
+
+tile.modularmachinery.blockinputbus.tiny.name=Tiny Item Input
+tile.modularmachinery.blockinputbus.small.name=Small Item Input
+tile.modularmachinery.blockinputbus.normal.name=Normal Item Input
+tile.modularmachinery.blockinputbus.reinforced.name=Reinforced Item Input
+tile.modularmachinery.blockinputbus.big.name=Big Item Input
+tile.modularmachinery.blockinputbus.huge.name=Huge Item Input
+tile.modularmachinery.blockinputbus.ludicrous.name=Ludicrous Item Input
+
+tile.modularmachinery.blockoutputbus.tiny.name=Tiny Item Output
+tile.modularmachinery.blockoutputbus.small.name=Small Item Output
+tile.modularmachinery.blockoutputbus.normal.name=Normal Item Output
+tile.modularmachinery.blockoutputbus.reinforced.name=Reinforced Item Output
+tile.modularmachinery.blockoutputbus.big.name=Big Item Output
+tile.modularmachinery.blockoutputbus.huge.name=Huge Item Output
+tile.modularmachinery.blockoutputbus.ludicrous.name=Ludicrous Item Output
+
+tile.modularmachinery.blockfluidinputhatch.tiny.name=Tiny Fluid Input Hatch
+tile.modularmachinery.blockfluidinputhatch.small.name=Small Fluid Input Hatch
+tile.modularmachinery.blockfluidinputhatch.normal.name=Normal Fluid Input Hatch
+tile.modularmachinery.blockfluidinputhatch.reinforced.name=Reinforced Fluid Input Hatch
+tile.modularmachinery.blockfluidinputhatch.big.name=Big Fluid Input Hatch
+tile.modularmachinery.blockfluidinputhatch.huge.name=Huge Fluid Input Hatch
+tile.modularmachinery.blockfluidinputhatch.ludicrous.name=Ludicrous Fluid Input Hatch
+tile.modularmachinery.blockfluidinputhatch.vacuum.name=Vacuum Fluid Input Hatch
+
+tile.modularmachinery.blockfluidoutputhatch.tiny.name=Tiny Fluid Output Hatch
+tile.modularmachinery.blockfluidoutputhatch.small.name=Small Fluid Output Hatch
+tile.modularmachinery.blockfluidoutputhatch.normal.name=Normal Fluid Output Hatch
+tile.modularmachinery.blockfluidoutputhatch.reinforced.name=Reinforced Fluid Output Hatch
+tile.modularmachinery.blockfluidoutputhatch.big.name=Big Fluid Output Hatch
+tile.modularmachinery.blockfluidoutputhatch.huge.name=Huge Fluid Output Hatch
+tile.modularmachinery.blockfluidoutputhatch.ludicrous.name=Ludicrous Fluid Output Hatch
+tile.modularmachinery.blockfluidoutputhatch.vacuum.name=Vacuum Fluid Output Hatch
+
+tile.modularmachinery.blockenergyinputhatch.tiny.name=Tiny Energy Input Hatch
+tile.modularmachinery.blockenergyinputhatch.small.name=Small Energy Input Hatch
+tile.modularmachinery.blockenergyinputhatch.normal.name=Normal Energy Input Hatch
+tile.modularmachinery.blockenergyinputhatch.reinforced.name=Reinforced Energy Input Hatch
+tile.modularmachinery.blockenergyinputhatch.big.name=Big Energy Input Hatch
+tile.modularmachinery.blockenergyinputhatch.huge.name=Huge Energy Input Hatch
+tile.modularmachinery.blockenergyinputhatch.ludicrous.name=Ludicrous Energy Input Hatch
+tile.modularmachinery.blockenergyinputhatch.ultimate.name=Ultimate Energy Input Hatch
+
+tile.modularmachinery.blockenergyoutputhatch.tiny.name=Tiny Energy Output Hatch
+tile.modularmachinery.blockenergyoutputhatch.small.name=Small Energy Output Hatch
+tile.modularmachinery.blockenergyoutputhatch.normal.name=Normal Energy Output Hatch
+tile.modularmachinery.blockenergyoutputhatch.reinforced.name=Reinforced Energy Output Hatch
+tile.modularmachinery.blockenergyoutputhatch.big.name=Big Energy Output Hatch
+tile.modularmachinery.blockenergyoutputhatch.huge.name=Huge Energy Output Hatch
+tile.modularmachinery.blockenergyoutputhatch.ludicrous.name=Ludicrous Energy Output Hatch
+tile.modularmachinery.blockenergyoutputhatch.ultimate.name=Ultimate Energy Output Hatch
+
+tile.modularmachinery.blocksmartinterface.number.name=Smart Data Interface (Number)
+tile.modularmachinery.blocksmartinterface.string.name=Smart Data Interface (String)
+
+tile.modularmachinery.blockparallelcontroller.normal.name=§aNormal Parallel Controller
+tile.modularmachinery.blockparallelcontroller.reinforced.name=§6Reinforced Parallel Controller
+tile.modularmachinery.blockparallelcontroller.elite.name=§bElite Parallel Controller
+tile.modularmachinery.blockparallelcontroller.super.name=§5Super Parallel Controller
+tile.modularmachinery.blockparallelcontroller.ultimate.name=§cUltimate Parallel Controller
+tile.modularmachinery.blockparallelcontroller.tip=Up to §a%s§7 of identical recipes can be run simultaneously.
+
+tile.modularmachinery.blockupgradebus.normal.name=§aNormal Upgrade Bus
+tile.modularmachinery.blockupgradebus.reinforced.name=§6Reinforced Upgrade Bus
+tile.modularmachinery.blockupgradebus.elite.name=§bElite Upgrade Bus
+tile.modularmachinery.blockupgradebus.super.name=§5Super Upgrade Bus
+tile.modularmachinery.blockupgradebus.ultimate.name=§eUltimate Upgrade Bus
+tile.modularmachinery.blockupgradebus.tip=Up to §a%s§7 different upgrades can be placed.
+
+tile.modularmachinery.blockmeitemoutputbus.name=ME Machinery Item Output Bus
+tile.modularmachinery.blockmeiteminputbus.name=ME Machinery Item Input Bus
+tile.modularmachinery.blockmefluidoutputbus.name=ME Machinery Fluid Output Bus
+tile.modularmachinery.blockmefluidinputbus.name=ME Machinery Fluid Input Bus
+tile.modularmachinery.blockmegasoutputbus.name=ME Mechanical gas output bus
+tile.modularmachinery.blockmegasinputbus.name=ME Machinery Gas Input Bus
+tile.modularmachinery.blockmepatternprovider.name=ME Machinery Pattern Provider
+tile.modularmachinery.blockmepatternmirrorimage.name=ME Machinery Pattern Mirror Image
+
+error.modularmachinery.requirement.lifeessence=Error while checking Life Essence requirement
+error.modularmachinery.requirement.lifeessence.orb=Missing or Unbound Blood Orb
+error.modularmachinery.requirement.lifeessence.lp.less=Not enough LP cache
+error.modularmachinery.requirement.lifeessence.lp.more=Too many LP cache
+error.modularmachinery.requirement.will.less=Not enough will
+error.modularmachinery.requirement.will.more=Too much will
+error.modularmachinery.requirement.aspect.less=Not enough aspect
+error.modularmachinery.requirement.aspect.out=Can't output aspect
+error.modularmachinery.requirement.grid.less=Not enough grid power
+error.modularmachinery.requirement.grid.missingprovider=No Grid Power Hatch found
+error.modularmachinery.requirement.rainbow.less=Missing working Rainbow Generator
+error.modularmachinery.requirement.starlight.less=Not enough Starlight
+error.modularmachinery.requirement.starlight.missingprovider=No Starlight Hatch found
+error.modularmachinery.requirement.constellation.missingprovider=No Constellation Detector Hatch found
+error.modularmachinery.requirement.constellation.less=Constellation not present
+error.modularmachinery.requirement.constellation.unknown=Unknown Constellation
+error.modularmachinery.requirement.aura.invalid=Invalid Aura type in this world
+error.modularmachinery.requirement.aura.less=Not enough Aura
+error.modularmachinery.requirement.aura.more=Too much Aura
+error.modularmachinery.requirement.mana.less=Not enough Mana
+error.modularmachinery.requirement.mana.space=Too much mana
+error.modularmachinery.requirement.invalid=Invalid IO Type
+error.modularmachinery.component.invalid=Invalid Hatch
+error.modularmachinery.impetus.less=Not enough Impetus
+error.modularmachinery.impetus.space=Too much Impetus
+
+info.modularmachinery.lp=LP
+info.modularmachinery.lppertick=LP per Tick
+info.modularmachinery.lifeessence=Life Essence
+info.modularmachinery.grid.required=Need %f GP
+info.modularmachinery.grid.produced=Produce %f GP
+info.modularmachinery.rainbow.required=A working rainbow generator is needed for this recipe
+info.modularmachinery.impetus=Impetus: %s
+
+tile.modularmachinery.blockwillproviderinput.name=Demon Will Input Hatch
+tile.modularmachinery.blockwillprovideroutput.name=Demon Will Output Hatch
+tile.modularmachinery.blocklifeessenceproviderinput.name=Life Essence Input Hatch
+tile.modularmachinery.blocklifeessenceprovideroutput.name=Life Essence Output Hatch
+tile.modularmachinery.blockaspectproviderinput.name=Essentia Input Hatch
+tile.modularmachinery.blockaspectprovideroutput.name=Essentia Output Hatch
+tile.modularmachinery.blockgridproviderinput.name=Grid Power Input Hatch
+tile.modularmachinery.blockgridprovideroutput.name=Grid Power Output Hatch
+tile.modularmachinery.blockstarlightproviderinput.name=Starlight Collector Hatch
+tile.modularmachinery.blockstarlightprovideroutput.name=Starlight Distributor Hatch
+tile.modularmachinery.blockconstellationprovider.name=Constellation Detector Hatch
+tile.modularmachinery.blockauraproviderinput.name=Aura Input Hatch
+tile.modularmachinery.blockauraprovideroutput.name=Aura Output Hatch
+tile.modularmachinery.blockrainbowprovider.name=Rainbow Input Hatch
+tile.modularmachinery.blockmanaproviderinput.name=Mana Input Hatch
+tile.modularmachinery.blockmanaprovideroutput.name=Mana Output Hatch
+tile.modularmachinery.blockimpetusproviderinput.name=Impetus Input Hatch
+tile.modularmachinery.blockimpetusprovideroutput.name=Impetus Output Hatch
+
+
+tooltip.modularcontroller.machine_projector=Right-click on the controller while crouching to project the blueprint of his machine into the world.
+tile.modularmachinery.blockparallelcontroller.mmceme_0.name=MMCEME Parallel Controller I
+tile.modularmachinery.blockparallelcontroller.mmceme_1.name=MMCEME Parallel Controller II
+tile.modularmachinery.blockparallelcontroller.mmceme_2.name=MMCEME Parallel Controller III
+tile.modularmachinery.blockparallelcontroller.mmceme_3.name=MMCEME Parallel Controller IV
+tile.modularmachinery.blockparallelcontroller.mmceme_4.name=MMCEME Parallel Controller V
+tile.modularmachinery.blockparallelcontroller.mmceme_5.name=MMCEME Parallel Controller VI
+tile.modularmachinery.blockparallelcontroller.mmceme_6.name=MMCEME Parallel Controller VII
+tile.modularmachinery.blockparallelcontroller.mmceme_7.name=MMCEME Parallel Controller VIII
+tile.modularmachinery.blockparallelcontroller.mmceme_8.name=MMCEME Parallel Controller IX
+tile.modularmachinery.blockparallelcontroller.mmceme_9.name=MMCEME Parallel Controller X
+tile.modularmachinery.blockparallelcontroller.mmceme_10.name=MMCEME Parallel Controller XI
+tile.modularmachinery.blockparallelcontroller.mmceme_11.name=MMCEME Parallel Controller XII
+tile.modularmachinery.blockparallelcontroller.mmceme_12.name=MMCEME Parallel Controller XIII
+tile.modularmachinery.blockparallelcontroller.mmceme_13.name=MMCEME Parallel Controller XIV
+tile.modularmachinery.blockparallelcontroller.mmceme_14.name=MMCEME Parallel Controller XV
+tile.modularmachinery.blockparallelcontroller.mmceme_15.name=MMCEME Parallel Controller XVI

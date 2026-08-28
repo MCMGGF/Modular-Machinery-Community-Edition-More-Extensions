@@ -99,7 +99,7 @@ MMEvents.onControllerGUIRender(DEMO_MACHINE, function(event as ControllerGUIRend
         "[mmcege:si.title=Demo Port {index}/{count} ({key})]",
         keyDirective,
         titleDirective,
-        "[panel:main]MMCEGE 1.0.1 full feature demo",
+        "[panel:main]Modular Machinery: Community Edition More Extensions 1.0.1 full feature demo",
         "[panel:main]demo_port_main = " + portMain,
         "[panel:main]demo_port_hidden_a = " + portHiddenA,
         "[panel:main]demo_port_hidden_b = " + portHiddenB,
@@ -151,4 +151,4 @@ MachineModifier.addSmartInterfaceType(DEMO_MACHINE,
 );
 
 MachineModifier.setMaxThreads(DEMO_MACHINE, 0);
-MachineModifier.addCoreThread(DEMO_MACHINE, FactoryRecipeThread.createCoreThread("MMCEGE Demo Thread"));
+MachineModifier.addCoreThread(DEMO_MACHINE, FactoryRecipeThread.createCoreThread("Modular Machinery: Community Edition More Extensions Demo Thread"));

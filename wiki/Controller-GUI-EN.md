@@ -6,7 +6,7 @@ Replace / customize the MMCE Machine and Factory controller GUIs: resizable, cus
 
 ## How it works
 
-MMCEGE hooks Forge's `GuiOpenEvent` and, the moment MMCE opens the vanilla `GuiMachineController` / `GuiFactoryController`, swaps in the resizable version — **only when** a custom texture, hidden default background, or per-machine style override is present. It does **not** patch any MMCE GUI class.
+Modular Machinery: Community Edition More Extensions hooks Forge's `GuiOpenEvent` and, the moment MMCE opens the vanilla `GuiMachineController` / `GuiFactoryController`, swaps in the resizable version — **only when** a custom texture, hidden default background, or per-machine style override is present. It does **not** patch any MMCE GUI class.
 
 Styles come from two layers; per-machine wins, falling back to global:
 - **Global**: `config/mmceguiext/client.cfg`

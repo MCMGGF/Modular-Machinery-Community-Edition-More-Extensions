@@ -9,7 +9,7 @@ import java.util.Collection;
  * Extension point for tiles that expose multiple MMCE machine components.
  *
  * <p>Implementations should keep {@link #getMachineComponentGroupId()} stable for the lifetime of the tile.
- * If a negative value is returned, MMCEGE falls back to the first provided component's group id.</p>
+ * If a negative value is returned, Modular Machinery: Community Edition More Extensions falls back to the first provided component's group id.</p>
  */
 public interface IMultiMachineComponentProvider {
 

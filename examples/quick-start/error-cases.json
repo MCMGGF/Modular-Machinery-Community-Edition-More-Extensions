@@ -2,7 +2,7 @@
   // 这个模板故意带错误字段，用来测试日志报错是否清楚。
   // This template intentionally contains invalid fields to test error logging.
   "registryname": "mmcege_error_case_demo",
-  "localizedname": "MMCEGE Error Case Demo / MMCEGE 错误示例",
+  "localizedname": "Modular Machinery: Community Edition More Extensions Error Case Demo / Modular Machinery: Community Edition More Extensions 错误示例",
   "requires-blueprint": false,
   "has-factory": true,
   "mmce_gui_ext": {

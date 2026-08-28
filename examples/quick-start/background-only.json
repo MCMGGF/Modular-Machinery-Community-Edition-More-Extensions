@@ -2,7 +2,7 @@
   // 这个模板只演示背景替换。
   // This template only demonstrates background replacement.
   "registryname": "mmcege_background_only_demo",
-  "localizedname": "MMCEGE Background Only Demo / MMCEGE 仅背景示例",
+  "localizedname": "Modular Machinery: Community Edition More Extensions Background Only Demo / Modular Machinery: Community Edition More Extensions 仅背景示例",
   "requires-blueprint": false,
   "has-factory": true,
   "mmce_gui_ext": {

@@ -426,6 +426,41 @@ public class MMCEGuiExtConfig {
             "修改该选项后必须完整重启游戏，因为相关 Mixin 在早期启动阶段决定是否加载。"
         })
         public boolean enableLongFluidGasRequirements = false;
+
+        @Config.Comment({
+            "EXPERIMENTAL: register additional static MMCE parallel-controller tiers.",
+            "The extra tiers are named mmceme_0, mmceme_1, ... and reuse MMCE's native block, tile, GUI and parallelism logic.",
+            "After enabling and restarting, edit each generated parallel-controller.mmceme_* entry in modularmachinery.cfg.",
+            "WhimCraft may remain installed for other features. Set WhimCraft's mmce_config.otherParallelController=0 to disable its extra tiers; MMCEME will then register its own tiers and provide an explicit client model mapping.",
+            "实验性：注册额外的静态 MMCE 并行控制器等级。",
+            "额外等级名称为 mmceme_0、mmceme_1……，并复用 MMCE 原生方块、Tile、GUI 和并行计算逻辑。",
+            "启用并重启后，在 modularmachinery.cfg 的 parallel-controller.mmceme_* 节点中修改每级最大并行数。",
+            "不要与 WhimCraft 同时使用本功能：两个模组都会提供并行控制器资源。"
+        })
+        public boolean enableCustomParallelControllerTiers = false;
+
+        @Config.Comment({
+            "Number of additional static parallel-controller tiers to register when enabled.",
+            "范围：1-16 / Range: 1-16."
+        })
+        @Config.RangeInt(min = 1, max = 16)
+        public int customParallelControllerTierCount = 1;
+
+        @Config.Comment({
+            "Default max parallelism for each new tier before MMCE writes its modularmachinery.cfg entry.",
+            "默认值仅用于首次生成 MMCE 配置；之后请直接修改 parallel-controller.mmceme_*。",
+            "This default is only used when MMCE first generates the config entry; edit parallel-controller.mmceme_* afterwards."
+        })
+        @Config.RangeInt(min = 1, max = Integer.MAX_VALUE)
+        public int customParallelControllerDefaultMaxParallelism = 32;
+
+        @Config.Comment({
+            "Optional per-tier max parallelism values, in mmceme_0, mmceme_1, ... order.",
+            "Example: 16,64,256 creates per-tier defaults of 16, 64 and 256; missing entries use the common default above.",
+            "可选：按 mmceme_0、mmceme_1……顺序设置每级最大并行数。",
+            "例如 16、64、256 分别设置三档；未填写的档位使用上面的统一默认值。"
+        })
+        public String[] customParallelControllerMaxParallelisms = new String[0];
     }
 
     public static boolean isLongFluidGasRequirementsEnabled() {
@@ -673,13 +708,13 @@ public class MMCEGuiExtConfig {
         @Config.Comment("是否显示物品输入/输出统计 / Show item input/output counts.")
         public boolean showItemInfo = false;
 
-        @Config.Comment("是否显示 MMCEGE 自己绘制的流体条。注意：TOP 可能仍会自动显示 Forge Fluid 能力条 / Show MMCEGE's own fluid bar. TOP may still auto-render Forge Fluid capability.")
+        @Config.Comment("是否显示 Modular Machinery: Community Edition More Extensions 自己绘制的流体条。注意：TOP 可能仍会自动显示 Forge Fluid 能力条 / Show Modular Machinery: Community Edition More Extensions' own fluid bar. TOP may still auto-render Forge Fluid capability.")
         public boolean showFluidInfo = true;
 
-        @Config.Comment("是否显示 MMCEGE 自己绘制的气体条 / Show MMCEGE's own gas bar.")
+        @Config.Comment("是否显示 Modular Machinery: Community Edition More Extensions 自己绘制的气体条 / Show Modular Machinery: Community Edition More Extensions' own gas bar.")
         public boolean showGasInfo = true;
 
-        @Config.Comment("是否显示 MMCEGE 自己绘制的能源条 / Show MMCEGE's own energy bar.")
+        @Config.Comment("是否显示 Modular Machinery: Community Edition More Extensions 自己绘制的能源条 / Show Modular Machinery: Community Edition More Extensions' own energy bar.")
         public boolean showEnergyInfo = true;
     }
 }

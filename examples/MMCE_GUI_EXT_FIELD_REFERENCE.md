@@ -140,8 +140,8 @@ This file is a quick reference for pack authors.
   - CN: GUI 打开时默认显示的页。未填写时通常使用 `main`。
   - EN: Page shown when the GUI opens. Usually `main` when omitted.
 - `defaultCharSpacing`
-  - CN: 本 controller/style 下 MMCEGE 自绘文本的默认字符间距。别名：`defaultCharacterSpacing`、`defaultLetterSpacing`、`default_char_spacing`、`default_letter_spacing`、`textCharSpacing`、`text_char_spacing`。未写或为 `0` 时保持原版字体绘制路径。
-  - EN: Default character spacing for MMCEGE-rendered text in this controller/style. Aliases: `defaultCharacterSpacing`, `defaultLetterSpacing`, `default_char_spacing`, `default_letter_spacing`, `textCharSpacing`, `text_char_spacing`. Omitted or `0` keeps the vanilla font path.
+  - CN: 本 controller/style 下 Modular Machinery: Community Edition More Extensions 自绘文本的默认字符间距。别名：`defaultCharacterSpacing`、`defaultLetterSpacing`、`default_char_spacing`、`default_letter_spacing`、`textCharSpacing`、`text_char_spacing`。未写或为 `0` 时保持原版字体绘制路径。
+  - EN: Default character spacing for Modular Machinery: Community Edition More Extensions-rendered text in this controller/style. Aliases: `defaultCharacterSpacing`, `defaultLetterSpacing`, `default_char_spacing`, `default_letter_spacing`, `textCharSpacing`, `text_char_spacing`. Omitted or `0` keeps the vanilla font path.
 - `page`
   - CN: 可写在 `customPanels` 第 6 段、`texts`、`smartInterfaceEditors`、图层和按钮上，用来限制它们只在某一页显示。`state` / `guiState` 可作为别名。
   - EN: Can be used on the 6th segment of `customPanels`, `texts`, `smartInterfaceEditors`, layers, and buttons to show them only on one page. `state` / `guiState` are accepted aliases.

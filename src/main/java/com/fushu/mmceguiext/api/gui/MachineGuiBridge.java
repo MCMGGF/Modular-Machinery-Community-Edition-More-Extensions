@@ -11,7 +11,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import java.util.Objects;
 
 /**
- * Stable public bridge for opening MMCEGE resizable controller GUIs programmatically.
+ * Stable public bridge for opening Modular Machinery: Community Edition More Extensions resizable controller GUIs programmatically.
  * <p>
  * Use these methods instead of directly constructing GUI classes,
  * so that the implementation can evolve without breaking addon mods.

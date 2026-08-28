@@ -1,10 +1,10 @@
-# MMCEGE Wiki
+# Modular Machinery: Community Edition More Extensions Wiki
 
-**Modular Machinery: Community Edition — GUI Edit (MMCEGE)** · MC `1.12.2` · version `1.1.0-beta`
+**Modular Machinery: Community Edition More Extensions (formerly MMCEGE)** · MC `1.12.2` · version `1.3.5`
 
 > Language / 语言: **English** below · [跳转到中文](#中文)
 
-MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork). It bundles four subsystems:
+Modular Machinery: Community Edition More Extensions is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork). It is the renamed and expanded successor to MMCEGE:
 
 | Subsystem | What it gives you | Page |
 |---|---|---|
@@ -18,7 +18,7 @@ MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova 
 - **Required**: `modularmachinery` (CE), `mekanism`
 - **Optional**: `appliedenergistics2` (AE2 Extended Life) or `ae2` (AE2S), `mekeng` (required only for classic custom AE mixed buses), The One Probe, AE2 Fluid Crafting Rework, GregTech CE, HEI/JEI, GeckoLib
 
-### Config directories MMCEGE reads at startup
+### Config directories Modular Machinery: Community Edition More Extensions reads at startup
 
 | Path | Purpose |
 |---|---|
@@ -35,7 +35,7 @@ MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova 
 
 ```powershell
 .\mmce-src\gradlew.bat -p .\mmce-gui-ext build
-# -> mmce-gui-ext/build/libs/MMCEGE-1.1.0-beta.jar
+# -> mmce-gui-ext/build/libs/Modular-Machinery-Community-Edition-More-Extensions-1.3.5.jar
 ```
 
 ---
@@ -43,9 +43,9 @@ MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova 
 <a name="中文"></a>
 # 中文
 
-**Modular Machinery: Community Edition — GUI Edit (MMCEGE)** · MC `1.12.2` · 版本 `1.1.0-beta`
+**Modular Machinery: Community Edition More Extensions（前身：MMCEGE）** · MC `1.12.2` · 版本 `1.3.5`
 
-MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组，包含四个子系统：
+Modular Machinery: Community Edition More Extensions 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的扩展模组，也是 MMCEGE 的更名与扩展版本：
 
 | 子系统 | 作用 | 页面 |
 |---|---|---|
@@ -59,7 +59,7 @@ MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附
 - **必需**：`modularmachinery`（CE）、`mekanism`
 - **可选**：`appliedenergistics2`（AE2 Extended Life）或 `ae2`（AE2S）、`mekeng`（仅传统自定义 AE 混合总线需要）、The One Probe、AE2 Fluid Crafting Rework、GregTech CE、HEI/JEI、GeckoLib
 
-### MMCEGE 启动时读取的配置目录
+### Modular Machinery: Community Edition More Extensions 启动时读取的配置目录
 
 | 路径 | 用途 |
 |---|---|
@@ -76,5 +76,5 @@ MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附
 
 ```powershell
 .\mmce-src\gradlew.bat -p .\mmce-gui-ext build
-# -> mmce-gui-ext/build/libs/MMCEGE-1.1.0-beta.jar
+# -> mmce-gui-ext/build/libs/Modular-Machinery-Community-Edition-More-Extensions-1.3.5.jar
 ```

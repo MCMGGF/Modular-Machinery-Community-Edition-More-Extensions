@@ -43,4 +43,14 @@ public class MMCEGuiExtConfigTest {
 
         assertFalse(experimental.enableLongFluidGasRequirements);
     }
+
+    @Test
+    public void customParallelControllerTiersAreOptInWithConservativeDefaults() {
+        MMCEGuiExtConfig.Experimental experimental = new MMCEGuiExtConfig.Experimental();
+
+        assertFalse(experimental.enableCustomParallelControllerTiers);
+        assertEquals(1, experimental.customParallelControllerTierCount);
+        assertEquals(32, experimental.customParallelControllerDefaultMaxParallelism);
+        assertEquals(0, experimental.customParallelControllerMaxParallelisms.length);
+    }
 }

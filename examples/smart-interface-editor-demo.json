@@ -1,6 +1,6 @@
 {
   "registryname": "mmcege_demo_multi_port",
-  "localizedname": "MMCEGE GUI DataPort Demo / MMCEGE GUI 数据端口示例",
+  "localizedname": "Modular Machinery: Community Edition More Extensions GUI DataPort Demo / Modular Machinery: Community Edition More Extensions GUI 数据端口示例",
   "requires-blueprint": false,
   "has-factory": true,
   "color": "66CCFF",

@@ -1,0 +1,27 @@
+{
+  "variants": {
+    "type=normal": { "model": "modularmachinery:blockparallelcontroller_normal" },
+    "type=reinforced": { "model": "modularmachinery:blockparallelcontroller_reinforced" },
+    "type=elite": { "model": "modularmachinery:blockparallelcontroller_elite" },
+    "type=super": { "model": "modularmachinery:blockparallelcontroller_super" },
+    "type=ultimate": { "model": "modularmachinery:blockparallelcontroller_ultimate" },
+    "type=mmceme_0": { "model": "modularmachinery:blockparallelcontroller_mmceme_0" },
+    "type=mmceme_1": { "model": "modularmachinery:blockparallelcontroller_mmceme_1" },
+    "type=mmceme_2": { "model": "modularmachinery:blockparallelcontroller_mmceme_2" },
+    "type=mmceme_3": { "model": "modularmachinery:blockparallelcontroller_mmceme_3" },
+    "type=mmceme_4": { "model": "modularmachinery:blockparallelcontroller_mmceme_4" },
+    "type=mmceme_5": { "model": "modularmachinery:blockparallelcontroller_mmceme_5" },
+    "type=mmceme_6": { "model": "modularmachinery:blockparallelcontroller_mmceme_6" },
+    "type=mmceme_7": { "model": "modularmachinery:blockparallelcontroller_mmceme_7" },
+    "type=mmceme_8": { "model": "modularmachinery:blockparallelcontroller_mmceme_8" },
+    "type=mmceme_9": { "model": "modularmachinery:blockparallelcontroller_mmceme_9" },
+    "type=mmceme_10": { "model": "modularmachinery:blockparallelcontroller_mmceme_10" },
+    "type=mmceme_11": { "model": "modularmachinery:blockparallelcontroller_mmceme_11" },
+    "type=mmceme_12": { "model": "modularmachinery:blockparallelcontroller_mmceme_12" },
+    "type=mmceme_13": { "model": "modularmachinery:blockparallelcontroller_mmceme_13" },
+    "type=mmceme_14": { "model": "modularmachinery:blockparallelcontroller_mmceme_14" },
+    "type=mmceme_15": { "model": "modularmachinery:blockparallelcontroller_mmceme_15" },
+    "type=whimcraft_0": { "model": "modularmachinery:blockparallelcontroller_whimcraft_0" },
+    "type=whimcraft_1": { "model": "modularmachinery:blockparallelcontroller_whimcraft_1" }
+  }
+}

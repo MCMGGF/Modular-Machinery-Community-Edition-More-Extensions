@@ -1,11 +1,15 @@
 plugins {
     id("java-library")
     id("maven-publish")
-    id("com.gtnewhorizons.retrofuturagradle") version "1.4.1"
+    id("com.gtnewhorizons.retrofuturagradle") version "1.4.9"
 }
 
 group = "com.fushu.mmce"
 version = "1.3.5"
+
+base {
+    archivesName.set("Modular-Machinery-Community-Edition-More-Extensions")
+}
 
 java {
     withSourcesJar()
@@ -81,7 +85,10 @@ dependencies {
     compileOnly("CraftTweaker2:CraftTweaker2-MC1120-Main:1.12-4.1.20.715")
     testRuntimeOnly("CraftTweaker2:CraftTweaker2-API:4.1.20.715")
     testRuntimeOnly("CraftTweaker2:CraftTweaker2-MC1120-Main:1.12-4.1.20.715")
-    val craftTweakerModsDir = System.getenv("MMCEGE_CRAFTTWEAKER_MODS_DIR")
+    val craftTweakerModsDir =
+        System.getenv("MODULAR_MACHINERY_COMMUNITY_EDITION_MORE_EXTENSIONS_CRAFTTWEAKER_MODS_DIR")
+            ?: System.getenv("MMCE_MORE_EXTENSIONS_CRAFTTWEAKER_MODS_DIR")
+            ?: System.getenv("MMCEGE_CRAFTTWEAKER_MODS_DIR")
     val localCraftTweakerJars = if (!craftTweakerModsDir.isNullOrBlank()) {
         fileTree(craftTweakerModsDir) {
             include("*CraftTweaker2*.jar")
@@ -180,7 +187,7 @@ val verifyJarDoesNotBundleMouseTweaks by tasks.registering {
             include("yalter/mousetweaks/**")
         }.files
         check(bundledEntries.isEmpty()) {
-            "MMCEGE must not bundle Mouse Tweaks classes: " +
+            "Modular Machinery: Community Edition More Extensions must not bundle Mouse Tweaks classes: " +
                 bundledEntries.joinToString { it.name }
         }
 
@@ -189,7 +196,7 @@ val verifyJarDoesNotBundleMouseTweaks by tasks.registering {
             include("com/fushu/mmceguiext/mixin/MixinMouseTweaksMain.class")
         }.files
         check(obsoleteMixinEntries.isEmpty()) {
-            "MMCEGE must not transform Mouse Tweaks classes: " +
+            "Modular Machinery: Community Edition More Extensions must not transform Mouse Tweaks classes: " +
                 obsoleteMixinEntries.joinToString { it.name }
         }
     }

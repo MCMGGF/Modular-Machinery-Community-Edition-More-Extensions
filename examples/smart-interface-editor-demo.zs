@@ -17,8 +17,8 @@ function clampDemoLevel(v as int) as int {
     return v;
 }
 
-// Read from virtual DataPort values written by MMCEGE GUI editor.
-// 从 MMCEGE GUI 编辑器写入的虚拟数据端口值读取
+// Read from virtual DataPort values written by Modular Machinery: Community Edition More Extensions GUI editor.
+// 从 Modular Machinery: Community Edition More Extensions GUI 编辑器写入的虚拟数据端口值读取
 function readDemoPort(ctrl, data as IData, key as string) as int {
     var value = data.getFloat(key, 0.0) as int;
     if (value < 1 || value > 9) {

@@ -1,10 +1,10 @@
-# Modular Machinery: Community Edition Gui Edit (MMCEGE, 1.12.2)
+# Modular Machinery: Community Edition More Extensions (formerly MMCEGE, 1.12.2)
 
-MMCEGE is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork).
-MMCEGE 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组。
+Modular Machinery: Community Edition More Extensions is an addon for **Modular Machinery: Community Edition** (the KasumiNova fork).
+Modular Machinery: Community Edition More Extensions 是 **Modular Machinery: Community Edition**（KasumiNova 分支）的附属模组。
 
-It started as a controller-GUI editor, but now bundles four subsystems:
-它最初只是控制器 GUI 编辑器，目前已包含四个子系统：
+It started as a controller-GUI editor, but is now a broader Modular Machinery extension suite:
+它最初只是控制器 GUI 编辑器，目前已经发展为面向 Modular Machinery 的综合扩展套件：
 
 1. **Controller GUI replacement / customization** — resizable, texture-driven, multi-panel controller GUIs.
    **控制器 GUI 替换 / 自定义** — 可调整大小、贴图驱动、多信息区的控制器 GUI。
@@ -14,6 +14,14 @@ It started as a controller-GUI editor, but now bundles four subsystems:
    **JSON 定义的自定义 AE2 总线** — ME 物品输入总线，以及混合（物品+流体+气体）输入/输出总线。
 4. **Long-capacity recipe requirements (experimental opt-in)** — fluid/gas recipe amounts beyond the vanilla `int` limit.
    **Long 容量配方需求（实验性，需要手动开启）** — 流体/气体配方量可突破原版 `int`（约 21 亿 mB）上限。
+5. **Additional static parallel-controller tiers (experimental opt-in)** — add `mmceme_0`, `mmceme_1`, ... while reusing MMCE's native controller behavior.
+   **额外静态并行控制器等级（实验性，需要手动开启）** — 增加 `mmceme_0`、`mmceme_1`……，复用 MMCE 原生控制器行为。
+
+The project was formerly published as **MMCEGE (MMCE Gui Edit)**. The
+`mmceguiext` mod ID and existing script/config identifiers remain unchanged
+for compatibility.
+本项目的前身是 **MMCEGE（MMCE Gui Edit）**。为兼容已有整合包，
+`mmceguiext` 模组 ID 以及现有脚本/配置标识保持不变。
 
 Current version / 当前版本: **`1.3.5`** · API level **`1`** · MC `1.12.2` · author / 作者: WuXiaoYa
 
@@ -32,8 +40,8 @@ Optional (soft, compile-only) / 可选依赖：
 - `mekeng` (Mekanism Energistics; required only for classic custom AE mixed buses / 仅传统自定义 AE 混合总线需要)
 - The One Probe (hatch probe info / 仓口探针信息)
 - AE2 Fluid Crafting Rework, GregTech CE, HEI/JEI, GeckoLib
-- Mouse Tweaks Unofficial is optional. MMCEGE 1.3.4 does not transform Mouse Tweaks classes. During client pre-initialization it clears recoverable Cleanroom class-loader failures and preloads the official Mouse Tweaks entry points and handlers.
-- Mouse Tweaks Unofficial 为可选依赖。MMCEGE 1.3.4 不再转换 Mouse Tweaks 类；客户端预初始化时会清理 Cleanroom 可恢复的类加载失败缓存，并预加载官方入口及 handler。
+- Mouse Tweaks Unofficial is optional. Modular Machinery: Community Edition More Extensions 1.3.4 does not transform Mouse Tweaks classes. During client pre-initialization it clears recoverable Cleanroom class-loader failures and preloads the official Mouse Tweaks entry points and handlers.
+- Mouse Tweaks Unofficial 为可选依赖。Modular Machinery: Community Edition More Extensions 1.3.4 不再转换 Mouse Tweaks 类；客户端预初始化时会清理 Cleanroom 可恢复的类加载失败缓存，并预加载官方入口及 handler。
 
 ---
 
@@ -50,13 +58,65 @@ From the repo root / 在仓库根目录执行：
 
 Output / 产物：
 
-- `mmce-gui-ext/build/libs/MMCEGE-1.3.5.jar`
+- `mmce-gui-ext/build/libs/Modular-Machinery-Community-Edition-More-Extensions-1.3.5.jar`
 
-GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `MMCEGE-<commit-sha>` artifact to let testers build without using the local machine.
-GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `MMCEGE-<commit-sha>` artifact 即可，不需要本机编译。
+GitHub Actions also builds every push to `main` and every pull request. Open the latest **Build** workflow run on GitHub and download the `Modular-Machinery-Community-Edition-More-Extensions-<commit-sha>` artifact to let testers build without using the local machine.
+GitHub Actions 也会在每次推送到 `main` 和 PR 时构建。让测试者打开 GitHub 最新的 **Build** workflow 运行，下载 `Modular-Machinery-Community-Edition-More-Extensions-<commit-sha>` artifact 即可，不需要本机编译。
 
-MMCEGE is a coremod (`FMLCorePlugin = com.fushu.mmceguiext.core.MMCEGuiExtEarlyMixinLoader`); its Mixins load before MMCE.
-MMCEGE 是一个 coremod（`FMLCorePlugin`），其 Mixin 会在 MMCE 之前加载。
+Modular Machinery: Community Edition More Extensions is a coremod (`FMLCorePlugin = com.fushu.mmceguiext.core.MMCEGuiExtEarlyMixinLoader`); its Mixins load before MMCE.
+
+### Additional parallel-controller tiers | 额外并行控制器等级
+
+This is an experimental static extension of MMCE's existing parallel-controller enum. It does not add dynamic or energy-dependent parallel rules.
+该功能只是对 MMCE 现有并行控制器等级的静态扩展，不会改变配方逻辑，也不提供按能源动态改变并行数的规则。
+
+Enable it in `config/mmceguiext/client.cfg`, then restart the game:
+
+```ini
+experimental {
+    B:enableCustomParallelControllerTiers=true
+    I:customParallelControllerTierCount=3
+    I:customParallelControllerDefaultMaxParallelism=32
+    S:customParallelControllerMaxParallelisms <
+        16
+        64
+        256
+    >
+}
+```
+
+After restart, MMCE writes the generated entries under `parallel-controller` in
+`config/modularmachinery/modularmachinery.cfg`:
+
+```ini
+parallel-controller {
+    mmceme_0 {
+        I:max-parallelism=16
+    }
+    mmceme_1 {
+        I:max-parallelism=64
+    }
+    mmceme_2 {
+        I:max-parallelism=256
+    }
+}
+```
+
+Only `customParallelControllerTierCount` tiers are registered at runtime. The
+resource pack contains entries up to the supported limit of 16 so the same JAR
+can support different pack configurations; unused tiers do not appear in the
+creative tab and cannot be used in a machine. Each tier uses the matching value
+from `customParallelControllerMaxParallelisms`; missing values fall back to
+`customParallelControllerDefaultMaxParallelism`. The controller item metadata
+and model are registered automatically. `mmceme_0` can then be used anywhere a
+normal `modularmachinery:blockparallelcontroller` is accepted. WhimCraft can
+remain installed for its other features: set
+`I:otherParallelController=0` in `config/WhimCraft.cfg` to disable WhimCraft's
+extra parallel tiers and allow MMCEME to register `mmceme_*`. If
+`otherParallelController` is greater than `0`, missing, or invalid, MMCEME
+keeps its conflict guard enabled and leaves the parallel-controller ownership
+to WhimCraft. WhimCraft's other features are not merged into MMCEME.
+Modular Machinery: Community Edition More Extensions 是一个 coremod（`FMLCorePlugin`），其 Mixin 会在 MMCE 之前加载。
 
 ---
 
@@ -71,7 +131,7 @@ MMCEGE 是一个 coremod（`FMLCorePlugin`），其 Mixin 会在 MMCE 之前加�
 - Smart Interface editor demo / Smart Interface 编辑器示例: `examples/smart-interface-editor-demo.json` + `.zs`
 - Controller slider demo / 控制器滑块示例: `examples/quick-start/sliders.json`
 
-Config directories MMCEGE reads at startup / MMCEGE 启动时读取的配置目录：
+Config directories Modular Machinery: Community Edition More Extensions reads at startup / Modular Machinery: Community Edition More Extensions 启动时读取的配置目录：
 
 | Path / 路径 | Purpose / 用途 |
 |---|---|
@@ -86,8 +146,8 @@ Config directories MMCEGE reads at startup / MMCEGE 启动时读取的配置目�
 
 # Part 1 — Controller GUI | 第一部分 · 控制器 GUI
 
-MMCEGE replaces the vanilla Machine / Factory controller GUI **only when** a custom texture, hidden default background, or per-machine style override is present. It hooks Forge's `GuiOpenEvent` and does **not** patch any MMCE GUI class.
-MMCEGE 仅在存在自定义贴图、隐藏默认背景或机器级样式覆盖时才替换原版普通/集成控制器 GUI。它挂接 Forge 的 `GuiOpenEvent`，**不修改** 任何 MMCE 的 GUI 类。
+Modular Machinery: Community Edition More Extensions replaces the vanilla Machine / Factory controller GUI **only when** a custom texture, hidden default background, or per-machine style override is present. It hooks Forge's `GuiOpenEvent` and does **not** patch any MMCE GUI class.
+Modular Machinery: Community Edition More Extensions 仅在存在自定义贴图、隐藏默认背景或机器级样式覆盖时才替换原版普通/集成控制器 GUI。它挂接 Forge 的 `GuiOpenEvent`，**不修改** 任何 MMCE 的 GUI 类。
 
 ## Global Config | 全局配置
 
@@ -255,8 +315,8 @@ See `examples/quick-start/buttons-and-pages.json`, `event-button-test.json`, `co
 
 ## Controller Progress Bars | 控制器进度条
 
-Progress bars are defined per-machine with `progressBars[]` (aliases: `progress_bars`, `guiProgressBars`, `gui_progress_bars`). The main mode uses two textures: an empty/background texture and a full/fill texture. MMCEGE draws the empty texture first, then clips the full texture by the current progress. This works in both Machine and Factory controller GUIs.
-进度条在机器级 JSON 中通过 `progressBars[]` 定义（别名：`progress_bars`、`guiProgressBars`、`gui_progress_bars`）。主模式使用两张贴图：空槽/背景贴图和满槽/填充贴图。MMCEGE 会先绘制空槽，再按当前进度裁剪满槽。普通控制器和集成控制器都支持。
+Progress bars are defined per-machine with `progressBars[]` (aliases: `progress_bars`, `guiProgressBars`, `gui_progress_bars`). The main mode uses two textures: an empty/background texture and a full/fill texture. Modular Machinery: Community Edition More Extensions draws the empty texture first, then clips the full texture by the current progress. This works in both Machine and Factory controller GUIs.
+进度条在机器级 JSON 中通过 `progressBars[]` 定义（别名：`progress_bars`、`guiProgressBars`、`gui_progress_bars`）。主模式使用两张贴图：空槽/背景贴图和满槽/填充贴图。Modular Machinery: Community Edition More Extensions 会先绘制空槽，再按当前进度裁剪满槽。普通控制器和集成控制器都支持。
 
 Minimal two-texture example / 双贴图最小示例：
 
@@ -290,8 +350,8 @@ Supported sources / 支持数据源：
 
 Supported fields / 支持字段：`id`, `x`, `y`, `width`, `height`, `source`, `direction`, `backgroundTexture`, `fillTexture`, `texture`, `textureWidth`, `textureHeight`, `backgroundColor`, `fillColor`, `borderColor`, `threadIndex`, `coreThreadId`, `min`, `max`, `priority`, `foreground`, `visible`, `page`, `showText`, `textColor`.
 
-If no textures are configured, MMCEGE falls back to colored rectangles (`backgroundColor`, `fillColor`, `borderColor`).
-若未配置贴图，MMCEGE 会退回使用纯色矩形（`backgroundColor`、`fillColor`、`borderColor`）。
+If no textures are configured, Modular Machinery: Community Edition More Extensions falls back to colored rectangles (`backgroundColor`, `fillColor`, `borderColor`).
+若未配置贴图，Modular Machinery: Community Edition More Extensions 会退回使用纯色矩形（`backgroundColor`、`fillColor`、`borderColor`）。
 
 See `examples/quick-start/progress-bars.json`.
 示例见 `examples/quick-start/progress-bars.json`。
@@ -301,14 +361,14 @@ See `examples/quick-start/progress-bars.json`.
 Sliders are defined per-machine with `sliders[]` (aliases: `guiSliders`, `gui_sliders`, `rangeControls`, `range_controls`). They work in both Machine and Factory controller GUIs, can be placed on pages/sub GUIs, and write numeric values to the Smart Interface / virtual DataPort key directly.
 滑块在机器级 JSON 中通过 `sliders[]` 定义（别名：`guiSliders`、`gui_sliders`、`rangeControls`、`range_controls`）。普通控制器和集成控制器都支持，可放在分页/子 GUI 内，并直接把数值写入 Smart Interface / 虚拟 DataPort key。
 
-MMCEGE 1.3.5 moves virtual Smart Interface machine-component helpers out of the controller Mixin, preventing server-side `NoSuchMethodError` failures caused by relocated synthetic inner-class constructors.
-MMCEGE 1.3.5 将虚拟 Smart Interface 的机器组件辅助类移出控制器 Mixin，避免内部类重定位后的合成构造器签名不一致导致服务端 `NoSuchMethodError`。
+Modular Machinery: Community Edition More Extensions 1.3.5 moves virtual Smart Interface machine-component helpers out of the controller Mixin, preventing server-side `NoSuchMethodError` failures caused by relocated synthetic inner-class constructors.
+Modular Machinery: Community Edition More Extensions 1.3.5 将虚拟 Smart Interface 的机器组件辅助类移出控制器 Mixin，避免内部类重定位后的合成构造器签名不一致导致服务端 `NoSuchMethodError`。
 
-MMCEGE 1.3.4 removes the Mouse Tweaks `Main` mixin that could poison Cleanroom's permanent invalid-class cache. Mouse Tweaks compatibility now uses lifecycle-time class recovery and preloading without modifying Mouse Tweaks bytecode.
-MMCEGE 1.3.4 移除了可能污染 Cleanroom 永久无效类缓存的 Mouse Tweaks `Main` Mixin，改为在模组生命周期内恢复并预加载相关类，不再修改 Mouse Tweaks 字节码。
+Modular Machinery: Community Edition More Extensions 1.3.4 removes the Mouse Tweaks `Main` mixin that could poison Cleanroom's permanent invalid-class cache. Mouse Tweaks compatibility now uses lifecycle-time class recovery and preloading without modifying Mouse Tweaks bytecode.
+Modular Machinery: Community Edition More Extensions 1.3.4 移除了可能污染 Cleanroom 永久无效类缓存的 Mouse Tweaks `Main` Mixin，改为在模组生命周期内恢复并预加载相关类，不再修改 Mouse Tweaks 字节码。
 
-MMCEGE 1.3.3 keeps slider dragging active with default or custom backgrounds, routes modal sub-GUI slider input consistently, and mirrors successful Smart Interface writes into controller `customData`.
-MMCEGE 1.3.3 修复默认/自定义背景下的持续拖拽、modal 子 GUI 滑块输入，并把成功的 Smart Interface 写值同步镜像到控制器 `customData`。
+Modular Machinery: Community Edition More Extensions 1.3.3 keeps slider dragging active with default or custom backgrounds, routes modal sub-GUI slider input consistently, and mirrors successful Smart Interface writes into controller `customData`.
+Modular Machinery: Community Edition More Extensions 1.3.3 修复默认/自定义背景下的持续拖拽、modal 子 GUI 滑块输入，并把成功的 Smart Interface 写值同步镜像到控制器 `customData`。
 
 Minimal example / 最小示例：
 
@@ -341,8 +401,8 @@ See `examples/quick-start/sliders.json`.
 
 # Part 2 — Custom Hatches | 第二部分 · 自定义仓口
 
-Custom hatches are opt-in. Set `customContent.enableCustomHatches=true` in `config/mmceguiext/client.cfg`, then drop a `.json` into `config/mmceguiext/custom_hatches/` and MMCEGE registers a new block + item + tile at startup. Each hatch acts as an MMCE multiblock component (input/output for fluid / gas / item / energy, or a combined component) and uses **long** capacities (beyond the `int` limit).
-自定义仓口默认不注册，避免整合包玩家在 JEI 里看到示例/开发用仓室。需要时先在 `config/mmceguiext/client.cfg` 设置 `customContent.enableCustomHatches=true`，再把 `.json` 放入 `config/mmceguiext/custom_hatches/`，MMCEGE 会在启动时注册新的方块 + 物品 + tile。每个仓口作为 MMCE 多方块组件（流体/气体/物品/能量的输入或输出，或组合组件），容量使用 **long**（突破 `int` 上限）。
+Custom hatches are opt-in. Set `customContent.enableCustomHatches=true` in `config/mmceguiext/client.cfg`, then drop a `.json` into `config/mmceguiext/custom_hatches/` and Modular Machinery: Community Edition More Extensions registers a new block + item + tile at startup. Each hatch acts as an MMCE multiblock component (input/output for fluid / gas / item / energy, or a combined component) and uses **long** capacities (beyond the `int` limit).
+自定义仓口默认不注册，避免整合包玩家在 JEI 里看到示例/开发用仓室。需要时先在 `config/mmceguiext/client.cfg` 设置 `customContent.enableCustomHatches=true`，再把 `.json` 放入 `config/mmceguiext/custom_hatches/`，Modular Machinery: Community Edition More Extensions 会在启动时注册新的方块 + 物品 + tile。每个仓口作为 MMCE 多方块组件（流体/气体/物品/能量的输入或输出，或组合组件），容量使用 **long**（突破 `int` 上限）。
 
 Key top-level fields / 关键顶层字段：
 
@@ -415,11 +475,11 @@ Common JSON fields / 通用 JSON 字段：`id`, `displayName`, the GUI layout (`
 
 # Part 4 — Long-Capacity Recipe Requirements | 第四部分 · Long 容量配方需求
 
-MMCE's `RequirementFluid` / `RequirementGas` store the recipe `amount` as `int`, which overflows above ~2.1 billion mB. MMCEGE can patch the requirement system (via Mixins) so fluid/gas amounts are parsed and processed as `long`, but this path is currently experimental.
-MMCE 的 `RequirementFluid` / `RequirementGas` 以 `int` 存储配方 `amount`，超过约 21 亿 mB 会溢出。MMCEGE 可以通过 Mixin 改造需求系统，使流体/气体量以 `long` 解析与处理，但此路径当前仍是实验性功能。
+MMCE's `RequirementFluid` / `RequirementGas` store the recipe `amount` as `int`, which overflows above ~2.1 billion mB. Modular Machinery: Community Edition More Extensions can patch the requirement system (via Mixins) so fluid/gas amounts are parsed and processed as `long`, but this path is currently experimental.
+MMCE 的 `RequirementFluid` / `RequirementGas` 以 `int` 存储配方 `amount`，超过约 21 亿 mB 会溢出。Modular Machinery: Community Edition More Extensions 可以通过 Mixin 改造需求系统，使流体/气体量以 `long` 解析与处理，但此路径当前仍是实验性功能。
 
-**Configuration required / experimental** — enable `experimental.enableLongFluidGasRequirements=true` in `config/mmceguiext/client.cfg`, then fully restart the game before writing large `amount` values in MMCE recipe JSON. It is disabled by default because the current implementation may make some fluid/gas recipes fail to take effect; while disabled, MMCEGE does not load the `RequirementFluid` / `RequirementGas` long-support Mixins.
-**需要配置 / 实验性** — 先在 `config/mmceguiext/client.cfg` 中设置 `experimental.enableLongFluidGasRequirements=true`，然后完整重启游戏，再在 MMCE 配方 JSON 中写大数值 `amount`。该选项默认关闭，因为当前实现可能导致部分流体/气体配方无法生效；关闭时 MMCEGE 不会加载 `RequirementFluid` / `RequirementGas` 的 long 支持 Mixin。
+**Configuration required / experimental** — enable `experimental.enableLongFluidGasRequirements=true` in `config/mmceguiext/client.cfg`, then fully restart the game before writing large `amount` values in MMCE recipe JSON. It is disabled by default because the current implementation may make some fluid/gas recipes fail to take effect; while disabled, Modular Machinery: Community Edition More Extensions does not load the `RequirementFluid` / `RequirementGas` long-support Mixins.
+**需要配置 / 实验性** — 先在 `config/mmceguiext/client.cfg` 中设置 `experimental.enableLongFluidGasRequirements=true`，然后完整重启游戏，再在 MMCE 配方 JSON 中写大数值 `amount`。该选项默认关闭，因为当前实现可能导致部分流体/气体配方无法生效；关闭时 Modular Machinery: Community Edition More Extensions 不会加载 `RequirementFluid` / `RequirementGas` 的 long 支持 Mixin。
 
 This is what makes the long-capacity custom hatches / AE buses above actually usable in recipes.
 正是这一改造，让前面 long 容量的自定义仓口 / AE 总线能在配方中真正可用。

@@ -39,7 +39,7 @@
 | `inputSlot` / `outputSlot` | — | `{x,y}` | `{0,0}` | 旧式槽位坐标（无 `gui.components` 时用） |
 | `tank` | — | object | 见 §3.3 | 旧式储罐渲染参数（无 gui tank 组件时用） |
 | `texts` | — | array | `[]` | 旧式静态文本列表（被 gui text 组件覆盖） |
-| `defaultCharSpacing` | `defaultCharacterSpacing`,`defaultLetterSpacing`,`default_char_spacing`,`default_letter_spacing`,`textCharSpacing`,`text_char_spacing` | float | null | 本仓口 MMCEGE 自绘文本默认字符间距；`0` 保持原版文本绘制路径 |
+| `defaultCharSpacing` | `defaultCharacterSpacing`,`defaultLetterSpacing`,`default_char_spacing`,`default_letter_spacing`,`textCharSpacing`,`text_char_spacing` | float | null | 本仓口 Modular Machinery: Community Edition More Extensions 自绘文本默认字符间距；`0` 保持原版文本绘制路径 |
 
 ### 1.1 `componentType` 取值
 

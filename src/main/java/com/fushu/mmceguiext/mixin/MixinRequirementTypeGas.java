@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.Overwrite;
 @Mixin(value = RequirementTypeGas.class, remap = false)
 public abstract class MixinRequirementTypeGas {
     /**
-     * @author MMCEGE
+     * @author Modular Machinery: Community Edition More Extensions
      * @reason Parse gas amount as long for custom long-capacity hatches.
      */
     @Overwrite

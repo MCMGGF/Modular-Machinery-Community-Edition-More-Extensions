@@ -6,7 +6,7 @@
 
 ## 工作机制
 
-MMCEGE 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineController` / `GuiFactoryController` 的瞬间，**仅当**存在自定义贴图、隐藏默认背景或机器级样式覆盖时，才替换为可调整大小的版本。它**不修改** MMCE 的任何 GUI 类。
+Modular Machinery: Community Edition More Extensions 挂接 Forge 的 `GuiOpenEvent`，在 MMCE 打开原版 `GuiMachineController` / `GuiFactoryController` 的瞬间，**仅当**存在自定义贴图、隐藏默认背景或机器级样式覆盖时，才替换为可调整大小的版本。它**不修改** MMCE 的任何 GUI 类。
 
 样式来自两层，机器级优先、回退到全局：
 - **全局**：`config/mmceguiext/client.cfg`

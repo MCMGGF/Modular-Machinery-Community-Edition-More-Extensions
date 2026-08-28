@@ -1,8 +1,8 @@
-# MMCEGE 1.1.0-beta 完整教程（可直接进游戏）
+# Modular Machinery: Community Edition More Extensions 1.3.5 完整教程（前身：MMCEGE，可直接进游戏）
 
 本目录提供的是“可直接加载”的示例，不是伪代码。
 
-MMCEGE 目前包含四大功能，本教程按部分组织：
+Modular Machinery: Community Edition More Extensions 目前包含多个功能模块，本教程按部分组织：
 
 - **第一部分 · 控制器 GUI**（第 1–8 章）：替换 / 自定义普通与集成控制器的 GUI。
 - **第二部分 · 自定义仓口（Hatch）**（第 9 章）：用 JSON 定义新的流体 / 气体 / 物品 / 能量仓口方块。
@@ -243,7 +243,7 @@ MMCEGE 目前包含四大功能，本教程按部分组织：
 - `backgroundTexture`：空槽 / 背景贴图。
 - `fillTexture`：满槽 / 填充贴图。
 
-MMCEGE 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常见 GUI 美术资源。
+Modular Machinery: Community Edition More Extensions 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常见 GUI 美术资源。
 
 每个进度条至少写：
 
@@ -617,7 +617,7 @@ MMCEGE 会先完整绘制空槽，再按进度裁剪满槽。这样最适合常�
 
 ## 11. 突破 int 上限的流体 / 气体配方
 
-MMCE 的 `RequirementFluid` / `RequirementGas` 用 `int` 存配方 `amount`，超过约 **21 亿 mB** 会溢出。MMCEGE 可以通过 Mixin 改造需求系统，使流体 / 气体量以 **long** 解析与处理，但该路径当前仍是实验性功能。
+MMCE 的 `RequirementFluid` / `RequirementGas` 用 `int` 存配方 `amount`，超过约 **21 亿 mB** 会溢出。Modular Machinery: Community Edition More Extensions 可以通过 Mixin 改造需求系统，使流体 / 气体量以 **long** 解析与处理，但该路径当前仍是实验性功能。
 
 **需要手动开启 / 实验性** —— 先在 `config/mmceguiext/client.cfg` 中设置：
 

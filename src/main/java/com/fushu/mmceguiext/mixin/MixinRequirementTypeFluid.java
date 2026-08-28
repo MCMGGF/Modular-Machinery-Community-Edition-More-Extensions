@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.Overwrite;
 @Mixin(value = RequirementTypeFluid.class, remap = false)
 public abstract class MixinRequirementTypeFluid {
     /**
-     * @author MMCEGE
+     * @author Modular Machinery: Community Edition More Extensions
      * @reason Parse fluid amount as long for custom long-capacity hatches.
      */
     @Overwrite

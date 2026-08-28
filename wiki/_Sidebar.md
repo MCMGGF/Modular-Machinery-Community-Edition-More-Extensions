@@ -1,4 +1,7 @@
-### MMCEGE Wiki
+### Modular Machinery: Community Edition More Extensions Wiki
+
+Formerly MMCEGE
+前身：MMCEGE
 
 **English**
 - [Home](Home)

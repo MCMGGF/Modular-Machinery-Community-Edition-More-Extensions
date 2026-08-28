@@ -38,11 +38,11 @@ public final class MMCEGEEvents {
     public static void onControllerButtonClick(String machineRegistryName, IEventHandler<ControllerButtonClickEvent> handler) {
         String key = normalizeMachineKey(machineRegistryName);
         if (key == null) {
-            CraftTweakerAPI.logError("[MMCEGE] onControllerButtonClick machineRegistryName is empty.");
+            CraftTweakerAPI.logError("[Modular Machinery: Community Edition More Extensions] onControllerButtonClick machineRegistryName is empty.");
             return;
         }
         if (handler == null) {
-            CraftTweakerAPI.logError("[MMCEGE] onControllerButtonClick handler is null for `" + machineRegistryName + "`.");
+            CraftTweakerAPI.logError("[Modular Machinery: Community Edition More Extensions] onControllerButtonClick handler is null for `" + machineRegistryName + "`.");
             return;
         }
 
@@ -68,7 +68,7 @@ public final class MMCEGEEvents {
                     break;
                 }
             } catch (Exception ex) {
-                MMCEGuiExt.logger().warn("Caught an exception in MMCEGE controller button handler.", ex);
+                MMCEGuiExt.logger().warn("Caught an exception in Modular Machinery: Community Edition More Extensions controller button handler.", ex);
             }
         }
         controller.markForUpdateSync();
@@ -105,7 +105,7 @@ public final class MMCEGEEvents {
                                                     long flatGas,
                                                     boolean matchNbt) {
         if (itemId == null || itemId.trim().isEmpty()) {
-            CraftTweakerAPI.logError("[MMCEGE] registerCapacityCard itemId is empty.");
+            CraftTweakerAPI.logError("[Modular Machinery: Community Edition More Extensions] registerCapacityCard itemId is empty.");
             return;
         }
         boolean ok = CustomCapacityCardRegistry.registerScriptEntry(
@@ -119,7 +119,7 @@ public final class MMCEGEEvents {
             matchNbt
         );
         if (!ok) {
-            CraftTweakerAPI.logError("[MMCEGE] Failed to register capacity card for `" + itemId + "`.");
+            CraftTweakerAPI.logError("[Modular Machinery: Community Edition More Extensions] Failed to register capacity card for `" + itemId + "`.");
         }
     }
 
